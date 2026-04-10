@@ -1,0 +1,8 @@
+{
+  "name": "@scope/consts",
+  "version": "0.0.1",
+  "exports": {
+    ".": "./index.ts",
+    "./db": "./db.consts.ts"
+  }
+}

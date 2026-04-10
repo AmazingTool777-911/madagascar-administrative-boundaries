@@ -1,0 +1,8 @@
+{
+  "name": "@scope/adapters",
+  "version": "0.0.1",
+  "exports": {
+    ".": "./index.ts",
+    "./postgres": "./postgres/index.ts"
+  }
+}
