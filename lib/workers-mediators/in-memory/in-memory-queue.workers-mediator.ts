@@ -509,12 +509,7 @@ export class InMemoryQueueWorkerExecutor<
   TMessage = unknown,
   TFinishedPayload = unknown,
 > implements QueueWorkerExecutor<TContext, TMessage, TFinishedPayload> {
-  constructor(
-    private workerType: "process" | "insert",
-    private finishEventType:
-      | typeof WORKER_EVENTS.PROCESSING_FINISHED
-      | typeof WORKER_EVENTS.INSERT_FINISHED,
-  ) {}
+  constructor() {}
 
   /**
    * Runs the worker by registering the lifecycle callbacks to process incoming messages.
@@ -532,22 +527,24 @@ export class InMemoryQueueWorkerExecutor<
 
     self.addEventListener("message", async (event: Event) => {
       const e = event as MessageEvent;
-      if (
-        e.data?.type !== WORKER_EVENTS.INIT ||
-        e.data?.workerType !== this.workerType
-      ) {
+      if (e.data?.type !== WORKER_EVENTS.INIT) {
         return;
       }
 
       const {
         readable,
         context,
+        workerType,
         workerIndex,
         maxRetries = DEFAULT_MAX_RETRIES,
       } = e.data as AppToWorkerInitMessage<TContext, TMessage>;
 
+      const finishEventType = workerType === "process"
+        ? WORKER_EVENTS.PROCESSING_FINISHED
+        : WORKER_EVENTS.INSERT_FINISHED;
+
       await initHook?.(context, {
-        workerMetadata: { type: this.workerType, index: workerIndex },
+        workerMetadata: { type: workerType, index: workerIndex },
       });
 
       let isTornDown = false;
@@ -555,7 +552,7 @@ export class InMemoryQueueWorkerExecutor<
         if (!isTornDown) {
           isTornDown = true;
           await teardownHook?.(context, {
-            workerMetadata: { type: this.workerType, index: workerIndex },
+            workerMetadata: { type: workerType, index: workerIndex },
           });
         }
       };
@@ -567,10 +564,10 @@ export class InMemoryQueueWorkerExecutor<
             try {
               const result = await execute(context, batch, {
                 retryCount: attempt,
-                workerMetadata: { type: this.workerType, index: workerIndex },
+                workerMetadata: { type: workerType, index: workerIndex },
               });
               postMessage({
-                type: this.finishEventType,
+                type: finishEventType,
                 workerId: jobId,
                 payload: result as TFinishedPayload[],
               });
@@ -651,19 +648,12 @@ export function injectInMemoryQueueWorkersMediator<
 /**
  * Injects a new instance of the InMemoryQueueWorkerExecutor.
  *
- * @param workerType The type of the worker ("process" or "insert").
- * @param finishEventType The event type to emit when a batch is finished.
  * @returns A new instance of the executor.
  */
 export function injectInMemoryQueueWorkerExecutor<
   TContext = unknown,
   TMessage = unknown,
   TFinishedPayload = unknown,
->(
-  workerType: "process" | "insert",
-  finishEventType:
-    | typeof WORKER_EVENTS.PROCESSING_FINISHED
-    | typeof WORKER_EVENTS.INSERT_FINISHED,
-): InMemoryQueueWorkerExecutor<TContext, TMessage, TFinishedPayload> {
-  return new InMemoryQueueWorkerExecutor(workerType, finishEventType);
+>(): InMemoryQueueWorkerExecutor<TContext, TMessage, TFinishedPayload> {
+  return new InMemoryQueueWorkerExecutor();
 }
