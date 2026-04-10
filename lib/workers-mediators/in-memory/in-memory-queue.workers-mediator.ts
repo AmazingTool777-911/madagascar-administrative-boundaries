@@ -30,6 +30,7 @@ type AppToWorkerInitMessage<TContext, TMessage> = {
   readable: ReadableStream<WorkerReadableBatchData<TMessage>>;
   context: TContext;
   workerType: "process" | "insert";
+  workerIndex: number;
   maxRetries?: number;
 };
 
@@ -79,9 +80,11 @@ export interface InMemoryQueueWorkersMediatorOptions<
 class WorkerJob<TInputMessage, TOutputMessage> {
   private _pendingTask: Promise<void> | null = null;
   private _pendingTaskResolve: (() => void) | null = null;
-  private _outputController: ReadableStreamDefaultController<
-    TOutputMessage[]
-  > | null = null;
+  private _outputController:
+    | ReadableStreamDefaultController<
+      TOutputMessage[]
+    >
+    | null = null;
   private _outputStream: ReadableStream<TOutputMessage[]> | null = null;
   private _inputWritable: WritableStream<TInputMessage[]> | null = null;
 
@@ -92,6 +95,7 @@ class WorkerJob<TInputMessage, TOutputMessage> {
     private worker: Worker,
     private type: "process" | "insert",
     private context: unknown,
+    private workerIndex: number,
     options: WorkerJobOptions = {},
   ) {
     const { hwm = DEFAULT_WORKER_JOB_HWM, maxRetries = DEFAULT_MAX_RETRIES } =
@@ -124,6 +128,7 @@ class WorkerJob<TInputMessage, TOutputMessage> {
         readable: transform.readable,
         context: this.context,
         workerType: this.type,
+        workerIndex: this.workerIndex,
         maxRetries,
       } as AppToWorkerInitMessage<unknown, TInputMessage>,
       [transform.readable],
@@ -235,25 +240,28 @@ export class InMemoryQueueWorkersMediator<
   TProcessingFinishedPayload = unknown,
   TInsertContext = unknown,
   TInsertFinishedPayload = unknown,
-> implements QueueWorkersMediator<
-  TProcessingContext,
-  TMessage,
-  TProcessingFinishedPayload,
-  TInsertContext,
-  TInsertFinishedPayload
-> {
-  #options: Required<
-    Omit<
-      InMemoryQueueWorkersMediatorOptions<TMessage>,
-      "processingHwm" | "insertHwm" | "compareProcessingMessages"
+> implements
+  QueueWorkersMediator<
+    TProcessingContext,
+    TMessage,
+    TProcessingFinishedPayload,
+    TInsertContext,
+    TInsertFinishedPayload
+  > {
+  #options:
+    & Required<
+      Omit<
+        InMemoryQueueWorkersMediatorOptions<TMessage>,
+        "processingHwm" | "insertHwm" | "compareProcessingMessages"
+      >
     >
-  > & {
-    processingHwm?: number;
-    insertHwm?: number;
-    compareProcessingMessages?: InMemoryQueueWorkersMediatorOptions<
-      TMessage
-    >["compareProcessingMessages"];
-  };
+    & {
+      processingHwm?: number;
+      insertHwm?: number;
+      compareProcessingMessages?: InMemoryQueueWorkersMediatorOptions<
+        TMessage
+      >["compareProcessingMessages"];
+    };
 
   /**
    * Initializes a new instance of the InMemoryQueueWorkersMediator.
@@ -301,8 +309,7 @@ export class InMemoryQueueWorkersMediator<
       : workers.processing;
     const workersCount = processingWorkers.length;
 
-    const isSplitContext =
-      context &&
+    const isSplitContext = context &&
       typeof context === "object" &&
       ("processing" in context || "insert" in context);
 
@@ -315,11 +322,12 @@ export class InMemoryQueueWorkersMediator<
       : (undefined as unknown as TInsertContext);
 
     const processingJobs = processingWorkers.map(
-      (w) =>
+      (w, i) =>
         new WorkerJob<TMessage, TProcessingFinishedPayload>(
           w,
           "process",
           processingContext,
+          i,
           { hwm: this.#options.processingHwm, maxRetries },
         ),
     );
@@ -400,15 +408,17 @@ export class InMemoryQueueWorkersMediator<
     const processingWritingPipeline = messagesReadable.pipeTo(assignerWritable);
 
     let insertWritingPipeline: Promise<void> | null = null;
-    let insertJob: WorkerJob<
-      TProcessingFinishedPayload,
-      TInsertFinishedPayload
-    > | null = null;
+    let insertJob:
+      | WorkerJob<
+        TProcessingFinishedPayload,
+        TInsertFinishedPayload
+      >
+      | null = null;
 
     const insertWorker = Array.isArray(workers) ? undefined : workers.insert;
 
     if (insertWorker) {
-      insertJob = new WorkerJob(insertWorker, "insert", insertContext, {
+      insertJob = new WorkerJob(insertWorker, "insert", insertContext, 0, {
         hwm: this.#options.insertHwm,
         maxRetries,
       });
@@ -516,30 +526,37 @@ export class InMemoryQueueWorkerExecutor<
   ): void {
     const execute = typeof handler === "function" ? handler : handler.execute;
     const initHook = typeof handler === "object" ? handler.init : undefined;
-    const teardownHook =
-      typeof handler === "object" ? handler.teardown : undefined;
+    const teardownHook = typeof handler === "object"
+      ? handler.teardown
+      : undefined;
 
     self.addEventListener("message", async (event: Event) => {
       const e = event as MessageEvent;
       if (
         e.data?.type !== WORKER_EVENTS.INIT ||
         e.data?.workerType !== this.workerType
-      )
+      ) {
         return;
+      }
 
       const {
         readable,
         context,
+        workerIndex,
         maxRetries = DEFAULT_MAX_RETRIES,
       } = e.data as AppToWorkerInitMessage<TContext, TMessage>;
 
-      await initHook?.(context);
+      await initHook?.(context, {
+        workerMetadata: { type: this.workerType, index: workerIndex },
+      });
 
       let isTornDown = false;
       const safeTeardown = async () => {
         if (!isTornDown) {
           isTornDown = true;
-          await teardownHook?.(context);
+          await teardownHook?.(context, {
+            workerMetadata: { type: this.workerType, index: workerIndex },
+          });
         }
       };
 
@@ -550,6 +567,7 @@ export class InMemoryQueueWorkerExecutor<
             try {
               const result = await execute(context, batch, {
                 retryCount: attempt,
+                workerMetadata: { type: this.workerType, index: workerIndex },
               });
               postMessage({
                 type: this.finishEventType,
@@ -565,7 +583,7 @@ export class InMemoryQueueWorkerExecutor<
               }
               // Wait backoff before retrying
               await new Promise((resolve) =>
-                setTimeout(resolve, 2 ** attempt * 100),
+                setTimeout(resolve, 2 ** attempt * 100)
               );
             }
           }
@@ -580,13 +598,15 @@ export class InMemoryQueueWorkerExecutor<
   }
 }
 
-let _instance: InMemoryQueueWorkersMediator<
-  unknown,
-  object,
-  unknown,
-  unknown,
-  unknown
-> | null = null;
+let _instance:
+  | InMemoryQueueWorkersMediator<
+    unknown,
+    object,
+    unknown,
+    unknown,
+    unknown
+  >
+  | null = null;
 
 /**
  * Injects a singleton instance of the InMemoryQueueWorkersMediator.
@@ -609,7 +629,9 @@ export function injectInMemoryQueueWorkersMediator<
   TInsertFinishedPayload
 > {
   if (!_instance) {
-    _instance = new InMemoryQueueWorkersMediator(options) as unknown as InMemoryQueueWorkersMediator<
+    _instance = new InMemoryQueueWorkersMediator(
+      options,
+    ) as unknown as InMemoryQueueWorkersMediator<
       unknown,
       object,
       unknown,
