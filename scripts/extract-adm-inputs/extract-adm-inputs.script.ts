@@ -1,6 +1,11 @@
 import { parseArgs } from "@std/cli";
 import { injectPostgresDbConnection } from "@scope/adapters/postgres";
 import { injectRedisConnection } from "@scope/redis";
+import {
+  InMemory,
+  type QueueWorkersMediator,
+  Redis,
+} from "@scope/lib/workers-mediators";
 import { DbType } from "@scope/consts/db";
 import { CliArgsEnvResolvers } from "@scope/helpers";
 
@@ -46,6 +51,18 @@ interface RedisCliArgs {
   ssl?: boolean;
 }
 
+/**
+ * Parsed CLI arguments for the worker mediators configuration.
+ */
+interface MediatorCliArgs {
+  queueBatchSize?: number;
+  queueMaxRetries?: number;
+  inMemoryProcessingHwm?: number;
+  inMemoryInsertHwm?: number;
+  workerHealthcheckInterval?: number;
+  workerPendingMinDurationThreshold?: number;
+}
+
 const args = parseArgs(Deno.args, {
   string: [
     "url",
@@ -57,6 +74,12 @@ const args = parseArgs(Deno.args, {
     "redis-host",
     "redis-username",
     "redis-password",
+    "queue-batch-size",
+    "queue-max-retries",
+    "in-memory-processing-hwm",
+    "in-memory-insert-hwm",
+    "worker-healthcheck-interval",
+    "worker-pending-min-duration-threshold",
   ],
   boolean: ["ssl", "disable-redis", "redis-ssl"],
   default: {},
@@ -131,6 +154,34 @@ const redisCliArgs: RedisCliArgs = {
   ),
 };
 
+// 3. Resolve Mediator Parameters
+const mediatorCliArgs: MediatorCliArgs = {
+  queueBatchSize: CliArgsEnvResolvers.resolveOptionalNumber(
+    args["queue-batch-size"] as number | undefined,
+    "QUEUE_BATCH_SIZE",
+  ),
+  queueMaxRetries: CliArgsEnvResolvers.resolveOptionalNumber(
+    args["queue-max-retries"] as number | undefined,
+    "QUEUE_MAX_RETRIES",
+  ),
+  inMemoryProcessingHwm: CliArgsEnvResolvers.resolveOptionalNumber(
+    args["in-memory-processing-hwm"] as number | undefined,
+    "IN_MEMORY_PROCESSING_HWM",
+  ),
+  inMemoryInsertHwm: CliArgsEnvResolvers.resolveOptionalNumber(
+    args["in-memory-insert-hwm"] as number | undefined,
+    "IN_MEMORY_INSERT_HWM",
+  ),
+  workerHealthcheckInterval: CliArgsEnvResolvers.resolveOptionalNumber(
+    args["worker-healthcheck-interval"] as number | undefined,
+    "WORKER_HEALTHCHECK_INTERVAL",
+  ),
+  workerPendingMinDurationThreshold: CliArgsEnvResolvers.resolveOptionalNumber(
+    args["worker-pending-min-duration-threshold"] as number | undefined,
+    "WORKER_PENDING_MIN_DURATION_THRESHOLD",
+  ),
+};
+
 const pg = injectPostgresDbConnection();
 const redis = injectRedisConnection();
 
@@ -162,34 +213,66 @@ try {
   }
   console.log("✅ PostgreSQL connection successful.");
 
+  // deno-lint-ignore no-unused-vars -- Set up for upcoming business logic
+  let mediator: QueueWorkersMediator;
+
   // 4. Optionally Establish Redis Connection
   if (!redisCliArgs.disableRedis) {
-    if (redisCliArgs.url) {
+    const redisConfig = redisCliArgs.url ? redisCliArgs.url : {
+      host: redisCliArgs.host,
+      port: redisCliArgs.port,
+      username: redisCliArgs.username,
+      password: redisCliArgs.password,
+      db: redisCliArgs.db,
+      ssl: redisCliArgs.ssl,
+    };
+
+    if (typeof redisConfig === "string") {
       console.log("\nConnecting to Redis via URL...");
-      console.log(`  URL : ${redisCliArgs.url}`);
-      await redis.connect(redisCliArgs.url);
+      console.log(`  URL : ${redisConfig}`);
     } else {
       console.log("\nConnecting to Redis via config...");
-      console.log(`  Host : ${redisCliArgs.host}`);
-      console.log(`  Port : ${redisCliArgs.port}`);
-      if (redisCliArgs.username) {
-        console.log(`  User : ${redisCliArgs.username}`);
+      console.log(`  Host : ${redisConfig.host}`);
+      console.log(`  Port : ${redisConfig.port}`);
+      if (redisConfig.username) {
+        console.log(`  User : ${redisConfig.username}`);
       }
-      console.log(`  DB   : ${redisCliArgs.db}`);
-      console.log(`  SSL  : ${redisCliArgs.ssl ?? "false"}`);
-
-      await redis.connect({
-        host: redisCliArgs.host,
-        port: redisCliArgs.port,
-        username: redisCliArgs.username,
-        password: redisCliArgs.password,
-        db: redisCliArgs.db,
-        ssl: redisCliArgs.ssl,
-      });
+      console.log(`  DB   : ${redisConfig.db}`);
+      console.log(`  SSL  : ${redisConfig.ssl ?? "false"}`);
     }
+
+    await redis.connect(redisConfig);
     console.log("✅ Redis connection successful.");
+
+    mediator = Redis.injectRedisQueueWorkersMediator(
+      redis.client!,
+      redisConfig,
+      {
+        processingContextKey: "extract-adm:processing:context",
+        processingStreamKey: "extract-adm:processing:stream",
+        insertContextKey: "extract-adm:insert:context",
+        insertStreamKey: "extract-adm:insert:stream",
+        processingConsumerGroupName: "extract-adm:processing-group",
+        insertConsumerGroupName: "extract-adm:insert-group",
+        persistedLastMessageKey: "extract-adm:persisted-last:message",
+        persistedLastInsertMessageKey:
+          "extract-adm:persisted-last-insert:message",
+        processingDlqStreamKey: "extract-adm:processing:dlq",
+        insertDlqStreamKey: "extract-adm:insert:dlq",
+        healthcheckInterval: mediatorCliArgs.workerHealthcheckInterval,
+        pendingMinDurationThreshold:
+          mediatorCliArgs.workerPendingMinDurationThreshold,
+      },
+    );
+    console.log("✅ Redis Queue Workers Mediator initialized.");
   } else {
     console.log("\nℹ️  Redis connection disabled. Skipping...");
+
+    mediator = InMemory.injectInMemoryQueueWorkersMediator({
+      processingHwm: mediatorCliArgs.inMemoryProcessingHwm,
+      insertHwm: mediatorCliArgs.inMemoryInsertHwm,
+    });
+    console.log("✅ In-Memory Queue Workers Mediator initialized.");
   }
 
   // Business Logic placeholder

@@ -49,6 +49,22 @@ export function resolveNumber(
 }
 
 /**
+ * Resolves an optional numeric value from a CLI flag first, falling back to an
+ * environment variable.
+ *
+ * @param flag - The value supplied via the CLI flag (may be undefined).
+ * @param envKey - The name of the environment variable to fall back to.
+ * @returns The resolved numeric value, or `undefined` when neither source provides one.
+ */
+export function resolveOptionalNumber(
+  flag: number | undefined,
+  envKey: string,
+): number | undefined {
+  const raw = Deno.env.get(envKey);
+  return flag ?? (raw !== undefined ? Number(raw) : undefined);
+}
+
+/**
  * Resolves a boolean value from a CLI flag first, falling back to an
  * environment variable.
  *
