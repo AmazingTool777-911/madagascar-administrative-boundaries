@@ -1,5 +1,4 @@
 import { parseArgs } from "@std/cli";
-import { injectPostgresDbConnection } from "@scope/adapters/postgres";
 import { injectRedisConnection } from "@scope/redis";
 import {
   InMemory,
@@ -8,6 +7,17 @@ import {
 } from "@scope/lib/workers-mediators";
 import { DbType } from "@scope/consts/db";
 import { CliArgsEnvResolvers } from "@scope/helpers";
+import type { MadaAdmConfigValues } from "@scope/types/models";
+import type { TableDDL } from "@scope/types/db";
+import {
+  injectCommunesPostgresDDL,
+  injectDistrictsPostgresDDL,
+  injectFokontanysPostgresDDL,
+  injectMadaAdmConfigPostgresDDL,
+  injectPostgresDbConnection,
+  injectProvincesPostgresDDL,
+  injectRegionsPostgresDDL,
+} from "@scope/adapters/postgres";
 
 /**
  * Parsed CLI arguments for the PostgreSQL connection.
@@ -185,6 +195,15 @@ const mediatorCliArgs: MediatorCliArgs = {
 const pg = injectPostgresDbConnection();
 const redis = injectRedisConnection();
 
+const config: MadaAdmConfigValues = {
+  tablesPrefix: "extract_adm",
+  isFkRepeated: false,
+  isProvinceRepeated: true,
+  isProvinceFkRepeated: false,
+  hasGeojson: true,
+  hasAdmLevel: false,
+};
+
 try {
   // 3. Establish PostgreSQL Connection
   if (pgParams.url) {
@@ -212,6 +231,10 @@ try {
     });
   }
   console.log("✅ PostgreSQL connection successful.");
+
+  // Ensure PostGIS extension is enabled for spatial data support
+  console.log("  Enabling PostGIS extension...");
+  await pg.client.queryObject("CREATE EXTENSION IF NOT EXISTS postgis;");
 
   // deno-lint-ignore no-unused-vars -- Set up for upcoming business logic
   let mediator: QueueWorkersMediator;
@@ -275,8 +298,29 @@ try {
     console.log("✅ In-Memory Queue Workers Mediator initialized.");
   }
 
-  // Business Logic placeholder
+  // 5. Initialize and create ADM Level tables
   console.log("\n🚀 Proceeding with extracting ADM inputs...");
+
+  const ddls: TableDDL[] = [
+    injectMadaAdmConfigPostgresDDL(),
+    injectProvincesPostgresDDL(config),
+    injectRegionsPostgresDDL(config),
+    injectDistrictsPostgresDDL(config),
+    injectCommunesPostgresDDL(config),
+    injectFokontanysPostgresDDL(config),
+  ];
+
+  // Drop tables in reverse order to respect foreign key constraints
+  for (const ddl of [...ddls].reverse()) {
+    console.log(`  Dropping table: ${ddl.tableName}...`);
+    await ddl.drop();
+  }
+
+  // Create tables in order Level 0 to 4
+  for (const ddl of ddls) {
+    console.log(`  Creating table: ${ddl.tableName}...`);
+    await ddl.create();
+  }
 } catch (err) {
   console.error(`\n❌ Fatal Error: ${(err as Error).message}`);
   Deno.exit(1);

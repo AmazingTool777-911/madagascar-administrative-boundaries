@@ -3,64 +3,75 @@ trigger: model_decision
 description: Apply this rule whenever creating or modifying a workspace package, its deno.json exports, or its root index.ts barrel file
 ---
 
-# Workspace Barrel Imports with Namespaces
+# Workspace Barrel Files with Namespaces
 
-Always use barrel imports for workspace packages to keep the entry points clean
-and predictable. Specialized internal modules within a package should be grouped
-and exported via a namespace identifier for better discoverability and to avoid
-name collisions.
+Every workspace package must maintain a root `index.ts` that provides a
+namespaced export of its internal modules. This ensuring consistent structure
+and discoverability across the repository.
 
-## Rule
+---
 
-1. **Entry Point**: Every workspace package MUST contain an `index.ts` at its
-   root.
-2. **Deno Configuration**: The `deno.json` `exports` field MUST point to
-   `./index.ts`.
-3. **Namespace Export**: Inside `index.ts`, group each logical module into a
-   namespace variable using the `import * as` syntax, and then export that
-   variable.
+## Rule: Mandatory Barrel File
+
+1. **Existence**: Every workspace package MUST contain an `index.ts` at its root.
+2. **Deno Configuration**: The `deno.json` `exports` field MUST include the root entry point (e.g., `".": "./index.ts"`).
+3. **Namespace Grouping**: Inside `index.ts`, group internal modules into namespace identifiers using the `import * as` syntax, and then export them.
+
+## Rule: Preferred Import Style
+
+**The existence of a namespaced barrel file does NOT change the import preference.**
+
+- **Always prefer sub-path imports**: If a package exposes a specific module via a sub-path in its `deno.json` (e.g., `@scope/package/module`), use that sub-path directly.
+- **Namespace fallback**: Use the namespaced root import (`import { Module } from "@scope/package"`) only if the package does not expose the desired module as a standalone sub-path.
+
+---
 
 ## Example
 
 ### Package Structure
-
 ```text
-helpers/
+adapters/
 ├── deno.json
 ├── index.ts
-└── cli-args-env-resolvers.helper.ts
+└── postgres/
+    └── index.ts
 ```
 
-### helpers/deno.json
-
+### adapters/deno.json
 ```json
 {
-  "name": "@scope/helpers",
-  "exports": "./index.ts"
+  "name": "@scope/adapters",
+  "exports": {
+    ".": "./index.ts",
+    "./postgres": "./postgres/index.ts"
+  }
 }
 ```
 
-### helpers/index.ts
-
+### adapters/index.ts
 ```ts
-import * as CliArgsEnvResolvers from "./cli-args-env-resolvers.helper.ts";
+import * as Postgres from "./postgres/index.ts";
 
-export { CliArgsEnvResolvers };
+export { Postgres };
 ```
 
-### Usage
-
+### Preferred Usage (Sub-path)
 ```ts
-import { CliArgsEnvResolvers } from "@scope/helpers";
-
-const dbPath = CliArgsEnvResolvers.resolveString(args.path, "DB_PATH", "./db");
+// PREFERRED: Direct sub-path import
+import { injectPostgresDbConnection } from "@scope/adapters/postgres";
 ```
+
+### Alternative Usage (Namespace)
+```ts
+// Use namespaced root import only if necessary
+import { Postgres } from "@scope/adapters";
+Postgres.injectPostgresDbConnection();
+```
+
+---
 
 ## Rationale
 
-- **Discoverability**: Grouped exports allow users of the package to see all
-  related functions via IntelliSense completion after typing the namespace name.
-- **Collision Avoidance**: Generic function names like `resolveString` are
-  protected from colliding with other imports or local variables.
-- **Maintainability**: Adding new modules only requires a single new line in
-  `index.ts`.
+- **Internal Organization**: The `index.ts` file serves as a map of the package's internal structure using namespaces, which helps avoid name collisions within the barrel itself.
+- **Discoverability**: Grouped exports in `index.ts` allow for easy exploration of a package's capabilities via IntelliSense.
+- **Performance & Clarity**: Preferring sub-path imports (as defined in `deno.json`) ensures that only the necessary code is loaded and makes dependencies more explicit.

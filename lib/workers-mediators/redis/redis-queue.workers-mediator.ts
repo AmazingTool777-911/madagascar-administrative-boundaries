@@ -224,23 +224,28 @@ export class RedisQueueWorkersMediator<
   TProcessingFinishedPayload = unknown,
   TInsertContext = unknown,
   TInsertFinishedPayload = unknown,
-> implements QueueWorkersMediator<
-  TProcessingContext,
-  TMessage,
-  TProcessingFinishedPayload,
-  TInsertContext,
-  TInsertFinishedPayload
-> {
+> implements
+  QueueWorkersMediator<
+    TProcessingContext,
+    TMessage,
+    TProcessingFinishedPayload,
+    TInsertContext,
+    TInsertFinishedPayload
+  > {
   #client: RedisClient;
   #redisConfig: RedisConnectionParams;
-  #options: Required<
-    Omit<
-      RedisQueueWorkersMediatorOptions<TMessage>,
-      "compareProcessingMessages"
+  #options:
+    & Required<
+      Omit<
+        RedisQueueWorkersMediatorOptions<TMessage>,
+        "compareProcessingMessages"
+      >
     >
-  > & {
-    compareProcessingMessages?: RedisQueueWorkersMediatorOptions<TMessage>["compareProcessingMessages"];
-  };
+    & {
+      compareProcessingMessages?: RedisQueueWorkersMediatorOptions<
+        TMessage
+      >["compareProcessingMessages"];
+    };
   #processingExecutions: RedisQueueWorkerExecution<
     TProcessingContext,
     TMessage,
@@ -267,32 +272,29 @@ export class RedisQueueWorkersMediator<
     this.#client = client;
     this.#redisConfig = redisConfig;
     this.#options = {
-      processingContextKey:
-        options.processingContextKey ?? DEFAULT_PROCESSING_CONTEXT_KEY,
-      processingStreamKey:
-        options.processingStreamKey ?? DEFAULT_PROCESSING_STREAM_KEY,
+      processingContextKey: options.processingContextKey ??
+        DEFAULT_PROCESSING_CONTEXT_KEY,
+      processingStreamKey: options.processingStreamKey ??
+        DEFAULT_PROCESSING_STREAM_KEY,
       insertContextKey: options.insertContextKey ?? DEFAULT_INSERT_CONTEXT_KEY,
       insertStreamKey: options.insertStreamKey ?? DEFAULT_INSERT_STREAM_KEY,
-      xreadBlockDuration:
-        options.xreadBlockDuration ?? DEFAULT_XREAD_BLOCK_DURATION,
-      processingConsumerGroupName:
-        options.processingConsumerGroupName ??
+      xreadBlockDuration: options.xreadBlockDuration ??
+        DEFAULT_XREAD_BLOCK_DURATION,
+      processingConsumerGroupName: options.processingConsumerGroupName ??
         DEFAULT_PROCESSING_CONSUMER_GROUP_NAME,
-      insertConsumerGroupName:
-        options.insertConsumerGroupName ?? DEFAULT_INSERT_CONSUMER_GROUP_NAME,
-      persistedLastMessageKey:
-        options.persistedLastMessageKey ?? DEFAULT_PERSISTED_LAST_MESSAGE_KEY,
-      persistedLastInsertMessageKey:
-        options.persistedLastInsertMessageKey ??
+      insertConsumerGroupName: options.insertConsumerGroupName ??
+        DEFAULT_INSERT_CONSUMER_GROUP_NAME,
+      persistedLastMessageKey: options.persistedLastMessageKey ??
+        DEFAULT_PERSISTED_LAST_MESSAGE_KEY,
+      persistedLastInsertMessageKey: options.persistedLastInsertMessageKey ??
         DEFAULT_PERSISTED_LAST_INSERT_MESSAGE_KEY,
-      processingDlqStreamKey:
-        options.processingDlqStreamKey ?? DEFAULT_PROCESSING_DLQ_STREAM_KEY,
-      insertDlqStreamKey:
-        options.insertDlqStreamKey ?? DEFAULT_INSERT_DLQ_STREAM_KEY,
-      healthcheckInterval:
-        options.healthcheckInterval ?? DEFAULT_HEALTHCHECK_INTERVAL,
-      pendingMinDurationThreshold:
-        options.pendingMinDurationThreshold ??
+      processingDlqStreamKey: options.processingDlqStreamKey ??
+        DEFAULT_PROCESSING_DLQ_STREAM_KEY,
+      insertDlqStreamKey: options.insertDlqStreamKey ??
+        DEFAULT_INSERT_DLQ_STREAM_KEY,
+      healthcheckInterval: options.healthcheckInterval ??
+        DEFAULT_HEALTHCHECK_INTERVAL,
+      pendingMinDurationThreshold: options.pendingMinDurationThreshold ??
         DEFAULT_PENDING_MIN_DURATION_THRESHOLD,
       compareProcessingMessages: options.compareProcessingMessages,
     };
@@ -327,8 +329,7 @@ export class RedisQueueWorkersMediator<
       : workers.processing;
     const insertWorker = Array.isArray(workers) ? undefined : workers.insert;
 
-    const isSplitContext =
-      context &&
+    const isSplitContext = context &&
       typeof context === "object" &&
       ("processing" in context || "insert" in context);
     const processingContext = isSplitContext
@@ -380,17 +381,17 @@ export class RedisQueueWorkersMediator<
     // 3. Create a readable stream that stream the messages in batches
     const messagesStream = Array.isArray(messages)
       ? (() => {
-          let index = 0;
-          return new ReadableStream<TMessage>({
-            pull(controller) {
-              if (index < messages.length) {
-                controller.enqueue(messages[index++]);
-              } else {
-                controller.close();
-              }
-            },
-          });
-        })()
+        let index = 0;
+        return new ReadableStream<TMessage>({
+          pull(controller) {
+            if (index < messages.length) {
+              controller.enqueue(messages[index++]);
+            } else {
+              controller.close();
+            }
+          },
+        });
+      })()
       : messages;
 
     const batcher = (() => {
@@ -520,11 +521,13 @@ export class RedisQueueWorkersMediator<
 
       processingExecutions.forEach((exec) => exec.init());
 
-      let insertExecution: RedisQueueWorkerExecution<
-        TInsertContext,
-        TProcessingFinishedPayload,
-        TInsertFinishedPayload
-      > | null = null;
+      let insertExecution:
+        | RedisQueueWorkerExecution<
+          TInsertContext,
+          TProcessingFinishedPayload,
+          TInsertFinishedPayload
+        >
+        | null = null;
 
       if (insertWorker) {
         insertExecution = new RedisQueueWorkerExecution<
@@ -618,10 +621,10 @@ export class RedisQueueWorkersMediator<
       );
       const insertIsNonEmpty = insertExecution
         ? await checkStreamActivity(
-            this.#options.insertStreamKey,
-            this.#options.insertDlqStreamKey,
-            this.#options.insertConsumerGroupName,
-          )
+          this.#options.insertStreamKey,
+          this.#options.insertDlqStreamKey,
+          this.#options.insertConsumerGroupName,
+        )
         : false;
 
       if (processingIsNonEmpty || insertIsNonEmpty) {
@@ -724,8 +727,9 @@ export class RedisQueueWorkerExecutor<
   ): void {
     const init = typeof handler === "function" ? undefined : handler.init;
     const execute = typeof handler === "function" ? handler : handler.execute;
-    const teardown =
-      typeof handler === "function" ? undefined : handler.teardown;
+    const teardown = typeof handler === "function"
+      ? undefined
+      : handler.teardown;
 
     self.addEventListener("message", async (event) => {
       const {
@@ -744,21 +748,20 @@ export class RedisQueueWorkerExecutor<
       await redis.connect(redisConfig);
       const client = redis.client;
 
-      const streamKey =
-        workerType === "process"
-          ? mediatorOptions.processingStreamKey
-          : mediatorOptions.insertStreamKey;
-      const groupName =
-        workerType === "process"
-          ? mediatorOptions.processingConsumerGroupName
-          : mediatorOptions.insertConsumerGroupName;
-      const consumerName = `worker-${workerMetadata.type}-${workerMetadata.index}`;
-      const dlqKey =
-        workerType === "process"
-          ? mediatorOptions.processingDlqStreamKey
-          : mediatorOptions.insertDlqStreamKey;
-      const nextStreamKey =
-        workerType === "process" ? mediatorOptions.insertStreamKey : null;
+      const streamKey = workerType === "process"
+        ? mediatorOptions.processingStreamKey
+        : mediatorOptions.insertStreamKey;
+      const groupName = workerType === "process"
+        ? mediatorOptions.processingConsumerGroupName
+        : mediatorOptions.insertConsumerGroupName;
+      const consumerName =
+        `worker-${workerMetadata.type}-${workerMetadata.index}`;
+      const dlqKey = workerType === "process"
+        ? mediatorOptions.processingDlqStreamKey
+        : mediatorOptions.insertDlqStreamKey;
+      const nextStreamKey = workerType === "process"
+        ? mediatorOptions.insertStreamKey
+        : null;
 
       const ensureGroup = async (key: string, group: string) => {
         try {
@@ -785,10 +788,9 @@ export class RedisQueueWorkerExecutor<
       await ensureGroup(streamKey, groupName);
       await ensureGroup(dlqKey, groupName);
 
-      const contextKey =
-        workerType === "process"
-          ? mediatorOptions.processingContextKey
-          : mediatorOptions.insertContextKey;
+      const contextKey = workerType === "process"
+        ? mediatorOptions.processingContextKey
+        : mediatorOptions.insertContextKey;
       const contextRaw = (await client.sendCommand(["GET", contextKey])) as
         | string
         | null;
@@ -994,10 +996,9 @@ export class RedisQueueWorkerExecutor<
 
           // Evaluate termination
           const lag = await getLag(client, streamKey, groupName);
-          const producerKey =
-            workerType === "process"
-              ? mediatorOptions.persistedLastMessageKey
-              : mediatorOptions.persistedLastInsertMessageKey;
+          const producerKey = workerType === "process"
+            ? mediatorOptions.persistedLastMessageKey
+            : mediatorOptions.persistedLastInsertMessageKey;
           const producerExists = (await client.sendCommand([
             "EXISTS",
             producerKey,
@@ -1029,18 +1030,20 @@ export class RedisQueueWorkerExecutor<
   }
 }
 
-let _instance: RedisQueueWorkersMediator<
-  // deno-lint-ignore no-explicit-any
-  any,
-  // deno-lint-ignore no-explicit-any
-  any,
-  // deno-lint-ignore no-explicit-any
-  any,
-  // deno-lint-ignore no-explicit-any
-  any,
-  // deno-lint-ignore no-explicit-any
-  any
-> | null = null;
+let _instance:
+  | RedisQueueWorkersMediator<
+    // deno-lint-ignore no-explicit-any
+    any,
+    // deno-lint-ignore no-explicit-any
+    any,
+    // deno-lint-ignore no-explicit-any
+    any,
+    // deno-lint-ignore no-explicit-any
+    any,
+    // deno-lint-ignore no-explicit-any
+    any
+  >
+  | null = null;
 
 export function injectRedisQueueWorkersMediator<
   TProcessingContext = unknown,

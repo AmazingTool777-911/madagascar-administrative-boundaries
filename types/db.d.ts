@@ -61,3 +61,10 @@ export interface PostgresConnectionParams {
  * Initially supports only PostgreSQL.
  */
 export type DbConnectionParams = PostgresConnectionParams;
+
+export interface TableDDL {
+  /** The physical database table name. */
+  readonly tableName: string;
+  create(): MaybePromise<void>;
+  drop(): MaybePromise<void>;
+}

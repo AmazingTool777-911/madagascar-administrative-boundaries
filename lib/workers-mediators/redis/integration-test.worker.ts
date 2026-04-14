@@ -4,16 +4,26 @@ import { injectRedisQueueWorkerExecutor } from "./redis-queue.workers-mediator.t
 /**
  * A simple worker that performs an identity transformation for integration testing.
  */
-interface TestMessage { id: string }
-interface TestPayload { id: string; integrated: boolean; timestamp: number }
+interface TestMessage {
+  id: string;
+}
+interface TestPayload {
+  id: string;
+  integrated: boolean;
+  timestamp: number;
+}
 
-const executor = injectRedisQueueWorkerExecutor<unknown, TestMessage, TestPayload>();
+const executor = injectRedisQueueWorkerExecutor<
+  unknown,
+  TestMessage,
+  TestPayload
+>();
 
 executor.run((_context, batch, _extra) => {
   // Identity transformation: return what we received
-  return batch.map(msg => ({ 
-    ...msg, 
+  return batch.map((msg) => ({
+    ...msg,
     integrated: true,
-    timestamp: Date.now() 
+    timestamp: Date.now(),
   }));
 });

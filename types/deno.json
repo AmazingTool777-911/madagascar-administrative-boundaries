@@ -4,6 +4,7 @@
   "exports": {
     ".": "./index.d.ts",
     "./db": "./db.d.ts",
-    "./utils": "./utils.d.ts"
+    "./utils": "./utils.d.ts",
+    "./models": "./models.d.ts"
   }
 }

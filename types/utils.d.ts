@@ -12,13 +12,13 @@ export type GeoJSONGeometry<T extends Record<string, unknown>> = {
     type: "Feature";
     geometry:
       | {
-          type: "Polygon";
-          coordinates: number[][][];
-        }
+        type: "Polygon";
+        coordinates: number[][][];
+      }
       | {
-          type: "MultiPolygon";
-          coordinates: number[][][][];
-        };
+        type: "MultiPolygon";
+        coordinates: number[][][][];
+      };
     properties: T;
   }[];
 };

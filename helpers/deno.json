@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "exports": {
     ".": "./index.ts",
-    "./cli-args-env-resolvers": "./cli-args-env-resolvers.helper.ts"
+    "./cli-args-env-resolvers": "./cli-args-env-resolvers.helper.ts",
+    "./models": "./models.helper.ts"
   }
 }

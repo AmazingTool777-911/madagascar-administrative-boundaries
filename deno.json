@@ -13,10 +13,12 @@
   "workspace": [
     "./consts",
     "./types",
+    "./db",
     "./adapters",
     "./helpers",
     "./redis",
-    "./lib"
+    "./lib",
+    "./utils"
   ],
   "compilerOptions": {
     "lib": [

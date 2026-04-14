@@ -3,6 +3,7 @@
   "version": "0.0.1",
   "exports": {
     ".": "./index.ts",
-    "./db": "./db.consts.ts"
+    "./db": "./db.consts.ts",
+    "./models": "./models.consts.ts"
   }
 }
