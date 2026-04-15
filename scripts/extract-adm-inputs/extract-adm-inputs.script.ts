@@ -8,7 +8,7 @@ import {
 import { DbType } from "@scope/consts/db";
 import { CliArgsEnvResolvers } from "@scope/helpers";
 import type { MadaAdmConfigValues } from "@scope/types/models";
-import type { TableDDL } from "@scope/types/db";
+import type { PostgresConnectionParams, TableDDL } from "@scope/types/db";
 import {
   injectCommunesPostgresDDL,
   injectDistrictsPostgresDDL,
@@ -17,6 +17,8 @@ import {
   injectProvincesPostgresDDL,
   injectRegionsPostgresDDL,
 } from "@scope/adapters/postgres";
+import type { ExtractAdmInputJobContext } from "./extract-adm-input.d.ts";
+import { AdmLevelCode } from "@scope/consts/models";
 
 /**
  * Parsed CLI arguments for the PostgreSQL connection.
@@ -216,21 +218,22 @@ const config: MadaAdmConfigValues = {
   hasAdmLevel: false,
 };
 
+let pgConnectionParams: PostgresConnectionParams;
 try {
   // 3. Establish PostgreSQL Connection
   if (pgParams.url) {
-    console.log("Connecting to PostgreSQL database via URL...");
-    console.log(`  URL : ${pgParams.url}`);
-    await pg.connect({ dbType: DbType.Postgres, connection: pgParams.url });
+    console.log("🐘 Connecting to PostgreSQL database via URL...");
+    console.log(`   URL: ${pgParams.url}`);
+    pgConnectionParams = { dbType: DbType.Postgres, connection: pgParams.url };
   } else {
-    console.log("Connecting to PostgreSQL database via config...");
-    console.log(`  Host     : ${pgParams.host}`);
-    console.log(`  Port     : ${pgParams.port}`);
-    console.log(`  User     : ${pgParams.username}`);
-    console.log(`  Database : ${pgParams.database}`);
-    console.log(`  SSL      : ${pgParams.ssl ?? "false"}`);
+    console.log("🐘 Connecting to PostgreSQL database via configuration...");
+    console.log(`   Host:     ${pgParams.host}`);
+    console.log(`   Port:     ${pgParams.port}`);
+    console.log(`   User:     ${pgParams.username}`);
+    console.log(`   Database: ${pgParams.database}`);
+    console.log(`   SSL:      ${pgParams.ssl ?? "false"}`);
 
-    await pg.connect({
+    pgConnectionParams = {
       dbType: DbType.Postgres,
       connection: {
         host: pgParams.host,
@@ -240,46 +243,44 @@ try {
         database: pgParams.database,
         ssl: pgParams.ssl,
       },
-    });
+    };
   }
-  console.log("✅ PostgreSQL connection successful.");
+  await pg.connect(pgConnectionParams);
+  console.log("✅ PostgreSQL connection established.");
 
   // Ensure PostGIS extension is enabled for spatial data support
-  console.log("  Enabling PostGIS extension...");
+  console.log("🛰️  Enabling PostGIS extension...");
   await pg.client.queryObject("CREATE EXTENSION IF NOT EXISTS postgis;");
 
-  // deno-lint-ignore no-unused-vars -- Set up for upcoming business logic
-  let mediator: QueueWorkersMediator;
+  let mediator: QueueWorkersMediator<ExtractAdmInputJobContext>;
 
   // 4. Optionally Establish Redis Connection
   if (!redisCliArgs.disableRedis) {
-    const redisConfig = redisCliArgs.url
-      ? redisCliArgs.url
-      : {
-          host: redisCliArgs.host,
-          port: redisCliArgs.port,
-          username: redisCliArgs.username,
-          password: redisCliArgs.password,
-          db: redisCliArgs.db,
-          ssl: redisCliArgs.ssl,
-        };
+    const redisConfig = redisCliArgs.url ? redisCliArgs.url : {
+      host: redisCliArgs.host,
+      port: redisCliArgs.port,
+      username: redisCliArgs.username,
+      password: redisCliArgs.password,
+      db: redisCliArgs.db,
+      ssl: redisCliArgs.ssl,
+    };
 
     if (typeof redisConfig === "string") {
-      console.log("\nConnecting to Redis via URL...");
-      console.log(`  URL : ${redisConfig}`);
+      console.log("\n🔴 Connecting to Redis via URL...");
+      console.log(`   URL: ${redisConfig}`);
     } else {
-      console.log("\nConnecting to Redis via config...");
-      console.log(`  Host : ${redisConfig.host}`);
-      console.log(`  Port : ${redisConfig.port}`);
+      console.log("\n🔴 Connecting to Redis via configuration...");
+      console.log(`   Host: ${redisConfig.host}`);
+      console.log(`   Port: ${redisConfig.port}`);
       if (redisConfig.username) {
-        console.log(`  User : ${redisConfig.username}`);
+        console.log(`   User: ${redisConfig.username}`);
       }
-      console.log(`  DB   : ${redisConfig.db}`);
-      console.log(`  SSL  : ${redisConfig.ssl ?? "false"}`);
+      console.log(`   DB:   ${redisConfig.db}`);
+      console.log(`   SSL:  ${redisConfig.ssl ?? "false"}`);
     }
 
     await redis.connect(redisConfig);
-    console.log("✅ Redis connection successful.");
+    console.log("✅ Redis connection established.");
 
     mediator = Redis.injectRedisQueueWorkersMediator(
       redis.client!,
@@ -313,7 +314,7 @@ try {
   }
 
   // 5. Initialize and create ADM Level tables
-  console.log("\n🚀 Proceeding with extracting ADM inputs...");
+  console.log("\n🚀 Preparing ADM Level tables...");
 
   const ddls: TableDDL[] = [
     injectProvincesPostgresDDL(config, pgParams.schema),
@@ -323,20 +324,91 @@ try {
     injectFokontanysPostgresDDL(config, pgParams.schema),
   ];
 
-  await pg.transaction(async (txCtx) => {
-    // Drop tables in reverse order to respect foreign key constraints
-    for (const ddl of [...ddls].reverse()) {
-      console.log(`  Dropping table: ${ddl.tableName}...`);
-      await ddl.drop(txCtx);
+  // Check if all tables are already defined to decide whether to prompt for clearing
+  const admTablesAreDefined = (
+    await Promise.all(ddls.map((ddl) => ddl.exists()))
+  ).every((exists) => exists);
+
+  let shouldClearDatabase = false;
+
+  if (!redisCliArgs.disableRedis && admTablesAreDefined) {
+    console.log();
+    shouldClearDatabase = confirm(
+      "⚠️  ADM tables already exist. Do you want to drop and recreate them? (This will clear all ADM data)",
+    );
+    console.log();
+  } else {
+    // If not all tables are defined or Redis is disabled (ephemeral), we must initialize them
+    shouldClearDatabase = true;
+  }
+
+  // Handle persisted job context for resuming operations
+  const prevJobContext = await mediator.persistedContext;
+  if (prevJobContext) {
+    let shouldClearContext = false;
+    if (shouldClearDatabase) {
+      // If we are clearing the database, we must clear the job context to stay in sync
+      shouldClearContext = true;
+    } else {
+      console.log();
+      shouldClearContext = confirm(
+        "🔄 Previous job context found. Do you want to clear it and start fresh?",
+      );
+      console.log();
+      if (shouldClearContext) {
+        // Clearing context usually implies a need for a clean database state
+        shouldClearDatabase = true;
+      }
     }
 
-    // Create tables in order Level 0 to 4
-    for (const ddl of ddls) {
-      console.log(`  Creating table: ${ddl.tableName}...`);
-      await ddl.create(txCtx);
+    if (shouldClearContext) {
+      console.log("🧹 Clearing previous job context...");
+      await mediator.clearPersisted();
     }
-  });
-  console.log("✅ ADM Level tables created successfully.");
+  }
+
+  // Execute database initialization if needed
+  if (shouldClearDatabase) {
+    console.log("🏗️  Initializing database schema...");
+    await pg.transaction(async (txCtx) => {
+      // Drop tables in reverse order to respect foreign key constraints
+      for (const ddl of [...ddls].reverse()) {
+        console.log(`   🗑️  Dropping table: ${ddl.tableName}...`);
+        await ddl.drop(txCtx);
+      }
+      // Create tables in order Level 0 to 4
+      for (const ddl of ddls) {
+        console.log(`   🏗️  Creating table: ${ddl.tableName}...`);
+        await ddl.create(txCtx);
+      }
+    });
+    console.log("✅ ADM Level tables initialized.");
+  } else {
+    console.log("ℹ️  Existing database schema preserved.");
+  }
+
+  /**
+   * Resolve the job context:
+   * 1. Resume from previous context if available and DB was not cleared.
+   * 2. Otherwise, start a fresh context from Level 0 (Province).
+   */
+  const jobContext: ExtractAdmInputJobContext =
+    !shouldClearDatabase && prevJobContext ? prevJobContext : {
+      config,
+      currentAdmLevel: AdmLevelCode.PROVINCE,
+      pgConnection: pgConnectionParams.connection,
+    };
+
+  if (!shouldClearDatabase && prevJobContext) {
+    console.log("🔄 Resuming extraction from previous state.");
+  } else {
+    console.log("🆕 Starting fresh extraction process.");
+  }
+
+  console.log("\n📝 Job Configuration:");
+  console.log(`   Current Level:  ${jobContext.currentAdmLevel}`);
+  console.log(`   Tables Prefix:  ${jobContext.config.tablesPrefix}`);
+  console.log(`   Target Schema:  ${pgParams.schema}`);
 } catch (err) {
   console.error(`\n❌ Fatal Error: ${(err as Error).message}`);
   Deno.exit(1);
