@@ -1,5 +1,19 @@
-import type { MaybePromise } from "./utils.d.ts";
+import type { Transaction } from "@db/postgres";
 import type { DbType } from "@scope/consts/db";
+import type { MaybePromise } from "./utils.d.ts";
+
+/**
+ * Represents the transaction context for a specific database type.
+ */
+export type PostgresTransactionContext = {
+  dbType: DbType.Postgres;
+  tx: Transaction;
+};
+
+/**
+ * Represents the transaction context for a specific database type.
+ */
+export type DbTransactionContext = PostgresTransactionContext;
 
 /**
  * Represents a database connection.
@@ -23,7 +37,11 @@ export interface DbConnection {
    * @param callback - The function to execute within the transaction.
    * @returns The result of the callback.
    */
-  transaction<T>(callback: () => MaybePromise<T>): MaybePromise<T>;
+  transaction<TReturn>(
+    callback: (
+      transactionContext: DbTransactionContext,
+    ) => MaybePromise<TReturn>,
+  ): MaybePromise<TReturn>;
 }
 
 /**
@@ -65,6 +83,7 @@ export type DbConnectionParams = PostgresConnectionParams;
 export interface TableDDL {
   /** The physical database table name. */
   readonly tableName: string;
-  create(): MaybePromise<void>;
-  drop(): MaybePromise<void>;
+  create(transactionContext?: DbTransactionContext): MaybePromise<void>;
+  drop(transactionContext?: DbTransactionContext): MaybePromise<void>;
+  exists(transactionContext?: DbTransactionContext): MaybePromise<boolean>;
 }

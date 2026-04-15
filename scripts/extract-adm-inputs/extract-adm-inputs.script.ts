@@ -13,7 +13,6 @@ import {
   injectCommunesPostgresDDL,
   injectDistrictsPostgresDDL,
   injectFokontanysPostgresDDL,
-  injectMadaAdmConfigPostgresDDL,
   injectPostgresDbConnection,
   injectProvincesPostgresDDL,
   injectRegionsPostgresDDL,
@@ -35,6 +34,8 @@ interface PostgresCliArgs {
   password: string;
   /** Name of the database to connect to. */
   database: string;
+  /** The physical database schema name. */
+  schema: string;
   /** Whether to enable SSL for the connection. */
   ssl?: boolean;
 }
@@ -75,11 +76,13 @@ interface MediatorCliArgs {
 
 const args = parseArgs(Deno.args, {
   string: [
-    "url",
-    "host",
-    "username",
-    "password",
-    "database",
+    "pg-url",
+    "pg-host",
+    "pg-port",
+    "pg-username",
+    "pg-password",
+    "pg-database",
+    "pg-schema",
     "redis-url",
     "redis-host",
     "redis-username",
@@ -91,36 +94,45 @@ const args = parseArgs(Deno.args, {
     "worker-healthcheck-interval",
     "worker-pending-min-duration-threshold",
   ],
-  boolean: ["ssl", "disable-redis", "redis-ssl"],
+  boolean: ["pg-ssl", "disable-redis", "redis-ssl"],
   default: {},
 });
 
 // 1. Resolve PostgreSQL Parameters
 const pgParams: PostgresCliArgs = {
-  url: CliArgsEnvResolvers.resolveOptionalString(args["url"], "PG_URL"),
-  host: CliArgsEnvResolvers.resolveString(args["host"], "PG_HOST", "localhost"),
+  url: CliArgsEnvResolvers.resolveOptionalString(args["pg-url"], "PG_URL"),
+  host: CliArgsEnvResolvers.resolveString(
+    args["pg-host"],
+    "PG_HOST",
+    "localhost",
+  ),
   port: CliArgsEnvResolvers.resolveNumber(
-    args["port"] as number | undefined,
+    args["pg-port"] as number | undefined,
     "PG_PORT",
     5432,
   ),
   username: CliArgsEnvResolvers.resolveString(
-    args["username"],
+    args["pg-username"],
     "PG_USERNAME",
     "postgres",
   ),
   password: CliArgsEnvResolvers.resolveString(
-    args["password"],
+    args["pg-password"],
     "PG_PASSWORD",
     "",
   ),
   database: CliArgsEnvResolvers.resolveString(
-    args["database"],
+    args["pg-database"],
     "PG_DATABASE",
     "postgres",
   ),
+  schema: CliArgsEnvResolvers.resolveString(
+    args["pg-schema"],
+    "PG_SCHEMA",
+    "public",
+  ),
   ssl: CliArgsEnvResolvers.resolveBoolean(
-    args["ssl"] as boolean | undefined,
+    args["pg-ssl"] as boolean | undefined,
     "PG_SSL",
   ),
 };
@@ -241,14 +253,16 @@ try {
 
   // 4. Optionally Establish Redis Connection
   if (!redisCliArgs.disableRedis) {
-    const redisConfig = redisCliArgs.url ? redisCliArgs.url : {
-      host: redisCliArgs.host,
-      port: redisCliArgs.port,
-      username: redisCliArgs.username,
-      password: redisCliArgs.password,
-      db: redisCliArgs.db,
-      ssl: redisCliArgs.ssl,
-    };
+    const redisConfig = redisCliArgs.url
+      ? redisCliArgs.url
+      : {
+          host: redisCliArgs.host,
+          port: redisCliArgs.port,
+          username: redisCliArgs.username,
+          password: redisCliArgs.password,
+          db: redisCliArgs.db,
+          ssl: redisCliArgs.ssl,
+        };
 
     if (typeof redisConfig === "string") {
       console.log("\nConnecting to Redis via URL...");
@@ -302,25 +316,27 @@ try {
   console.log("\n🚀 Proceeding with extracting ADM inputs...");
 
   const ddls: TableDDL[] = [
-    injectMadaAdmConfigPostgresDDL(),
-    injectProvincesPostgresDDL(config),
-    injectRegionsPostgresDDL(config),
-    injectDistrictsPostgresDDL(config),
-    injectCommunesPostgresDDL(config),
-    injectFokontanysPostgresDDL(config),
+    injectProvincesPostgresDDL(config, pgParams.schema),
+    injectRegionsPostgresDDL(config, pgParams.schema),
+    injectDistrictsPostgresDDL(config, pgParams.schema),
+    injectCommunesPostgresDDL(config, pgParams.schema),
+    injectFokontanysPostgresDDL(config, pgParams.schema),
   ];
 
-  // Drop tables in reverse order to respect foreign key constraints
-  for (const ddl of [...ddls].reverse()) {
-    console.log(`  Dropping table: ${ddl.tableName}...`);
-    await ddl.drop();
-  }
+  await pg.transaction(async (txCtx) => {
+    // Drop tables in reverse order to respect foreign key constraints
+    for (const ddl of [...ddls].reverse()) {
+      console.log(`  Dropping table: ${ddl.tableName}...`);
+      await ddl.drop(txCtx);
+    }
 
-  // Create tables in order Level 0 to 4
-  for (const ddl of ddls) {
-    console.log(`  Creating table: ${ddl.tableName}...`);
-    await ddl.create();
-  }
+    // Create tables in order Level 0 to 4
+    for (const ddl of ddls) {
+      console.log(`  Creating table: ${ddl.tableName}...`);
+      await ddl.create(txCtx);
+    }
+  });
+  console.log("✅ ADM Level tables created successfully.");
 } catch (err) {
   console.error(`\n❌ Fatal Error: ${(err as Error).message}`);
   Deno.exit(1);

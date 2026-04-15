@@ -1,5 +1,9 @@
 import { Client } from "@db/postgres";
-import type { DbConnection, DbConnectionParams } from "@scope/types/db";
+import type {
+  DbConnection,
+  DbConnectionParams,
+  DbTransactionContext,
+} from "@scope/types/db";
 import type { MaybePromise } from "@scope/types/utils";
 import { DbType } from "@scope/consts/db";
 
@@ -84,12 +88,17 @@ export class PostgresDbConnection implements DbConnection {
    * @returns The resolved value of the callback function.
    * @throws {Error} If the transaction fails or the callback throws an error.
    */
-  async transaction<T>(callback: () => MaybePromise<T>): Promise<T> {
+  async transaction<T>(
+    callback: (transactionContext: DbTransactionContext) => MaybePromise<T>,
+  ): Promise<T> {
     const transaction = this.client.createTransaction("postgres_tx");
 
     try {
       await transaction.begin();
-      const result = await callback();
+      const result = await callback({
+        dbType: DbType.Postgres,
+        tx: transaction,
+      });
       await transaction.commit();
       return result;
     } catch (error) {
