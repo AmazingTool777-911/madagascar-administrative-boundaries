@@ -73,11 +73,9 @@ export interface InMemoryQueueWorkersMediatorOptions<_TMessage = unknown> {
 class WorkerJob<TInputMessage, TOutputMessage> {
   private _pendingTask: Promise<void> | null = null;
   private _pendingTaskResolve: (() => void) | null = null;
-  private _outputController:
-    | ReadableStreamDefaultController<
-      TOutputMessage[]
-    >
-    | null = null;
+  private _outputController: ReadableStreamDefaultController<
+    TOutputMessage[]
+  > | null = null;
   private _outputStream: ReadableStream<TOutputMessage[]> | null = null;
   private _inputWritable: WritableStream<TInputMessage[]> | null = null;
 
@@ -233,28 +231,22 @@ export class InMemoryQueueWorkersMediator<
   TProcessingFinishedPayload = unknown,
   TInsertContext = unknown,
   TInsertFinishedPayload = unknown,
-> implements
-  QueueWorkersMediator<
-    TProcessingContext,
-    TMessage,
-    TProcessingFinishedPayload,
-    TInsertContext,
-    TInsertFinishedPayload
-  > {
-  #options:
-    & Required<
-      Omit<
-        InMemoryQueueWorkersMediatorOptions<TMessage>,
-        "processingHwm" | "insertHwm"
-      >
+> implements QueueWorkersMediator<
+  TProcessingContext,
+  TMessage,
+  TProcessingFinishedPayload,
+  TInsertContext,
+  TInsertFinishedPayload
+> {
+  #options: Required<
+    Omit<
+      InMemoryQueueWorkersMediatorOptions<TMessage>,
+      "processingHwm" | "insertHwm"
     >
-    & {
-      processingHwm?: number;
-      insertHwm?: number;
-    };
-
-  #isJobEnded = false;
-  #pulledMessagesCount = { processed: 0, inserted: 0 };
+  > & {
+    processingHwm?: number;
+    insertHwm?: number;
+  };
 
   /**
    * Initializes a new instance of the InMemoryQueueWorkersMediator.
@@ -296,7 +288,8 @@ export class InMemoryQueueWorkersMediator<
       : workers.processing;
     const workersCount = processingWorkers.length;
 
-    const isSplitContext = context &&
+    const isSplitContext =
+      context &&
       typeof context === "object" &&
       ("processing" in context || "insert" in context);
 
@@ -320,11 +313,7 @@ export class InMemoryQueueWorkersMediator<
     );
 
     processingJobs.forEach((job) => {
-      job.onJobCompleted = (event) => {
-        this.#pulledMessagesCount.processed +=
-          (event as unknown as TProcessingFinishedPayload[]).length;
-        onProcessingFinished?.(event);
-      };
+      job.onJobCompleted = (event) => onProcessingFinished?.(event);
     });
 
     const messagesReadable = (() => {
@@ -396,12 +385,10 @@ export class InMemoryQueueWorkersMediator<
     const processingWritingPipeline = messagesReadable.pipeTo(assignerWritable);
 
     let insertWritingPipeline: Promise<void> | null = null;
-    let insertJob:
-      | WorkerJob<
-        TProcessingFinishedPayload,
-        TInsertFinishedPayload
-      >
-      | null = null;
+    let insertJob: WorkerJob<
+      TProcessingFinishedPayload,
+      TInsertFinishedPayload
+    > | null = null;
 
     const insertWorker = Array.isArray(workers) ? undefined : workers.insert;
 
@@ -410,11 +397,7 @@ export class InMemoryQueueWorkersMediator<
         hwm: this.#options.insertHwm,
         maxRetries,
       });
-      insertJob.onJobCompleted = (event) => {
-        this.#pulledMessagesCount.inserted +=
-          (event as unknown as TInsertFinishedPayload[]).length;
-        onInsertFinished?.(event);
-      };
+      insertJob.onJobCompleted = (event) => onInsertFinished?.(event);
 
       const gathererReadable = new ReadableStream<TProcessingFinishedPayload[]>(
         {
@@ -453,8 +436,6 @@ export class InMemoryQueueWorkersMediator<
     ].filter((t): t is Promise<void> => t !== null);
 
     await Promise.all(pendingTasks);
-
-    this.#isJobEnded = true;
   }
 
   /**
@@ -487,21 +468,6 @@ export class InMemoryQueueWorkersMediator<
   clearPersisted(): void {
     // No-op
   }
-
-  /**
-   * Checks if the job has already ended.
-   * In-memory implementation always returns false for fresh runs.
-   */
-  get isJobEnded(): boolean {
-    return this.#isJobEnded;
-  }
-
-  /**
-   * Retrieves the count of messages that have been pulled (dequeued) so far.
-   */
-  get pulledMessagesCount(): { processed: number; inserted: number } {
-    return this.#pulledMessagesCount;
-  }
 }
 
 /**
@@ -524,9 +490,8 @@ export class InMemoryQueueWorkerExecutor<
   ): void {
     const execute = typeof handler === "function" ? handler : handler.execute;
     const initHook = typeof handler === "object" ? handler.init : undefined;
-    const teardownHook = typeof handler === "object"
-      ? handler.teardown
-      : undefined;
+    const teardownHook =
+      typeof handler === "object" ? handler.teardown : undefined;
 
     self.addEventListener("message", async (event: Event) => {
       const e = event as MessageEvent;
@@ -542,9 +507,10 @@ export class InMemoryQueueWorkerExecutor<
         maxRetries = DEFAULT_MAX_RETRIES,
       } = e.data as AppToWorkerInitMessage<TContext, TMessage>;
 
-      const finishEventType = workerType === "process"
-        ? WORKER_EVENTS.PROCESSING_FINISHED
-        : WORKER_EVENTS.INSERT_FINISHED;
+      const finishEventType =
+        workerType === "process"
+          ? WORKER_EVENTS.PROCESSING_FINISHED
+          : WORKER_EVENTS.INSERT_FINISHED;
 
       await initHook?.(context, {
         workerMetadata: { type: workerType, index: workerIndex },
@@ -583,7 +549,7 @@ export class InMemoryQueueWorkerExecutor<
               }
               // Wait backoff before retrying
               await new Promise((resolve) =>
-                setTimeout(resolve, 2 ** attempt * 100)
+                setTimeout(resolve, 2 ** attempt * 100),
               );
             }
           }
@@ -598,15 +564,13 @@ export class InMemoryQueueWorkerExecutor<
   }
 }
 
-let _instance:
-  | InMemoryQueueWorkersMediator<
-    unknown,
-    object,
-    unknown,
-    unknown,
-    unknown
-  >
-  | null = null;
+let _instance: InMemoryQueueWorkersMediator<
+  unknown,
+  object,
+  unknown,
+  unknown,
+  unknown
+> | null = null;
 
 /**
  * Injects a singleton instance of the InMemoryQueueWorkersMediator.

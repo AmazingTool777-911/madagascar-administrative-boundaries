@@ -32,3 +32,9 @@ export type GeoJSONFeatureCollection<T extends Record<string, unknown>> = {
   type: "FeatureCollection";
   features: GeoJSONFeature<T>[];
 };
+
+/**
+ * Represents an individual GeoJSON feature.
+ */
+export type GeoJSONFeature<T extends Record<string, unknown>> =
+  GeoJSONGeometry<T>["features"][number];
