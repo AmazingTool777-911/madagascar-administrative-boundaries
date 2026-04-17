@@ -18,7 +18,20 @@ import {
   injectRegionsPostgresDDL,
 } from "@scope/adapters/postgres";
 import type { ExtractAdmInputJobContext } from "./extract-adm-input.d.ts";
-import { AdmLevelCode } from "@scope/consts/models";
+import {
+  AdmLevelCode,
+  ADM_LEVEL_CODES_INDEXED,
+  ADM_LEVEL_TITLE_BY_CODE,
+} from "@scope/consts/models";
+import * as path from "@std/path";
+import { TextLineStream } from "@std/streams";
+import type { GeoJSONFeature } from "@scope/types/utils";
+
+type Feature = GeoJSONFeature<{
+  shapeName: string;
+  shapeID: string;
+  shapeType: string;
+}>;
 
 /**
  * Parsed CLI arguments for the PostgreSQL connection.
@@ -74,6 +87,7 @@ interface MediatorCliArgs {
   inMemoryInsertHwm?: number;
   workerHealthcheckInterval?: number;
   workerPendingMinDurationThreshold?: number;
+  processingWorkersCount?: number;
 }
 
 const args = parseArgs(Deno.args, {
@@ -95,6 +109,7 @@ const args = parseArgs(Deno.args, {
     "in-memory-insert-hwm",
     "worker-healthcheck-interval",
     "worker-pending-min-duration-threshold",
+    "processing-workers-count",
   ],
   boolean: ["pg-ssl", "disable-redis", "redis-ssl"],
   default: {},
@@ -204,6 +219,11 @@ const mediatorCliArgs: MediatorCliArgs = {
     args["worker-pending-min-duration-threshold"] as number | undefined,
     "WORKER_PENDING_MIN_DURATION_THRESHOLD",
   ),
+  processingWorkersCount: CliArgsEnvResolvers.resolveNumber(
+    args["processing-workers-count"] as number | undefined,
+    "PROCESSING_WORKERS_COUNT",
+    5,
+  ),
 };
 
 const pg = injectPostgresDbConnection();
@@ -252,18 +272,26 @@ try {
   console.log("🛰️  Enabling PostGIS extension...");
   await pg.client.queryObject("CREATE EXTENSION IF NOT EXISTS postgis;");
 
-  let mediator: QueueWorkersMediator<ExtractAdmInputJobContext>;
+  let mediator: QueueWorkersMediator<
+    ExtractAdmInputJobContext,
+    Feature,
+    Feature,
+    ExtractAdmInputJobContext,
+    Feature
+  >;
 
   // 4. Optionally Establish Redis Connection
   if (!redisCliArgs.disableRedis) {
-    const redisConfig = redisCliArgs.url ? redisCliArgs.url : {
-      host: redisCliArgs.host,
-      port: redisCliArgs.port,
-      username: redisCliArgs.username,
-      password: redisCliArgs.password,
-      db: redisCliArgs.db,
-      ssl: redisCliArgs.ssl,
-    };
+    const redisConfig = redisCliArgs.url
+      ? redisCliArgs.url
+      : {
+          host: redisCliArgs.host,
+          port: redisCliArgs.port,
+          username: redisCliArgs.username,
+          password: redisCliArgs.password,
+          db: redisCliArgs.db,
+          ssl: redisCliArgs.ssl,
+        };
 
     if (typeof redisConfig === "string") {
       console.log("\n🔴 Connecting to Redis via URL...");
@@ -282,31 +310,39 @@ try {
     await redis.connect(redisConfig);
     console.log("✅ Redis connection established.");
 
-    mediator = Redis.injectRedisQueueWorkersMediator(
-      redis.client!,
-      redisConfig,
-      {
-        processingContextKey: "extract-adm:processing:context",
-        processingStreamKey: "extract-adm:processing:stream",
-        insertContextKey: "extract-adm:insert:context",
-        insertStreamKey: "extract-adm:insert:stream",
-        processingConsumerGroupName: "extract-adm:processing-group",
-        insertConsumerGroupName: "extract-adm:insert-group",
-        persistedLastMessageKey: "extract-adm:persisted-last:message",
-        persistedLastInsertMessageKey:
-          "extract-adm:persisted-last-insert:message",
-        processingDlqStreamKey: "extract-adm:processing:dlq",
-        insertDlqStreamKey: "extract-adm:insert:dlq",
-        healthcheckInterval: mediatorCliArgs.workerHealthcheckInterval,
-        pendingMinDurationThreshold:
-          mediatorCliArgs.workerPendingMinDurationThreshold,
-      },
-    );
+    mediator = Redis.injectRedisQueueWorkersMediator<
+      ExtractAdmInputJobContext,
+      Feature,
+      Feature,
+      ExtractAdmInputJobContext,
+      Feature
+    >(redis.client!, redisConfig, {
+      processingContextKey: "extract-adm:processing:context",
+      processingStreamKey: "extract-adm:processing:stream",
+      insertContextKey: "extract-adm:insert:context",
+      insertStreamKey: "extract-adm:insert:stream",
+      processingConsumerGroupName: "extract-adm:processing-group",
+      insertConsumerGroupName: "extract-adm:insert-group",
+      persistedLastMessageKey: "extract-adm:persisted-last:message",
+      persistedLastInsertMessageKey:
+        "extract-adm:persisted-last-insert:message",
+      processingDlqStreamKey: "extract-adm:processing:dlq",
+      insertDlqStreamKey: "extract-adm:insert:dlq",
+      healthcheckInterval: mediatorCliArgs.workerHealthcheckInterval,
+      pendingMinDurationThreshold:
+        mediatorCliArgs.workerPendingMinDurationThreshold,
+    });
     console.log("✅ Redis Queue Workers Mediator initialized.");
   } else {
     console.log("\nℹ️  Redis connection disabled. Skipping...");
 
-    mediator = InMemory.injectInMemoryQueueWorkersMediator({
+    mediator = InMemory.injectInMemoryQueueWorkersMediator<
+      ExtractAdmInputJobContext,
+      Feature,
+      Feature,
+      ExtractAdmInputJobContext,
+      Feature
+    >({
       processingHwm: mediatorCliArgs.inMemoryProcessingHwm,
       insertHwm: mediatorCliArgs.inMemoryInsertHwm,
     });
@@ -393,11 +429,13 @@ try {
    * 2. Otherwise, start a fresh context from Level 0 (Province).
    */
   const jobContext: ExtractAdmInputJobContext =
-    !shouldClearDatabase && prevJobContext ? prevJobContext : {
-      config,
-      currentAdmLevel: AdmLevelCode.PROVINCE,
-      pgConnection: pgConnectionParams.connection,
-    };
+    !shouldClearDatabase && prevJobContext
+      ? prevJobContext
+      : {
+          config,
+          currentAdmLevel: AdmLevelCode.PROVINCE,
+          pgConnection: pgConnectionParams.connection,
+        };
 
   if (!shouldClearDatabase && prevJobContext) {
     console.log("🔄 Resuming extraction from previous state.");
@@ -409,6 +447,124 @@ try {
   console.log(`   Current Level:  ${jobContext.currentAdmLevel}`);
   console.log(`   Tables Prefix:  ${jobContext.config.tablesPrefix}`);
   console.log(`   Target Schema:  ${pgParams.schema}`);
+
+  // 6. Extraction Loop
+  const startIndex = ADM_LEVEL_CODES_INDEXED.indexOf(
+    jobContext.currentAdmLevel,
+  );
+  const levelsToProcess = ADM_LEVEL_CODES_INDEXED.slice(startIndex);
+
+  for (const levelCode of levelsToProcess) {
+    // Explicitly sync the job context with the current iteration level
+    jobContext.currentAdmLevel = levelCode;
+
+    const levelTitle = ADM_LEVEL_TITLE_BY_CODE.get(levelCode) ?? levelCode;
+    const ndjsonFileName = `${levelTitle}s.ndjson`;
+    const ndjsonFilePath = path.join(
+      Deno.cwd(),
+      "data",
+      "ndjson",
+      ndjsonFileName,
+    );
+
+    console.log(
+      `\n📂 Processing ${levelTitle.toUpperCase()} (${levelCode})...`,
+    );
+    console.log(`   Source: ${ndjsonFilePath}`);
+
+    // Initialize Worker Pool
+    const processingWorkersCount = mediatorCliArgs.processingWorkersCount!;
+    const workerOptions = {
+      type: "module" as const,
+    };
+    const processingWorkers = Array.from({
+      length: processingWorkersCount,
+    }).map(
+      () =>
+        new Worker(
+          new URL("./workers/processing.worker.ts", import.meta.url).href,
+          workerOptions,
+        ),
+    );
+    const insertWorker = new Worker(
+      new URL("./workers/insert.worker.ts", import.meta.url).href,
+      workerOptions,
+    );
+
+    const workers = {
+      processing: processingWorkers,
+      insert: insertWorker,
+    };
+
+    // Prepare feature stream with resumption support
+    const lastPersisted = await mediator.persistedLastMessage;
+    let skipping =
+      !!lastPersisted &&
+      (lastPersisted as Feature).properties?.shapeType === levelCode;
+
+    const featureStream = (await Deno.open(ndjsonFilePath)).readable
+      .pipeThrough(new TextDecoderStream())
+      .pipeThrough(new TextLineStream())
+      .pipeThrough(
+        new TransformStream<string, Feature>({
+          transform(chunk, controller) {
+            const feature = JSON.parse(chunk) as Feature;
+            if (skipping && lastPersisted) {
+              const last = lastPersisted as Feature;
+              if (
+                feature.properties.shapeID === last.properties.shapeID &&
+                feature.properties.shapeType === last.properties.shapeType
+              ) {
+                console.log(
+                  `   ⏭️  Reached last checkpoint: ${feature.properties.shapeName}. Resuming...`,
+                );
+                skipping = false;
+                // We skip the matched one as it was already inserted
+                return;
+              }
+              // Still skipping
+              return;
+            }
+            controller.enqueue(feature);
+          },
+        }),
+      );
+
+    await mediator.queue(
+      { processing: jobContext, insert: jobContext },
+      featureStream,
+      workers,
+      {
+        onProcessingFinished: (payloads) => {
+          for (const feature of payloads) {
+            console.log(
+              `   ✅ Processed ${levelTitle}: ${feature.properties.shapeName}`,
+            );
+          }
+        },
+        onInsertFinished: (payloads) => {
+          for (const feature of payloads) {
+            console.log(
+              `   💾 Inserted ${levelTitle}: ${feature.properties.shapeName}`,
+            );
+          }
+        },
+        batchSize: mediatorCliArgs.queueBatchSize,
+        maxRetries: mediatorCliArgs.queueMaxRetries,
+      },
+    );
+
+    // Cleanup for this level
+    for (const w of processingWorkers) w.terminate();
+    insertWorker.terminate();
+    await mediator.clearQueue();
+
+    console.log(`✅ ${levelTitle.toUpperCase()} extraction complete.`);
+  }
+
+  // Final Cleanup
+  await mediator.clearPersisted();
+  console.log("\n🏁 Extraction process completed successfully.");
 } catch (err) {
   console.error(`\n❌ Fatal Error: ${(err as Error).message}`);
   Deno.exit(1);

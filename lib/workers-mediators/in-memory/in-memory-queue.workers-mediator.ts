@@ -16,7 +16,7 @@ import {
 export const DEFAULT_BATCH_SIZE = 1;
 
 /** Default high water mark for worker jobs. */
-export const DEFAULT_WORKER_JOB_HWM = 16;
+export const DEFAULT_WORKER_JOB_HWM = 1;
 
 type EventWorkerIdPayload = { workerId: string };
 
@@ -57,18 +57,11 @@ export interface WorkerJobOptions {
 /**
  * Configuration options for the InMemoryQueueWorkersMediator.
  */
-export interface InMemoryQueueWorkersMediatorOptions<
-  TMessage = unknown,
-> {
+export interface InMemoryQueueWorkersMediatorOptions<_TMessage = unknown> {
   /** The default high water mark for processing workers. */
   processingHwm?: number;
   /** The default high water mark for the insert worker. */
   insertHwm?: number;
-  /** Function to compare two messages. */
-  compareProcessingMessages?: (
-    a: TMessage,
-    b: TMessage,
-  ) => boolean;
 }
 
 /**
@@ -80,11 +73,9 @@ export interface InMemoryQueueWorkersMediatorOptions<
 class WorkerJob<TInputMessage, TOutputMessage> {
   private _pendingTask: Promise<void> | null = null;
   private _pendingTaskResolve: (() => void) | null = null;
-  private _outputController:
-    | ReadableStreamDefaultController<
-      TOutputMessage[]
-    >
-    | null = null;
+  private _outputController: ReadableStreamDefaultController<
+    TOutputMessage[]
+  > | null = null;
   private _outputStream: ReadableStream<TOutputMessage[]> | null = null;
   private _inputWritable: WritableStream<TInputMessage[]> | null = null;
 
@@ -240,41 +231,32 @@ export class InMemoryQueueWorkersMediator<
   TProcessingFinishedPayload = unknown,
   TInsertContext = unknown,
   TInsertFinishedPayload = unknown,
-> implements
-  QueueWorkersMediator<
-    TProcessingContext,
-    TMessage,
-    TProcessingFinishedPayload,
-    TInsertContext,
-    TInsertFinishedPayload
-  > {
-  #options:
-    & Required<
-      Omit<
-        InMemoryQueueWorkersMediatorOptions<TMessage>,
-        "processingHwm" | "insertHwm" | "compareProcessingMessages"
-      >
+> implements QueueWorkersMediator<
+  TProcessingContext,
+  TMessage,
+  TProcessingFinishedPayload,
+  TInsertContext,
+  TInsertFinishedPayload
+> {
+  #options: Required<
+    Omit<
+      InMemoryQueueWorkersMediatorOptions<TMessage>,
+      "processingHwm" | "insertHwm"
     >
-    & {
-      processingHwm?: number;
-      insertHwm?: number;
-      compareProcessingMessages?: InMemoryQueueWorkersMediatorOptions<
-        TMessage
-      >["compareProcessingMessages"];
-    };
+  > & {
+    processingHwm?: number;
+    insertHwm?: number;
+  };
 
   /**
    * Initializes a new instance of the InMemoryQueueWorkersMediator.
    *
    * @param options - Configuration options for the mediator (HWM settings).
    */
-  constructor(
-    options: InMemoryQueueWorkersMediatorOptions<TMessage> = {},
-  ) {
+  constructor(options: InMemoryQueueWorkersMediatorOptions<TMessage> = {}) {
     this.#options = {
       processingHwm: options.processingHwm,
       insertHwm: options.insertHwm,
-      compareProcessingMessages: options.compareProcessingMessages,
     };
   }
 
@@ -291,10 +273,7 @@ export class InMemoryQueueWorkersMediator<
     context: WorkerBatchContext<TProcessingContext, TInsertContext>,
     messages: TMessage[] | ReadableStream<TMessage>,
     workers: WorkerPool,
-    options?: QueueOptions<
-      TProcessingFinishedPayload,
-      TInsertFinishedPayload
-    >,
+    options?: QueueOptions<TProcessingFinishedPayload, TInsertFinishedPayload>,
   ): Promise<void> {
     const {
       onProcessingFinished,
@@ -309,7 +288,8 @@ export class InMemoryQueueWorkersMediator<
       : workers.processing;
     const workersCount = processingWorkers.length;
 
-    const isSplitContext = context &&
+    const isSplitContext =
+      context &&
       typeof context === "object" &&
       ("processing" in context || "insert" in context);
 
@@ -356,10 +336,7 @@ export class InMemoryQueueWorkersMediator<
 
       // messages is a ReadableStream<TMessage>
       let currentBatch: TMessage[] = [];
-      const transformer = new TransformStream<
-        TMessage,
-        TMessage[]
-      >(
+      const transformer = new TransformStream<TMessage, TMessage[]>(
         {
           transform(chunk, controller) {
             currentBatch.push(chunk);
@@ -408,12 +385,10 @@ export class InMemoryQueueWorkersMediator<
     const processingWritingPipeline = messagesReadable.pipeTo(assignerWritable);
 
     let insertWritingPipeline: Promise<void> | null = null;
-    let insertJob:
-      | WorkerJob<
-        TProcessingFinishedPayload,
-        TInsertFinishedPayload
-      >
-      | null = null;
+    let insertJob: WorkerJob<
+      TProcessingFinishedPayload,
+      TInsertFinishedPayload
+    > | null = null;
 
     const insertWorker = Array.isArray(workers) ? undefined : workers.insert;
 
@@ -480,16 +455,10 @@ export class InMemoryQueueWorkersMediator<
   }
 
   /**
-   * Compares two processing messages.
+   * Clears the queue related data. No-op for the in-memory implementation.
    */
-  compareProcessingMessages(
-    a: TMessage,
-    b: TMessage,
-  ): boolean {
-    if (this.#options.compareProcessingMessages) {
-      return this.#options.compareProcessingMessages(a, b);
-    }
-    throw new Error("Method not implemented.");
+  clearQueue(): void {
+    // No-op for in-memory
   }
 
   /**
@@ -521,9 +490,8 @@ export class InMemoryQueueWorkerExecutor<
   ): void {
     const execute = typeof handler === "function" ? handler : handler.execute;
     const initHook = typeof handler === "object" ? handler.init : undefined;
-    const teardownHook = typeof handler === "object"
-      ? handler.teardown
-      : undefined;
+    const teardownHook =
+      typeof handler === "object" ? handler.teardown : undefined;
 
     self.addEventListener("message", async (event: Event) => {
       const e = event as MessageEvent;
@@ -539,9 +507,10 @@ export class InMemoryQueueWorkerExecutor<
         maxRetries = DEFAULT_MAX_RETRIES,
       } = e.data as AppToWorkerInitMessage<TContext, TMessage>;
 
-      const finishEventType = workerType === "process"
-        ? WORKER_EVENTS.PROCESSING_FINISHED
-        : WORKER_EVENTS.INSERT_FINISHED;
+      const finishEventType =
+        workerType === "process"
+          ? WORKER_EVENTS.PROCESSING_FINISHED
+          : WORKER_EVENTS.INSERT_FINISHED;
 
       await initHook?.(context, {
         workerMetadata: { type: workerType, index: workerIndex },
@@ -580,7 +549,7 @@ export class InMemoryQueueWorkerExecutor<
               }
               // Wait backoff before retrying
               await new Promise((resolve) =>
-                setTimeout(resolve, 2 ** attempt * 100)
+                setTimeout(resolve, 2 ** attempt * 100),
               );
             }
           }
@@ -595,15 +564,13 @@ export class InMemoryQueueWorkerExecutor<
   }
 }
 
-let _instance:
-  | InMemoryQueueWorkersMediator<
-    unknown,
-    object,
-    unknown,
-    unknown,
-    unknown
-  >
-  | null = null;
+let _instance: InMemoryQueueWorkersMediator<
+  unknown,
+  object,
+  unknown,
+  unknown,
+  unknown
+> | null = null;
 
 /**
  * Injects a singleton instance of the InMemoryQueueWorkersMediator.

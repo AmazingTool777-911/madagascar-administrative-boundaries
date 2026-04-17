@@ -1,4 +1,16 @@
 /**
+ * The names of the provinces in Madagascar.
+ */
+export enum ProvinceName {
+  ANTANANARIVO = "Antananarivo",
+  ANTSIRANANA = "Antsiranana",
+  FIANARANTSOA = "Fianarantsoa",
+  MAHAJANGA = "Mahajanga",
+  TOAMASINA = "Toamasina",
+  TOLIARA = "Toliara",
+}
+
+/**
  * The administrative level codes used in the Madagascar ADM hierarchy.
  */
 export enum AdmLevelCode {
@@ -59,14 +71,31 @@ export const ADM_LEVEL_INDEX_BY_CODE: Map<AdmLevelCode, number> = new Map([
 ]);
 
 /**
- * A mapping of administrative level codes to their corresponding GeoJSON file names.
+ * A mapping of Madagascar regions to their corresponding provinces.
  */
-export const ADM_GEOJSON_FILENAME_BY_LEVEL: Map<AdmLevelCode, string> = new Map(
-  [
-    [AdmLevelCode.PROVINCE, "geoBoundaries-MDG-ADM0-custom.geojson"],
-    [AdmLevelCode.REGION, "geoBoundaries-MDG-ADM1-custom.geojson"],
-    [AdmLevelCode.DISTRICT, "geoBoundaries-MDG-ADM2.geojson"],
-    [AdmLevelCode.COMMUNE, "geoBoundaries-MDG-ADM3.geojson"],
-    [AdmLevelCode.FOKONTANY, "geoBoundaries-MDG-ADM4.geojson"],
-  ],
-);
+export const PROVINCE_BY_REGION_MAP: Map<string, ProvinceName> = new Map([
+  ["Diana", ProvinceName.ANTSIRANANA],
+  ["Sava", ProvinceName.ANTSIRANANA],
+  ["Itasy", ProvinceName.ANTANANARIVO],
+  ["Analamanga", ProvinceName.ANTANANARIVO],
+  ["Vakinankaratra", ProvinceName.ANTANANARIVO],
+  ["Bongolava", ProvinceName.ANTANANARIVO],
+  ["Sofia", ProvinceName.MAHAJANGA],
+  ["Boeny", ProvinceName.MAHAJANGA],
+  ["Betsiboka", ProvinceName.MAHAJANGA],
+  ["Melaky", ProvinceName.MAHAJANGA],
+  ["Alaotra-Mangoro", ProvinceName.TOAMASINA],
+  ["Atsinanana", ProvinceName.TOAMASINA],
+  ["Ambatosoa", ProvinceName.TOAMASINA],
+  ["Analanjirofo", ProvinceName.TOAMASINA],
+  ["Amoron'i Mania", ProvinceName.FIANARANTSOA],
+  ["Matsiatra Ambony", ProvinceName.FIANARANTSOA],
+  ["Vatovavy", ProvinceName.FIANARANTSOA],
+  ["Atsimo-Atsinanana", ProvinceName.FIANARANTSOA],
+  ["Ihorombe", ProvinceName.FIANARANTSOA],
+  ["Fitovinany", ProvinceName.FIANARANTSOA],
+  ["Menabe", ProvinceName.TOLIARA],
+  ["Atsimo-Andrefana", ProvinceName.TOLIARA],
+  ["Androy", ProvinceName.TOLIARA],
+  ["Anosy", ProvinceName.TOLIARA],
+]);

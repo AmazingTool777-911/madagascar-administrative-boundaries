@@ -5,24 +5,27 @@
     "jsr:@iuioiua/redis@^1.1.10": "1.1.10",
     "jsr:@std/assert@1": "1.0.19",
     "jsr:@std/bytes@^1.0.5": "1.0.6",
+    "jsr:@std/bytes@^1.0.6": "1.0.6",
     "jsr:@std/cli@^1.0.28": "1.0.28",
     "jsr:@std/crypto@^1.0.4": "1.0.5",
     "jsr:@std/encoding@^1.0.9": "1.0.10",
     "jsr:@std/fmt@^1.0.6": "1.0.9",
     "jsr:@std/fmt@^1.0.9": "1.0.9",
     "jsr:@std/internal@^1.0.12": "1.0.12",
+    "jsr:@std/path@*": "1.1.4",
     "jsr:@std/path@^1.0.8": "1.1.4",
-    "npm:@streamparser/json@^0.0.22": "0.0.22"
+    "jsr:@std/streams@*": "1.0.17",
+    "jsr:@std/streams@^1.0.17": "1.0.17"
   },
   "jsr": {
     "@db/postgres@0.19.5": {
       "integrity": "afdbe608bd066cda2ee5dba37c416d332098b9238c51aec223331108e281954c",
       "dependencies": [
-        "jsr:@std/bytes",
+        "jsr:@std/bytes@^1.0.5",
         "jsr:@std/crypto",
         "jsr:@std/encoding",
         "jsr:@std/fmt@^1.0.6",
-        "jsr:@std/path"
+        "jsr:@std/path@^1.0.8"
       ]
     },
     "@iuioiua/redis@1.1.10": {
@@ -61,11 +64,12 @@
       "dependencies": [
         "jsr:@std/internal"
       ]
-    }
-  },
-  "npm": {
-    "@streamparser/json@0.0.22": {
-      "integrity": "sha512-b6gTSBjJ8G8SuO3Gbbj+zXbVx8NSs1EbpbMKpzGLWMdkR+98McH9bEjSz3+0mPJf68c5nxa3CrJHp5EQNXM6zQ=="
+    },
+    "@std/streams@1.0.17": {
+      "integrity": "7859f3d9deed83cf4b41f19223d4a67661b3d3819e9fc117698f493bf5992140",
+      "dependencies": [
+        "jsr:@std/bytes@^1.0.6"
+      ]
     }
   },
   "workspace": {
@@ -74,7 +78,8 @@
       "jsr:@iuioiua/redis@^1.1.10",
       "jsr:@std/assert@1",
       "jsr:@std/cli@^1.0.28",
-      "npm:@streamparser/json@^0.0.22"
+      "jsr:@std/path@^1.0.8",
+      "jsr:@std/streams@^1.0.17"
     ]
   }
 }

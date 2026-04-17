@@ -105,15 +105,14 @@ export interface QueueWorkersMediator<
   get persistedLastMessage(): MaybePromise<TMessage | null>;
 
   /**
-   * Compares two processing messages.
+   * Clears ONLY the queue-related data (including streams and DLQs) from
+   * previous operations, preserving the context and last message keys.
    */
-  compareProcessingMessages(
-    a: TMessage,
-    b: TMessage,
-  ): boolean;
+  clearQueue(): MaybePromise<void>;
 
   /**
-   * Clears the persisted data from previous operations.
+   * Clears ALL persisted data from previous operations, including context
+   * and last processed message trackers.
    */
   clearPersisted(): MaybePromise<void>;
 }

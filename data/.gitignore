@@ -1,2 +1,2 @@
-# The folder that stores the output of the script that extracts administrative boundaries 
-./inputs/generated/*
+# Any generated files
+/inputs/.generated/
