@@ -17,7 +17,9 @@ type Feature = GeoJSONFeature<{
 }>;
 
 const executorType =
-  Deno.env.get("DISABLE_REDIS") === "true" ? "in-memory" : "redis";
+  new URL(self.location.href).searchParams.get("disable-redis") === "true"
+    ? "in-memory"
+    : "redis";
 
 const executor =
   executorType === "redis"

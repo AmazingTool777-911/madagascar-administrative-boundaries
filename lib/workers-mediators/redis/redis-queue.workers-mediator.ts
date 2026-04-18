@@ -396,26 +396,22 @@ export class RedisQueueWorkersMediator<
     const enqueuer = new WritableStream<TMessage[]>({
       write: async (batch) => {
         const lastMsg = batch[batch.length - 1];
-        const commands: string[][] = [["MULTI"]];
-
-        for (const msg of batch) {
-          commands.push([
-            "XADD",
-            this.#options.processingStreamKey,
-            "*",
-            "data",
-            JSON.stringify(msg),
-          ]);
-        }
-
-        commands.push([
-          "SET",
-          this.#options.persistedLastMessageKey,
-          JSON.stringify(lastMsg),
+        const luaScript = `
+        for i = 1, #ARGV - 1 do
+            redis.call('XADD', KEYS[1], '*', 'data', ARGV[i])
+        end
+        redis.call('SET', KEYS[2], ARGV[#ARGV])
+        return #ARGV - 1
+        `;
+        await this.#client.sendCommand([
+          "EVAL",
+          luaScript,
+          "2", // number of KEYS
+          this.#options.processingStreamKey, // KEYS[1]
+          this.#options.persistedLastMessageKey, // KEYS[2]
+          ...batch.map((msg) => JSON.stringify(msg)), // ARGV[1..N-1] = all messages
+          JSON.stringify(lastMsg), // ARGV[N] = last message for SET
         ]);
-        commands.push(["EXEC"]);
-
-        await this.#client.pipelineCommands(commands);
       },
       close: async () => {
         await this.#client.sendCommand([
@@ -554,6 +550,13 @@ export class RedisQueueWorkersMediator<
       ) => {
         const checkOne = async (key: string) => {
           try {
+            // Helper to get value from Redis flat array results (key, value, key, value...)
+            // deno-lint-ignore no-explicit-any
+            const getVal = (arr: any[], field: string) => {
+              const idx = arr.indexOf(field);
+              return idx !== -1 ? arr[idx + 1] : undefined;
+            };
+
             const infoCmd = await this.#client.sendCommand([
               "XINFO",
               "STREAM",
@@ -561,9 +564,9 @@ export class RedisQueueWorkersMediator<
             ]);
             // deno-lint-ignore no-explicit-any
             const info = infoCmd as any[];
-            // XINFO STREAM returns a flat array; "length" is at index 1
-            const length = info[1] as number;
-            if (length > 0) return true;
+            const lastGeneratedId = getVal(info, "last-generated-id") as string;
+            const length = getVal(info, "length") as number;
+
             const groupsCmd = await this.#client.sendCommand([
               "XINFO",
               "GROUPS",
@@ -571,9 +574,37 @@ export class RedisQueueWorkersMediator<
             ]);
             // deno-lint-ignore no-explicit-any
             const groups = groupsCmd as any[][];
-            // Each group entry is a flat array; "pending" is at index 5
-            return groups.some((g) => (g[5] as number) > 0);
-          } catch {
+
+            // If no groups exist, but length > 0, it's non-empty
+            if (groups.length === 0) {
+              return length > 0;
+            }
+
+            return groups.some((g) => {
+              const pending = getVal(g, "pending") as number;
+              const lastDeliveredId = getVal(g, "last-delivered-id") as string;
+              const lag = getVal(g, "lag") as number | undefined;
+
+              // 1. Check for pending (delivered but unacknowledged)
+              if (pending > 0) {
+                return true;
+              }
+
+              // 2. Check for lag (messages in stream but not yet delivered)
+              // Redis 7+ provides 'lag' field directly
+              if (lag !== undefined && lag > 0) {
+                return true;
+              }
+
+              // 3. Fallback for older Redis: compare IDs
+              if (lag === undefined && lastDeliveredId !== lastGeneratedId) {
+                return true;
+              }
+
+              return false;
+            });
+          } catch (err) {
+            console.error(`[Mediator Debug] Error checking ${key}:`, err);
             return false;
           }
         };
@@ -594,9 +625,11 @@ export class RedisQueueWorkersMediator<
         : false;
 
       if (processingIsNonEmpty || insertIsNonEmpty) {
+        console.log();
         restartLoop = confirm(
           "[Mediator] Pending messages or lag detected after loop execution. Do you want to restart the worker loop to process them?",
         );
+        console.log();
 
         if (!restartLoop) {
           throw new Error(
@@ -804,24 +837,27 @@ export class RedisQueueWorkerExecutor<
             for (const id of ids) {
               successCommands.push(["XACK", currentStreamKey, groupName, id]);
             }
+            successCommands.push(["EXEC"]);
+            await client.pipelineCommands(successCommands);
+
             if (workerType === "process" && nextStreamKey) {
-              for (const payloadItem of payloads) {
-                successCommands.push([
-                  "XADD",
-                  nextStreamKey,
-                  "*",
-                  "data",
-                  JSON.stringify(payloadItem),
-                ]);
-              }
-              successCommands.push([
-                "SET",
+              const luaScript = `
+              for i = 1, #ARGV - 1 do
+                  redis.call('XADD', KEYS[1], '*', 'data', ARGV[i])
+              end
+              redis.call('SET', KEYS[2], ARGV[#ARGV])
+              return #ARGV - 1
+              `;
+              await client.sendCommand([
+                "EVAL",
+                luaScript,
+                "2",
+                nextStreamKey,
                 mediatorOptions.persistedLastInsertMessageKey,
+                ...payloads.map((p) => JSON.stringify(p)),
                 JSON.stringify(payloads[payloads.length - 1]),
               ]);
             }
-            successCommands.push(["EXEC"]);
-            await client.pipelineCommands(successCommands);
             port.postMessage({
               type: WORKER_EVENTS.FINISHED,
               payload: payloads,
@@ -915,7 +951,7 @@ export class RedisQueueWorkerExecutor<
           client: RedisClient,
           stream: string,
           group: string,
-        ): Promise<number> => {
+        ): Promise<{ lag: number; pending: number }> => {
           try {
             const groups = (await client.sendCommand([
               "XINFO",
@@ -930,14 +966,23 @@ export class RedisQueueWorkerExecutor<
               }
               return g.name === group;
             });
-            if (!groupInfo) return 0;
+            if (!groupInfo) return { lag: 0, pending: 0 };
             if (Array.isArray(groupInfo)) {
               const lagIdx = groupInfo.indexOf("lag");
-              return lagIdx !== -1 ? Number(groupInfo[lagIdx + 1]) : 0;
+              const pendingIdx = groupInfo.indexOf("pending");
+              return {
+                lag: lagIdx !== -1 ? Number(groupInfo[lagIdx + 1]) : 0,
+                pending: pendingIdx !== -1
+                  ? Number(groupInfo[pendingIdx + 1])
+                  : 0,
+              };
             }
-            return Number(groupInfo.lag ?? 0);
+            return {
+              lag: Number(groupInfo.lag ?? 0),
+              pending: Number(groupInfo.pending ?? 0),
+            };
           } catch {
-            return 0;
+            return { lag: 0, pending: 0 };
           }
         };
 
@@ -969,7 +1014,6 @@ export class RedisQueueWorkerExecutor<
           }
 
           // Evaluate termination
-          const lag = await getLag(client, streamKey, groupName);
           const producerKey =
             workerType === "process"
               ? mediatorOptions.persistedLastMessageKey
@@ -978,21 +1022,11 @@ export class RedisQueueWorkerExecutor<
             "EXISTS",
             producerKey,
           ])) as number;
-          hasMore = lag > 0 || producerExists === 1;
-          if (!hasMore) {
-            console.log(
-              `[Worker ${consumerName}] Loop termination reached. Lag: ${lag}, Producer exists: ${producerExists}`,
-            );
-          }
+          const { lag, pending } = await getLag(client, streamKey, groupName);
+          hasMore = lag > 0 || pending > 0 || producerExists === 1;
         } while (hasMore);
 
         // --- Post-Loop Cleanup ---
-        if (workerType === "process") {
-          await client.sendCommand([
-            "DEL",
-            mediatorOptions.persistedLastInsertMessageKey,
-          ]);
-        }
       } catch (err) {
         port.postMessage({ type: WORKER_EVENTS.INTERRUPTED, error: err });
       } finally {

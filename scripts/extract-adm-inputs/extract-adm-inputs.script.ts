@@ -22,6 +22,7 @@ import {
   AdmLevelCode,
   ADM_LEVEL_CODES_INDEXED,
   ADM_LEVEL_TITLE_BY_CODE,
+  ADM_LEVEL_INDEX_BY_CODE,
 } from "@scope/consts/models";
 import * as path from "@std/path";
 import { TextLineStream } from "@std/streams";
@@ -449,16 +450,16 @@ try {
   console.log(`   Target Schema:  ${pgParams.schema}`);
 
   // 6. Extraction Loop
-  const startIndex = ADM_LEVEL_CODES_INDEXED.indexOf(
+  const startIndex = ADM_LEVEL_INDEX_BY_CODE.get(
     jobContext.currentAdmLevel,
-  );
+  ) as number;
   const levelsToProcess = ADM_LEVEL_CODES_INDEXED.slice(startIndex);
 
   for (const levelCode of levelsToProcess) {
     // Explicitly sync the job context with the current iteration level
     jobContext.currentAdmLevel = levelCode;
 
-    const levelTitle = ADM_LEVEL_TITLE_BY_CODE.get(levelCode) ?? levelCode;
+    const levelTitle = ADM_LEVEL_TITLE_BY_CODE.get(levelCode) as string;
     const ndjsonFileName = `${levelTitle}s.ndjson`;
     const ndjsonFilePath = path.join(
       Deno.cwd(),
@@ -474,22 +475,29 @@ try {
 
     // Initialize Worker Pool
     const processingWorkersCount = mediatorCliArgs.processingWorkersCount!;
-    const workerOptions = {
+    const workerOptions: WorkerOptions = {
       type: "module" as const,
     };
+
+    const disableRedisParam = `disable-redis=${redisCliArgs.disableRedis}`;
+
+    const processingWorkerUrl = new URL(
+      "./workers/processing.worker.ts",
+      import.meta.url,
+    );
+    processingWorkerUrl.search = disableRedisParam;
+
     const processingWorkers = Array.from({
       length: processingWorkersCount,
-    }).map(
-      () =>
-        new Worker(
-          new URL("./workers/processing.worker.ts", import.meta.url).href,
-          workerOptions,
-        ),
+    }).map(() => new Worker(processingWorkerUrl.href, workerOptions));
+
+    const insertWorkerUrl = new URL(
+      "./workers/insert.worker.ts",
+      import.meta.url,
     );
-    const insertWorker = new Worker(
-      new URL("./workers/insert.worker.ts", import.meta.url).href,
-      workerOptions,
-    );
+    insertWorkerUrl.search = disableRedisParam;
+
+    const insertWorker = new Worker(insertWorkerUrl.href, workerOptions);
 
     const workers = {
       processing: processingWorkers,
