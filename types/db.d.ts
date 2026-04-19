@@ -1,6 +1,13 @@
 import type { Transaction } from "@db/postgres";
 import type { DbType } from "@scope/consts/db";
 import type { MaybePromise } from "./utils.d.ts";
+import type {
+  CommuneValues,
+  DistrictValues,
+  FokontanyValues,
+  ProvinceValues,
+  RegionValues,
+} from "./models.d.ts";
 
 /**
  * Represents the transaction context for a specific database type.
@@ -86,4 +93,47 @@ export interface TableDDL {
   create(transactionContext?: DbTransactionContext): MaybePromise<void>;
   drop(transactionContext?: DbTransactionContext): MaybePromise<void>;
   exists(transactionContext?: DbTransactionContext): MaybePromise<boolean>;
+}
+
+/**
+ * Result of a batch insertion operation.
+ */
+export interface DMLInsertManyResult {
+  /** The number of rows successfully inserted. */
+  insertedCount: number;
+}
+
+/**
+ * Data Manipulation Layer interface for the provinces table.
+ */
+export interface ProvinceTableDML {
+  createMany(values: ProvinceValues[]): MaybePromise<DMLInsertManyResult>;
+}
+
+/**
+ * Data Manipulation Layer interface for the regions table.
+ */
+export interface RegionTableDML {
+  createMany(values: RegionValues[]): MaybePromise<DMLInsertManyResult>;
+}
+
+/**
+ * Data Manipulation Layer interface for the districts table.
+ */
+export interface DistrictTableDML {
+  createMany(values: DistrictValues[]): MaybePromise<DMLInsertManyResult>;
+}
+
+/**
+ * Data Manipulation Layer interface for the communes table.
+ */
+export interface CommuneTableDML {
+  createMany(values: CommuneValues[]): MaybePromise<DMLInsertManyResult>;
+}
+
+/**
+ * Data Manipulation Layer interface for the fokontanys table.
+ */
+export interface FokontanyTableDML {
+  createMany(values: FokontanyValues[]): MaybePromise<DMLInsertManyResult>;
 }

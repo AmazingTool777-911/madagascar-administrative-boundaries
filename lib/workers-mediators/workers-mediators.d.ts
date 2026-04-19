@@ -52,6 +52,8 @@ export interface QueueOptions<
   batchSize?: number;
   /** Maximum number of retries per batch in case of an error. */
   maxRetries?: number;
+  /** Whether to enable debug logging. */
+  debug?: boolean;
 }
 
 /**

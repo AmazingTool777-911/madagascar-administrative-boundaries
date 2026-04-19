@@ -89,6 +89,7 @@ interface MediatorCliArgs {
   workerHealthcheckInterval?: number;
   workerPendingMinDurationThreshold?: number;
   processingWorkersCount?: number;
+  debug?: boolean;
 }
 
 const args = parseArgs(Deno.args, {
@@ -112,7 +113,7 @@ const args = parseArgs(Deno.args, {
     "worker-pending-min-duration-threshold",
     "processing-workers-count",
   ],
-  boolean: ["pg-ssl", "disable-redis", "redis-ssl"],
+  boolean: ["pg-ssl", "disable-redis", "redis-ssl", "debug"],
   default: {},
 });
 
@@ -225,6 +226,10 @@ const mediatorCliArgs: MediatorCliArgs = {
     "PROCESSING_WORKERS_COUNT",
     5,
   ),
+  debug: CliArgsEnvResolvers.resolveBoolean(
+    args["debug"] as boolean | undefined,
+    "EXTRACT_DEBUG",
+  ),
 };
 
 const pg = injectPostgresDbConnection();
@@ -332,6 +337,7 @@ try {
       healthcheckInterval: mediatorCliArgs.workerHealthcheckInterval,
       pendingMinDurationThreshold:
         mediatorCliArgs.workerPendingMinDurationThreshold,
+      debug: mediatorCliArgs.debug,
     });
     console.log("✅ Redis Queue Workers Mediator initialized.");
   } else {

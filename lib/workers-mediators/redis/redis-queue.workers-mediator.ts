@@ -41,6 +41,10 @@ export const DEFAULT_PENDING_MIN_DURATION_THRESHOLD = 60000;
 export const DEFAULT_PROCESSING_DLQ_STREAM_KEY = "processing:dlq";
 /** Default key for the insert DLQ Redis stream. */
 export const DEFAULT_INSERT_DLQ_STREAM_KEY = "insert:dlq";
+/** Static value indicating that a producer is initializing. */
+export const INITIALIZING_VALUE = "INITIALIZING";
+/** Static value indicating that a job has ended. */
+export const JOB_ENDED_VALUE = "JOB_ENDED";
 
 /**
  * Optional configuration for Redis keys used by the mediator.
@@ -72,6 +76,8 @@ export interface RedisQueueWorkersMediatorOptions<TMessage = unknown> {
   healthcheckInterval?: number;
   /** Minimum duration threshold for claiming pending messages in milliseconds. */
   pendingMinDurationThreshold?: number;
+  /** Whether to enable debug logging. */
+  debug?: boolean;
 }
 
 /**
@@ -92,6 +98,8 @@ interface WorkerInitMessage {
   batchSize: number;
   /** Maximum number of retries per batch. */
   maxRetries: number;
+  /** Whether to enable debug logging. */
+  debug: boolean;
   /** Mediator configuration options derived from the main thread. */
   mediatorOptions: Omit<Required<RedisQueueWorkersMediatorOptions>, "never">;
 }
@@ -119,6 +127,7 @@ class RedisQueueWorkerExecution<
   #workerIndex: number;
   #batchSize: number;
   #maxRetries: number;
+  #debug: boolean;
 
   constructor(
     worker: Worker,
@@ -129,6 +138,7 @@ class RedisQueueWorkerExecution<
     mediatorOptions: RedisQueueWorkersMediatorOptions<any>,
     batchSize: number,
     maxRetries: number,
+    debug: boolean,
     callbacks: {
       onDone: () => void;
       onInterrupted: (err: unknown) => void;
@@ -145,6 +155,7 @@ class RedisQueueWorkerExecution<
     this.#onFinished = callbacks.onFinished;
     this.#batchSize = batchSize;
     this.#maxRetries = maxRetries;
+    this.#debug = debug;
   }
 
   get status() {
@@ -175,6 +186,7 @@ class RedisQueueWorkerExecution<
         },
         batchSize: this.#batchSize,
         maxRetries: this.#maxRetries,
+        debug: this.#debug,
         port: port2,
       },
       [port2],
@@ -282,6 +294,7 @@ export class RedisQueueWorkersMediator<
       pendingMinDurationThreshold:
         options.pendingMinDurationThreshold ??
         DEFAULT_PENDING_MIN_DURATION_THRESHOLD,
+      debug: options.debug ?? false,
     };
   }
 
@@ -343,37 +356,63 @@ export class RedisQueueWorkersMediator<
     await this.#client.pipelineCommands(contextCommands);
 
     // 2. Initialize producer keys to prevent workers from exiting immediately
-    const initProducerCommands: string[][] = [
-      [
+    const checkProducerExists = (await this.#client.sendCommand([
+      "EXISTS",
+      this.#options.persistedLastMessageKey,
+    ])) as number;
+
+    if (checkProducerExists === 0) {
+      await this.#client.sendCommand([
         "SET",
         this.#options.persistedLastMessageKey,
-        JSON.stringify("INITIALIZING"),
-      ],
-    ];
-    if (insertWorker) {
-      initProducerCommands.push([
-        "SET",
-        this.#options.persistedLastInsertMessageKey,
-        JSON.stringify("INITIALIZING"),
+        JSON.stringify(INITIALIZING_VALUE),
       ]);
     }
-    await this.#client.pipelineCommands(initProducerCommands);
+
+    if (insertWorker) {
+      const checkInsertProducerExists = (await this.#client.sendCommand([
+        "EXISTS",
+        this.#options.persistedLastInsertMessageKey,
+      ])) as number;
+      if (checkInsertProducerExists === 0) {
+        await this.#client.sendCommand([
+          "SET",
+          this.#options.persistedLastInsertMessageKey,
+          JSON.stringify(INITIALIZING_VALUE),
+        ]);
+      }
+    }
 
     // 3. Create a readable stream that stream the messages in batches
-    const messagesStream = Array.isArray(messages)
-      ? (() => {
-          let index = 0;
-          return new ReadableStream<TMessage>({
-            pull(controller) {
-              if (index < messages.length) {
-                controller.enqueue(messages[index++]);
-              } else {
-                controller.close();
-              }
-            },
-          });
-        })()
-      : messages;
+    const lastMessageValue = (await this.#client.sendCommand([
+      "GET",
+      this.#options.persistedLastMessageKey,
+    ])) as string | null;
+
+    let finalMessagesStream: ReadableStream<TMessage>;
+
+    if (lastMessageValue === JSON.stringify(JOB_ENDED_VALUE)) {
+      finalMessagesStream = new ReadableStream({
+        start(controller) {
+          controller.close();
+        },
+      });
+    } else {
+      finalMessagesStream = Array.isArray(messages)
+        ? (() => {
+            let index = 0;
+            return new ReadableStream<TMessage>({
+              pull(controller) {
+                if (index < messages.length) {
+                  controller.enqueue(messages[index++]);
+                } else {
+                  controller.close();
+                }
+              },
+            });
+          })()
+        : messages;
+    }
 
     const batcher = (() => {
       let currentBatch: TMessage[] = [];
@@ -415,13 +454,16 @@ export class RedisQueueWorkersMediator<
       },
       close: async () => {
         await this.#client.sendCommand([
-          "DEL",
+          "SET",
           this.#options.persistedLastMessageKey,
+          JSON.stringify(JOB_ENDED_VALUE),
         ]);
       },
     });
 
-    const pipelineDone = messagesStream.pipeThrough(batcher).pipeTo(enqueuer);
+    const pipelineDone = finalMessagesStream
+      .pipeThrough(batcher)
+      .pipeTo(enqueuer);
 
     // 4. Monitoring loop
     let restartLoop = false;
@@ -457,6 +499,7 @@ export class RedisQueueWorkersMediator<
           this.#options,
           batchSize,
           maxRetries,
+          options.debug ?? this.#options.debug,
           {
             onDone: () => {
               workersDoneCount++;
@@ -507,6 +550,7 @@ export class RedisQueueWorkersMediator<
           this.#options,
           batchSize,
           maxRetries,
+          options.debug ?? this.#options.debug,
           {
             onDone: () => {
               resolveInsertDone();
@@ -639,6 +683,8 @@ export class RedisQueueWorkersMediator<
       }
     } while (restartLoop);
 
+    await this.clearPersisted();
+
     this.stop();
   }
 
@@ -677,7 +723,12 @@ export class RedisQueueWorkersMediator<
         "GET",
         this.#options.persistedLastMessageKey,
       ])) as string | null;
-      return raw ? (JSON.parse(raw) as TMessage) : null;
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      if (parsed === INITIALIZING_VALUE || parsed === JOB_ENDED_VALUE) {
+        return null;
+      }
+      return parsed as TMessage;
     })();
   }
 
@@ -745,6 +796,7 @@ export class RedisQueueWorkerExecutor<
         workerMetadata,
         batchSize: _batchSize,
         maxRetries,
+        debug,
         mediatorOptions,
       } = (event as MessageEvent<WorkerInitMessage>).data;
       if (type !== WORKER_EVENTS.INIT) return;
@@ -891,30 +943,18 @@ export class RedisQueueWorkerExecutor<
 
         const drainPhase = async (currentStreamKey: string, isDlq: boolean) => {
           while (true) {
-            const pending = (await client.sendCommand([
-              "XPENDING",
+            await client.sendCommand([
+              "XAUTOCLAIM",
               currentStreamKey,
               groupName,
-              "IDLE",
-              mediatorOptions.pendingMinDurationThreshold.toString(),
-              "-",
-              "+",
+              consumerName, // the new owner
+              mediatorOptions.pendingMinDurationThreshold.toString(), // min idle ms
+              "0-0", // start from beginning
+              "COUNT",
               _batchSize.toString(),
-              // deno-lint-ignore no-explicit-any
-            ])) as any[];
+            ]);
 
-            const idsToClaim = pending.map((p) => p[0]);
-            if (idsToClaim.length > 0) {
-              await client.sendCommand([
-                "XCLAIM",
-                currentStreamKey,
-                groupName,
-                consumerName,
-                mediatorOptions.pendingMinDurationThreshold.toString(),
-                ...idsToClaim,
-              ]);
-            }
-
+            const startFrom = isDlq ? ">" : "0";
             const streams = (await client.sendCommand([
               "XREADGROUP",
               "GROUP",
@@ -926,11 +966,12 @@ export class RedisQueueWorkerExecutor<
               "1",
               "STREAMS",
               currentStreamKey,
-              ">",
+              startFrom,
               // deno-lint-ignore no-explicit-any
             ])) as any[];
 
-            if (!streams || streams.length === 0) break;
+            if (!streams || streams.length === 0 || streams[0][1].length === 0)
+              break;
 
             const msgs = streams[0][1] as [string, string[]][];
             const batchIds = msgs.map(([id]) => id);
@@ -941,7 +982,7 @@ export class RedisQueueWorkerExecutor<
           }
         };
 
-        // --- Phase 1: Drain DLQ ---
+        // // --- Phase 1: Drain DLQ ---
         await drainPhase(dlqKey, true);
 
         // --- Phase 2: Drain Pending and Unread Main Stream ---
@@ -972,9 +1013,8 @@ export class RedisQueueWorkerExecutor<
               const pendingIdx = groupInfo.indexOf("pending");
               return {
                 lag: lagIdx !== -1 ? Number(groupInfo[lagIdx + 1]) : 0,
-                pending: pendingIdx !== -1
-                  ? Number(groupInfo[pendingIdx + 1])
-                  : 0,
+                pending:
+                  pendingIdx !== -1 ? Number(groupInfo[pendingIdx + 1]) : 0,
               };
             }
             return {
@@ -1018,13 +1058,39 @@ export class RedisQueueWorkerExecutor<
             workerType === "process"
               ? mediatorOptions.persistedLastMessageKey
               : mediatorOptions.persistedLastInsertMessageKey;
-          const producerExists = (await client.sendCommand([
-            "EXISTS",
+
+          const producerValue = (await client.sendCommand([
+            "GET",
             producerKey,
-          ])) as number;
+          ])) as string | null;
+
+          const isProducerActive =
+            producerValue !== null &&
+            JSON.parse(producerValue) !== JOB_ENDED_VALUE;
+
           const { lag, pending } = await getLag(client, streamKey, groupName);
-          hasMore = lag > 0 || pending > 0 || producerExists === 1;
+          hasMore = lag > 0 || pending > 0 || isProducerActive;
+          if (debug && !hasMore) {
+            console.log(
+              "workerType",
+              workerType,
+              "lag",
+              lag,
+              "pending",
+              pending,
+              "isProducerActive",
+              isProducerActive,
+            );
+          }
         } while (hasMore);
+
+        if (workerType === "process") {
+          await client.sendCommand([
+            "SET",
+            mediatorOptions.persistedLastInsertMessageKey,
+            JSON.stringify(JOB_ENDED_VALUE),
+          ]);
+        }
 
         // --- Post-Loop Cleanup ---
       } catch (err) {

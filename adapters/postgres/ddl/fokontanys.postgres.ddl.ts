@@ -20,7 +20,7 @@ export class FokontanysPostgresDDL extends BaseAdmTableDDL {
 
   async create(transactionContext?: DbTransactionContext): Promise<void> {
     const geometryColumn = this.config.hasGeojson
-      ? "\n        geometry GEOMETRY(Geometry, 4326),"
+      ? "\n        geojson GEOMETRY(Geometry, 4326),"
       : "";
     const admLevelColumn = this.config.hasAdmLevel
       ? "\n        adm_level SMALLINT NOT NULL DEFAULT 4,"

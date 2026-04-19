@@ -1,0 +1,88 @@
+import { BaseAdmPostgresTableDML } from "./adm-table.postgres.dml.ts";
+import type { DMLInsertManyResult, RegionTableDML } from "@scope/types/db";
+import type { MadaAdmConfigValues, RegionValues } from "@scope/types/models";
+import type { PostgresDbConnection } from "../postgres-db.connection.ts";
+
+/**
+ * PostgreSQL DML implementation for the regions table.
+ */
+export class RegionsPostgresDML extends BaseAdmPostgresTableDML
+  implements RegionTableDML {
+  constructor(
+    config: MadaAdmConfigValues,
+    db: PostgresDbConnection,
+    schema: string = "public",
+  ) {
+    super(config, db, schema);
+  }
+
+  /**
+   * Inserts multiple region records into the database in a single transaction.
+   *
+   * @param values - An array of region values to insert.
+   * @returns A result object containing the count of inserted rows.
+   */
+  async createMany(values: RegionValues[]): Promise<DMLInsertManyResult> {
+    const tableName = this.getTableName("regions");
+    const columns = ["region", "province", "province_id"];
+    if (this.config.hasAdmLevel) columns.push("adm_level");
+    if (this.config.hasGeojson) columns.push("geojson");
+
+    return await this._createMany(
+      tableName,
+      columns,
+      values,
+      (val, argIndex) => {
+        const placeholders: string[] = [];
+        const args: unknown[] = [];
+
+        // region
+        placeholders.push(`$${argIndex++}`);
+        args.push(val.region);
+
+        // province
+        placeholders.push(`$${argIndex++}`);
+        args.push(val.province);
+
+        // province_id
+        placeholders.push(`$${argIndex++}`);
+        args.push(val.provinceId);
+
+        // adm_level
+        if (this.config.hasAdmLevel) {
+          placeholders.push(`$${argIndex++}`);
+          args.push(val.admLevel ?? 1);
+        }
+
+        // geojson
+        if (this.config.hasGeojson) {
+          placeholders.push(`ST_GeomFromGeoJSON($${argIndex++})`);
+          args.push(val.geojson ? JSON.stringify(val.geojson) : null);
+        }
+
+        return { placeholders, args };
+      },
+    );
+  }
+}
+
+let _instance: RegionsPostgresDML | null = null;
+
+/**
+ * Injector for the RegionsPostgresDML singleton.
+ *
+ * @param config - The runtime ADM configuration.
+ * @param db - The singleton PostgreSQL database connection.
+ * @param schema - The ADM schema binding.
+ * @returns The singleton instance of RegionsPostgresDML.
+ */
+export function injectRegionsPostgresDML(
+  config: MadaAdmConfigValues,
+  db: PostgresDbConnection,
+  schema: string = "public",
+): RegionsPostgresDML {
+  if (!_instance) {
+    _instance = new RegionsPostgresDML(config, db, schema);
+  }
+  return _instance;
+}
