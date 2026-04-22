@@ -1,3 +1,4 @@
+import { ADM_LEVEL_TITLE_BY_CODE, AdmLevelCode } from "@scope/consts/models";
 import { BaseAdmPostgresTableDML } from "./adm-table.postgres.dml.ts";
 import type { DMLCreateManyResult, FokontanyTableDML } from "@scope/types/db";
 import type { FokontanyRecord, MadaAdmConfigValues } from "@scope/types/models";
@@ -23,7 +24,9 @@ export class FokontanysPostgresDML extends BaseAdmPostgresTableDML
    * @returns A result object containing the count of inserted rows.
    */
   async createMany(values: FokontanyRecord[]): Promise<DMLCreateManyResult> {
-    const tableName = this.getTableName("fokontanys");
+    const tableName = this.getTableName(
+      ADM_LEVEL_TITLE_BY_CODE.get(AdmLevelCode.FOKONTANY)! + "s",
+    );
     const columns = [
       "fokontany",
       "commune",
@@ -109,7 +112,9 @@ export class FokontanysPostgresDML extends BaseAdmPostgresTableDML
   }
 
   async deleteDuplicates(): Promise<void> {
-    const tableName = this.getTableName("fokontanys");
+    const tableName = this.getTableName(
+      ADM_LEVEL_TITLE_BY_CODE.get(AdmLevelCode.FOKONTANY)! + "s",
+    );
     await this._deleteDuplicates(tableName, [
       "fokontany",
       "commune",

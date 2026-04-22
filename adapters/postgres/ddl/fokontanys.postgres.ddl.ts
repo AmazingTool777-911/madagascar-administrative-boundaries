@@ -1,3 +1,4 @@
+import { ADM_LEVEL_TITLE_BY_CODE, AdmLevelCode } from "@scope/consts/models";
 import { BaseAdmTableDDL } from "@scope/db";
 import type { MadaAdmConfigValues } from "@scope/types/models";
 import type { DbTransactionContext } from "@scope/types/db";
@@ -17,7 +18,9 @@ export class FokontanysPostgresDDL extends BaseAdmTableDDL {
   }
 
   get tableName(): string {
-    return this.getTableName("fokontanys");
+    return this.getTableName(
+      ADM_LEVEL_TITLE_BY_CODE.get(AdmLevelCode.FOKONTANY)! + "s",
+    );
   }
 
   async create(transactionContext?: DbTransactionContext): Promise<void> {
@@ -28,10 +31,18 @@ export class FokontanysPostgresDDL extends BaseAdmTableDDL {
       ? "\n        adm_level SMALLINT NOT NULL DEFAULT 4,"
       : "";
 
-    const regionsTable = this.getTableName("regions");
-    const provincesTable = this.getTableName("provinces");
-    const districtsTable = this.getTableName("districts");
-    const communesTable = this.getTableName("communes");
+    const regionsTable = this.getTableName(
+      ADM_LEVEL_TITLE_BY_CODE.get(AdmLevelCode.REGION)! + "s",
+    );
+    const provincesTable = this.getTableName(
+      ADM_LEVEL_TITLE_BY_CODE.get(AdmLevelCode.PROVINCE)! + "s",
+    );
+    const districtsTable = this.getTableName(
+      ADM_LEVEL_TITLE_BY_CODE.get(AdmLevelCode.DISTRICT)! + "s",
+    );
+    const communesTable = this.getTableName(
+      ADM_LEVEL_TITLE_BY_CODE.get(AdmLevelCode.COMMUNE)! + "s",
+    );
 
     let optionalCols = "";
     let optionalFk = "";

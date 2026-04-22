@@ -1,3 +1,4 @@
+import { ADM_LEVEL_TITLE_BY_CODE, AdmLevelCode } from "@scope/consts/models";
 import { BaseAdmPostgresTableDML } from "./adm-table.postgres.dml.ts";
 import type { DMLCreateManyResult, ProvinceTableDML } from "@scope/types/db";
 import type {
@@ -21,7 +22,9 @@ export class ProvincesPostgresDML extends BaseAdmPostgresTableDML
   }
 
   async getManyByNames(names: string[]): Promise<Province[]> {
-    const tableName = this.getTableName("provinces");
+    const tableName = this.getTableName(
+      ADM_LEVEL_TITLE_BY_CODE.get(AdmLevelCode.PROVINCE)! + "s",
+    );
     const query = `SELECT * FROM ${tableName} WHERE province = ANY($1)`;
     const result = await this.db.client.queryObject<Province>(query, [names]);
     return result.rows;
@@ -34,7 +37,9 @@ export class ProvincesPostgresDML extends BaseAdmPostgresTableDML
    * @returns A result object containing the count of inserted rows.
    */
   async createMany(values: ProvinceRecord[]): Promise<DMLCreateManyResult> {
-    const tableName = this.getTableName("provinces");
+    const tableName = this.getTableName(
+      ADM_LEVEL_TITLE_BY_CODE.get(AdmLevelCode.PROVINCE)! + "s",
+    );
     const columns = ["province"];
     if (this.config.hasAdmLevel) columns.push("adm_level");
     if (this.config.hasGeojson) columns.push("geojson");
@@ -69,7 +74,9 @@ export class ProvincesPostgresDML extends BaseAdmPostgresTableDML
   }
 
   async deleteDuplicates(): Promise<void> {
-    const tableName = this.getTableName("provinces");
+    const tableName = this.getTableName(
+      ADM_LEVEL_TITLE_BY_CODE.get(AdmLevelCode.PROVINCE)! + "s",
+    );
     await this._deleteDuplicates(tableName, ["province"]);
   }
 }

@@ -1,3 +1,4 @@
+import { ADM_LEVEL_TITLE_BY_CODE, AdmLevelCode } from "@scope/consts/models";
 import { BaseAdmTableDDL } from "@scope/db";
 import type { MadaAdmConfigValues } from "@scope/types/models";
 import type { DbTransactionContext } from "@scope/types/db";
@@ -30,7 +31,9 @@ export class ProvincesPostgresDDL extends BaseAdmTableDDL {
    * @returns The resolved table name.
    */
   get tableName(): string {
-    return this.getTableName("provinces");
+    return this.getTableName(
+      ADM_LEVEL_TITLE_BY_CODE.get(AdmLevelCode.PROVINCE)! + "s",
+    );
   }
 
   /**

@@ -1,3 +1,4 @@
+import { ADM_LEVEL_TITLE_BY_CODE, AdmLevelCode } from "@scope/consts/models";
 import { BaseAdmPostgresTableDML } from "./adm-table.postgres.dml.ts";
 import type { DMLCreateManyResult, RegionTableDML } from "@scope/types/db";
 import type { MadaAdmConfigValues, RegionRecord } from "@scope/types/models";
@@ -23,7 +24,9 @@ export class RegionsPostgresDML extends BaseAdmPostgresTableDML
    * @returns A result object containing the count of inserted rows.
    */
   async createMany(values: RegionRecord[]): Promise<DMLCreateManyResult> {
-    const tableName = this.getTableName("regions");
+    const tableName = this.getTableName(
+      ADM_LEVEL_TITLE_BY_CODE.get(AdmLevelCode.REGION)! + "s",
+    );
     const columns = ["region", "province", "province_id"];
     if (this.config.hasAdmLevel) columns.push("adm_level");
     if (this.config.hasGeojson) columns.push("geojson");
@@ -66,7 +69,9 @@ export class RegionsPostgresDML extends BaseAdmPostgresTableDML
   }
 
   async deleteDuplicates(): Promise<void> {
-    const tableName = this.getTableName("regions");
+    const tableName = this.getTableName(
+      ADM_LEVEL_TITLE_BY_CODE.get(AdmLevelCode.REGION)! + "s",
+    );
     await this._deleteDuplicates(tableName, ["region"]);
   }
 }

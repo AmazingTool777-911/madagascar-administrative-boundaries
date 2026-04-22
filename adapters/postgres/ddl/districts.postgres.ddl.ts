@@ -1,3 +1,4 @@
+import { ADM_LEVEL_TITLE_BY_CODE, AdmLevelCode } from "@scope/consts/models";
 import { BaseAdmTableDDL } from "@scope/db";
 import type { MadaAdmConfigValues } from "@scope/types/models";
 import type { DbTransactionContext } from "@scope/types/db";
@@ -17,7 +18,9 @@ export class DistrictsPostgresDDL extends BaseAdmTableDDL {
   }
 
   get tableName(): string {
-    return this.getTableName("districts");
+    return this.getTableName(
+      ADM_LEVEL_TITLE_BY_CODE.get(AdmLevelCode.DISTRICT)! + "s",
+    );
   }
 
   async create(transactionContext?: DbTransactionContext): Promise<void> {
@@ -36,12 +39,16 @@ export class DistrictsPostgresDDL extends BaseAdmTableDDL {
     }
     if (this.config.isFkRepeated || this.config.isProvinceFkRepeated) {
       optionalCols += "\n        province_id INTEGER NOT NULL,";
-      const provincesTable = this.getTableName("provinces");
+      const provincesTable = this.getTableName(
+        ADM_LEVEL_TITLE_BY_CODE.get(AdmLevelCode.PROVINCE)! + "s",
+      );
       optionalFk +=
         `,\n        CONSTRAINT fk_district_province FOREIGN KEY (province_id) REFERENCES ${this.schema}.${provincesTable}(id) ON DELETE CASCADE`;
     }
 
-    const regionsTable = this.getTableName("regions");
+    const regionsTable = this.getTableName(
+      ADM_LEVEL_TITLE_BY_CODE.get(AdmLevelCode.REGION)! + "s",
+    );
 
     const query = `
       CREATE TABLE IF NOT EXISTS ${this.schema}.${this.tableName} (

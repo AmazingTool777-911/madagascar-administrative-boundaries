@@ -1,3 +1,4 @@
+import { ADM_LEVEL_TITLE_BY_CODE, AdmLevelCode } from "@scope/consts/models";
 import { BaseAdmTableDDL } from "@scope/db";
 import type { MadaAdmConfigValues } from "@scope/types/models";
 import type { DbTransactionContext } from "@scope/types/db";
@@ -17,7 +18,9 @@ export class RegionsPostgresDDL extends BaseAdmTableDDL {
   }
 
   get tableName(): string {
-    return this.getTableName("regions");
+    return this.getTableName(
+      ADM_LEVEL_TITLE_BY_CODE.get(AdmLevelCode.REGION)! + "s",
+    );
   }
 
   async create(transactionContext?: DbTransactionContext): Promise<void> {
@@ -27,7 +30,9 @@ export class RegionsPostgresDDL extends BaseAdmTableDDL {
     const admLevelColumn = this.config.hasAdmLevel
       ? "\n        adm_level SMALLINT NOT NULL DEFAULT 1,"
       : "";
-    const provincesTable = this.getTableName("provinces");
+    const provincesTable = this.getTableName(
+      ADM_LEVEL_TITLE_BY_CODE.get(AdmLevelCode.PROVINCE)! + "s",
+    );
 
     const query = `
       CREATE TABLE IF NOT EXISTS ${this.schema}.${this.tableName} (

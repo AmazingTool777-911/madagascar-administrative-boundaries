@@ -1,3 +1,4 @@
+import { ADM_LEVEL_TITLE_BY_CODE, AdmLevelCode } from "@scope/consts/models";
 import { BaseAdmPostgresTableDML } from "./adm-table.postgres.dml.ts";
 import type { CommuneTableDML, DMLCreateManyResult } from "@scope/types/db";
 import type { CommuneRecord, MadaAdmConfigValues } from "@scope/types/models";
@@ -23,7 +24,9 @@ export class CommunesPostgresDML extends BaseAdmPostgresTableDML
    * @returns A result object containing the count of inserted rows.
    */
   async createMany(values: CommuneRecord[]): Promise<DMLCreateManyResult> {
-    const tableName = this.getTableName("communes");
+    const tableName = this.getTableName(
+      ADM_LEVEL_TITLE_BY_CODE.get(AdmLevelCode.COMMUNE)! + "s",
+    );
     const columns = ["commune", "district", "region", "district_id"];
 
     if (this.config.isProvinceRepeated) columns.push("province");
@@ -94,7 +97,9 @@ export class CommunesPostgresDML extends BaseAdmPostgresTableDML
   }
 
   async deleteDuplicates(): Promise<void> {
-    const tableName = this.getTableName("communes");
+    const tableName = this.getTableName(
+      ADM_LEVEL_TITLE_BY_CODE.get(AdmLevelCode.COMMUNE)! + "s",
+    );
     await this._deleteDuplicates(tableName, ["commune", "district", "region"]);
   }
 }

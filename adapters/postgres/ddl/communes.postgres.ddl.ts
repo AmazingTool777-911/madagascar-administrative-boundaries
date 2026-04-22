@@ -1,3 +1,4 @@
+import { ADM_LEVEL_TITLE_BY_CODE, AdmLevelCode } from "@scope/consts/models";
 import { BaseAdmTableDDL } from "@scope/db";
 import type { MadaAdmConfigValues } from "@scope/types/models";
 import type { DbTransactionContext } from "@scope/types/db";
@@ -17,7 +18,9 @@ export class CommunesPostgresDDL extends BaseAdmTableDDL {
   }
 
   get tableName(): string {
-    return this.getTableName("communes");
+    return this.getTableName(
+      ADM_LEVEL_TITLE_BY_CODE.get(AdmLevelCode.COMMUNE)! + "s",
+    );
   }
 
   async create(transactionContext?: DbTransactionContext): Promise<void> {
@@ -28,9 +31,15 @@ export class CommunesPostgresDDL extends BaseAdmTableDDL {
       ? "\n        adm_level SMALLINT NOT NULL DEFAULT 3,"
       : "";
 
-    const regionsTable = this.getTableName("regions");
-    const provincesTable = this.getTableName("provinces");
-    const districtsTable = this.getTableName("districts");
+    const regionsTable = this.getTableName(
+      ADM_LEVEL_TITLE_BY_CODE.get(AdmLevelCode.REGION)! + "s",
+    );
+    const provincesTable = this.getTableName(
+      ADM_LEVEL_TITLE_BY_CODE.get(AdmLevelCode.PROVINCE)! + "s",
+    );
+    const districtsTable = this.getTableName(
+      ADM_LEVEL_TITLE_BY_CODE.get(AdmLevelCode.DISTRICT)! + "s",
+    );
 
     let optionalCols = "";
     let optionalFk = "";
@@ -40,11 +49,13 @@ export class CommunesPostgresDDL extends BaseAdmTableDDL {
     }
     if (this.config.isFkRepeated || this.config.isProvinceFkRepeated) {
       optionalCols += "\n        province_id INTEGER NOT NULL,";
-      optionalFk += `,\n        CONSTRAINT fk_commune_province FOREIGN KEY (province_id) REFERENCES ${this.schema}.${provincesTable}(id) ON DELETE CASCADE`;
+      optionalFk +=
+        `,\n        CONSTRAINT fk_commune_province FOREIGN KEY (province_id) REFERENCES ${this.schema}.${provincesTable}(id) ON DELETE CASCADE`;
     }
     if (this.config.isFkRepeated) {
       optionalCols += "\n        region_id INTEGER NOT NULL,";
-      optionalFk += `,\n        CONSTRAINT fk_commune_region FOREIGN KEY (region_id) REFERENCES ${this.schema}.${regionsTable}(id) ON DELETE CASCADE`;
+      optionalFk +=
+        `,\n        CONSTRAINT fk_commune_region FOREIGN KEY (region_id) REFERENCES ${this.schema}.${regionsTable}(id) ON DELETE CASCADE`;
     }
 
     const query = `
