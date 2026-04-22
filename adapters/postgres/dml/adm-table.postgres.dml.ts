@@ -76,4 +76,31 @@ export abstract class BaseAdmPostgresTableDML {
       return { insertedCount: res.rowCount ?? 0 };
     });
   }
+
+  /**
+   * Internal helper to delete duplicate records from a table.
+   *
+   * @param tableName - The fully qualified name of the table to deduplicate.
+   * @param partitionKeys - The columns to use for identifying duplicates.
+   */
+  protected async _deleteDuplicates(
+    tableName: string,
+    partitionKeys: string[],
+  ): Promise<void> {
+    const sql = `
+      WITH CTE AS (
+          SELECT id, 
+                 ROW_NUMBER() OVER (
+                     PARTITION BY ${partitionKeys.join(", ")}
+                     ORDER BY id ASC
+                 ) AS row_num
+          FROM ${tableName}
+      )
+      DELETE FROM ${tableName}
+      WHERE id IN (
+          SELECT id FROM CTE WHERE row_num > 1
+      );
+    `;
+    await this.db.client.queryObject(sql);
+  }
 }

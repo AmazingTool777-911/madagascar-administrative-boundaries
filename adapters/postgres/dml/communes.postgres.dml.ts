@@ -92,6 +92,11 @@ export class CommunesPostgresDML extends BaseAdmPostgresTableDML
       },
     );
   }
+
+  async deleteDuplicates(): Promise<void> {
+    const tableName = this.getTableName("communes");
+    await this._deleteDuplicates(tableName, ["commune", "district", "region"]);
+  }
 }
 
 let _instance: CommunesPostgresDML | null = null;

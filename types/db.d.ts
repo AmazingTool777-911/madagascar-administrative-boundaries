@@ -105,9 +105,20 @@ export interface DMLCreateManyResult {
 }
 
 /**
+ * Base interface for ADM Data Manipulation Layer (DML) operations.
+ */
+export interface BaseAdmTableDML {
+  /**
+   * Removes duplicate records from the table based on specific administrative criteria.
+   * Keeps only the record with the smallest ID for each unique set of keys.
+   */
+  deleteDuplicates(): MaybePromise<void>;
+}
+
+/**
  * Data Manipulation Layer interface for the provinces table.
  */
-export interface ProvinceTableDML {
+export interface ProvinceTableDML extends BaseAdmTableDML {
   getManyByNames(names: string[]): MaybePromise<Province[]>;
 
   createMany(values: ProvinceRecord[]): MaybePromise<DMLCreateManyResult>;
@@ -116,27 +127,27 @@ export interface ProvinceTableDML {
 /**
  * Data Manipulation Layer interface for the regions table.
  */
-export interface RegionTableDML {
+export interface RegionTableDML extends BaseAdmTableDML {
   createMany(values: RegionRecord[]): MaybePromise<DMLCreateManyResult>;
 }
 
 /**
  * Data Manipulation Layer interface for the districts table.
  */
-export interface DistrictTableDML {
+export interface DistrictTableDML extends BaseAdmTableDML {
   createMany(values: DistrictRecord[]): MaybePromise<DMLCreateManyResult>;
 }
 
 /**
  * Data Manipulation Layer interface for the communes table.
  */
-export interface CommuneTableDML {
+export interface CommuneTableDML extends BaseAdmTableDML {
   createMany(values: CommuneRecord[]): MaybePromise<DMLCreateManyResult>;
 }
 
 /**
  * Data Manipulation Layer interface for the fokontanys table.
  */
-export interface FokontanyTableDML {
+export interface FokontanyTableDML extends BaseAdmTableDML {
   createMany(values: FokontanyRecord[]): MaybePromise<DMLCreateManyResult>;
 }

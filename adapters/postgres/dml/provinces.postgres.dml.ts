@@ -67,6 +67,11 @@ export class ProvincesPostgresDML extends BaseAdmPostgresTableDML
       },
     );
   }
+
+  async deleteDuplicates(): Promise<void> {
+    const tableName = this.getTableName("provinces");
+    await this._deleteDuplicates(tableName, ["province"]);
+  }
 }
 
 let _instance: ProvincesPostgresDML | null = null;

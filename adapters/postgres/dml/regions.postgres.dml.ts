@@ -64,6 +64,11 @@ export class RegionsPostgresDML extends BaseAdmPostgresTableDML
       },
     );
   }
+
+  async deleteDuplicates(): Promise<void> {
+    const tableName = this.getTableName("regions");
+    await this._deleteDuplicates(tableName, ["region"]);
+  }
 }
 
 let _instance: RegionsPostgresDML | null = null;

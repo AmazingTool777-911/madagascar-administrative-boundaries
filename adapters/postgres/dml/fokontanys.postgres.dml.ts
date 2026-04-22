@@ -107,6 +107,16 @@ export class FokontanysPostgresDML extends BaseAdmPostgresTableDML
       },
     );
   }
+
+  async deleteDuplicates(): Promise<void> {
+    const tableName = this.getTableName("fokontanys");
+    await this._deleteDuplicates(tableName, [
+      "fokontany",
+      "commune",
+      "district",
+      "region",
+    ]);
+  }
 }
 
 let _instance: FokontanysPostgresDML | null = null;

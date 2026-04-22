@@ -81,6 +81,11 @@ export class DistrictsPostgresDML extends BaseAdmPostgresTableDML
       },
     );
   }
+
+  async deleteDuplicates(): Promise<void> {
+    const tableName = this.getTableName("districts");
+    await this._deleteDuplicates(tableName, ["district", "region"]);
+  }
 }
 
 let _instance: DistrictsPostgresDML | null = null;

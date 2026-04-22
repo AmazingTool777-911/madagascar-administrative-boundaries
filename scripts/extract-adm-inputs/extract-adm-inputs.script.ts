@@ -16,11 +16,15 @@ import type {
 import type { PostgresConnectionParams, TableDDL } from "@scope/types/db";
 import {
   injectCommunesPostgresDDL,
+  injectCommunesPostgresDML,
   injectDistrictsPostgresDDL,
+  injectDistrictsPostgresDML,
   injectFokontanysPostgresDDL,
   injectPostgresDbConnection,
   injectProvincesPostgresDDL,
+  injectProvincesPostgresDML,
   injectRegionsPostgresDDL,
+  injectRegionsPostgresDML,
 } from "@scope/adapters/postgres";
 import type { ExtractAdmInputJobContext } from "./extract-adm-input.d.ts";
 import {
@@ -695,6 +699,20 @@ try {
       }
     }
 
+    // 10. Deduplicate records for this level
+    console.log(`🧹 Deleting duplicates for ${levelTitle}...`);
+    const dml =
+      levelCode === AdmLevelCode.PROVINCE
+        ? injectProvincesPostgresDML(config, pg, pgParams.schema)
+        : levelCode === AdmLevelCode.REGION
+          ? injectRegionsPostgresDML(config, pg, pgParams.schema)
+          : levelCode === AdmLevelCode.DISTRICT
+            ? injectDistrictsPostgresDML(config, pg, pgParams.schema)
+            : injectCommunesPostgresDML(config, pg, pgParams.schema);
+
+    await dml.deleteDuplicates();
+    console.log(`✅ Duplicates removed for ${levelTitle}.`);
+
     // Cleanup for this level
     for (const w of processingWorkers) w.terminate();
     insertWorker?.terminate();
@@ -705,6 +723,15 @@ try {
 
   // Final Cleanup
   await mediator.clearPersisted();
+
+  console.log("   🧹 Dropping ADM Level tables...");
+  await pg.transaction(async (transactionContext) => {
+    // Drop in reverse order to respect dependencies if any
+    for (const ddl of ddls.toReversed()) {
+      await ddl.drop(transactionContext);
+    }
+  });
+  console.log("✅ ADM Level tables dropped.");
 
   console.log("\n🏁 Extraction process completed successfully.");
 } catch (err) {
