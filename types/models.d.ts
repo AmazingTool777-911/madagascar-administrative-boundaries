@@ -53,14 +53,15 @@ export type MadaAdmConfig = Entity<MadaAdmConfigValues>;
 
 export type AdmProperties = {
   shapeName: string;
-  shapeLevel: AdmLevelCode;
+  shapeType: AdmLevelCode;
+  shapeID: string;
 };
 
 export type HasGeoJsonLowLevel<T> = T & {
-  geojson?: GeoJSONGeometry<AdmProperties> | string;
+  geojson?: GeoJSONGeometry | string;
 };
 export type HasGeoJson<T> = T & {
-  geojson?: GeoJSONGeometry<AdmProperties>;
+  geojson?: GeoJSONGeometry;
 };
 
 export type HasAdmLevelLowLevel<T> = T & {
@@ -75,6 +76,7 @@ export type ProvinceValues = HasAdmLevel<
     province: string;
   }>
 >;
+export type ProvinceRecord = ProvinceValues;
 export type ProvinceSnakedCased = EntitySnakeCased<
   HasAdmLevelLowLevel<
     HasGeoJsonLowLevel<{
@@ -88,41 +90,48 @@ export type RegionValues = HasAdmLevel<
   HasGeoJson<{
     region: string;
     province: string;
-    provinceId: EntityId;
   }>
 >;
+export type RegionFks = { provinceId: EntityId };
+export type RegionFksSnakeCased = { province_id: EntityId };
+export type RegionRecord = RegionValues & RegionFks;
 export type RegionSnakeCased = EntitySnakeCased<
   HasAdmLevelLowLevel<
-    HasGeoJsonLowLevel<{
-      region: string;
-      province: string;
-      province_id: EntityId;
-    }>
+    HasGeoJsonLowLevel<
+      {
+        region: string;
+        province: string;
+      } & RegionFksSnakeCased
+    >
   >
 >;
-export type Region = Entity<RegionValues>;
+export type Region = Entity<RegionRecord>;
 
 export type DistrictValues = HasAdmLevel<
   HasGeoJson<{
     district: string;
     region: string;
     province?: string;
-    regionId: EntityId;
-    provinceId?: EntityId;
   }>
 >;
+export type DistrictFks = { regionId: EntityId; provinceId?: EntityId };
+export type DistrictFksSnakeCased = {
+  region_id: EntityId;
+  province_id?: EntityId;
+};
+export type DistrictRecord = DistrictValues & DistrictFks;
 export type DistrictSnakeCased = EntitySnakeCased<
   HasAdmLevelLowLevel<
-    HasGeoJsonLowLevel<{
-      district: string;
-      region: string;
-      province?: string;
-      region_id: EntityId;
-      province_id?: EntityId;
-    }>
+    HasGeoJsonLowLevel<
+      {
+        district: string;
+        region: string;
+        province?: string;
+      } & DistrictFksSnakeCased
+    >
   >
 >;
-export type District = Entity<DistrictValues>;
+export type District = Entity<DistrictRecord>;
 
 export type CommuneValues = HasAdmLevel<
   HasGeoJson<{
@@ -130,25 +139,32 @@ export type CommuneValues = HasAdmLevel<
     district: string;
     region: string;
     province?: string;
-    districtId: EntityId;
-    regionId?: EntityId;
-    provinceId?: EntityId;
   }>
 >;
+export type CommuneFks = {
+  districtId: EntityId;
+  regionId?: EntityId;
+  provinceId?: EntityId;
+};
+export type CommuneFksSnakeCased = {
+  district_id: EntityId;
+  region_id?: EntityId;
+  province_id?: EntityId;
+};
+export type CommuneRecord = CommuneValues & CommuneFks;
 export type CommuneSnakeCased = EntitySnakeCased<
   HasAdmLevelLowLevel<
-    HasGeoJsonLowLevel<{
-      commune: string;
-      district: string;
-      region: string;
-      province?: string;
-      district_id: EntityId;
-      region_id?: EntityId;
-      province_id?: EntityId;
-    }>
+    HasGeoJsonLowLevel<
+      {
+        commune: string;
+        district: string;
+        region: string;
+        province?: string;
+      } & CommuneFksSnakeCased
+    >
   >
 >;
-export type Commune = Entity<CommuneValues>;
+export type Commune = Entity<CommuneRecord>;
 
 export type FokontanyValues = HasAdmLevel<
   HasGeoJson<{
@@ -157,25 +173,68 @@ export type FokontanyValues = HasAdmLevel<
     district: string;
     region: string;
     province?: string;
-    communeId: EntityId;
-    districtId?: EntityId;
-    regionId?: EntityId;
-    provinceId?: EntityId;
   }>
 >;
+export type FokontanyFks = {
+  communeId: EntityId;
+  districtId?: EntityId;
+  regionId?: EntityId;
+  provinceId?: EntityId;
+};
+export type FokontanyFksSnakeCased = {
+  commune_id: EntityId;
+  district_id?: EntityId;
+  region_id?: EntityId;
+  province_id?: EntityId;
+};
+export type FokontanyRecord = FokontanyValues & FokontanyFks;
 export type FokontanySnakeCased = EntitySnakeCased<
   HasAdmLevelLowLevel<
-    HasGeoJsonLowLevel<{
-      fokontany: string;
-      commune: string;
-      district: string;
-      region: string;
-      province?: string;
-      commune_id: EntityId;
-      district_id?: EntityId;
-      region_id?: EntityId;
-      province_id?: EntityId;
-    }>
+    HasGeoJsonLowLevel<
+      {
+        fokontany: string;
+        commune: string;
+        district: string;
+        region: string;
+        province?: string;
+      } & FokontanyFksSnakeCased
+    >
   >
 >;
-export type Fokontany = Entity<FokontanyValues>;
+export type Fokontany = Entity<FokontanyRecord>;
+
+export type AdmValues =
+  | ProvinceValues
+  | RegionValues
+  | DistrictValues
+  | CommuneValues
+  | FokontanyValues;
+
+export type AdmRecords =
+  | ProvinceRecord
+  | RegionRecord
+  | DistrictRecord
+  | CommuneRecord
+  | FokontanyRecord;
+
+export type AdmValuesDiscriminated =
+  | {
+    admLevelCode: AdmLevelCode.PROVINCE;
+    values: ProvinceRecord;
+  }
+  | {
+    admLevelCode: AdmLevelCode.REGION;
+    values: RegionRecord;
+  }
+  | {
+    admLevelCode: AdmLevelCode.DISTRICT;
+    values: DistrictRecord;
+  }
+  | {
+    admLevelCode: AdmLevelCode.COMMUNE;
+    values: CommuneRecord;
+  }
+  | {
+    admLevelCode: AdmLevelCode.FOKONTANY;
+    values: FokontanyRecord;
+  };

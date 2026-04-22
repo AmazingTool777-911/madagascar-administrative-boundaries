@@ -71,6 +71,46 @@ export const ADM_LEVEL_INDEX_BY_CODE: Map<AdmLevelCode, number> = new Map([
 ]);
 
 /**
+ * The paths to the NDJSON files for each administrative level, indexed by level index (0-4).
+ */
+export const ADM_GEOJSON_FILES_PATHS: string[] = [
+  "data/ndjson/provinces.ndjson",
+  "data/ndjson/regions.ndjson",
+  "data/ndjson/districts.ndjson",
+  "data/ndjson/communes.ndjson",
+  "data/ndjson/fokontanys.ndjson",
+];
+
+export const ADM_LEVEL_ENTRIES_COUNT_BY_CODE: Map<AdmLevelCode, number> =
+  new Map<AdmLevelCode, number>([
+    [AdmLevelCode.PROVINCE, 6],
+    [AdmLevelCode.REGION, 24],
+    [AdmLevelCode.DISTRICT, 119],
+    [AdmLevelCode.COMMUNE, 1579],
+    [AdmLevelCode.FOKONTANY, 17465],
+  ]);
+
+/**
+ * The directory where the ADM seeding input files are generated.
+ */
+export const ADM_SEEDING_INPUTS_GENERATED_DIR = "data/inputs/.generated";
+
+/**
+ * Maps each administrative level code to its corresponding seeding input NDJSON filename.
+ */
+export const ADM_SEEDING_INPUT_FILENAMES_BY_CODE: Map<AdmLevelCode, string> =
+  new Map<
+    AdmLevelCode,
+    string
+  >([
+    [AdmLevelCode.PROVINCE, "provinces.input.ndjson"],
+    [AdmLevelCode.REGION, "regions.input.ndjson"],
+    [AdmLevelCode.DISTRICT, "districts.input.ndjson"],
+    [AdmLevelCode.COMMUNE, "communes.input.ndjson"],
+    [AdmLevelCode.FOKONTANY, "fokontanys.input.ndjson"],
+  ]);
+
+/**
  * A mapping of Madagascar regions to their corresponding provinces.
  */
 export const PROVINCE_BY_REGION_MAP: Map<string, ProvinceName> = new Map([

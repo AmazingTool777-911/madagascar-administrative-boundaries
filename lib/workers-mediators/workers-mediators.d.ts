@@ -11,7 +11,7 @@ export type WorkerPool =
     /** The workers responsible for processing the messages. */
     processing: Worker[];
     /** The specialized worker that handles database insertions. */
-    insert: Worker;
+    insert?: Worker;
   };
 
 /**
@@ -117,6 +117,11 @@ export interface QueueWorkersMediator<
    * and last processed message trackers.
    */
   clearPersisted(): MaybePromise<void>;
+
+  /**
+   * Checks if the job has already ended in a previous session.
+   */
+  get isJobEnded(): MaybePromise<boolean>;
 }
 
 export interface QueueWorkerLifecycle<
@@ -137,7 +142,7 @@ export interface QueueWorkerLifecycle<
       retryCount: number;
       workerMetadata: { type: "process" | "insert"; index: number };
     },
-  ) => MaybePromise<TFinishedPayload[] | undefined>;
+  ) => MaybePromise<TFinishedPayload[] | void>;
   /** Optional callback executed after all messages have been processed or on error. */
   teardown?: (
     context: TContext,

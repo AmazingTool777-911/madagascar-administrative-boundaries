@@ -1,7 +1,7 @@
 import { BaseAdmTableDDL } from "@scope/db";
 import type { MadaAdmConfigValues } from "@scope/types/models";
 import type { DbTransactionContext } from "@scope/types/db";
-import { injectPostgresDbConnection } from "../postgres-db.connection.ts";
+import type { PostgresDbConnection } from "../postgres-db.connection.ts";
 
 /**
  * Concrete implementation of the DDL abstract class for the provinces table
@@ -9,16 +9,18 @@ import { injectPostgresDbConnection } from "../postgres-db.connection.ts";
  * handle table naming and optional features like geojson.
  */
 export class ProvincesPostgresDDL extends BaseAdmTableDDL {
-  /** The database connection instance used for executing queries. */
-  #db = injectPostgresDbConnection();
-
   /**
    * Initializes a new instance of ProvincesPostgresDDL.
    *
+   * @param db - The PostgreSQL database connection.
    * @param config - The runtime ADM configuration to use for the table definitions.
    * @param schema - The physical database schema name. Defaults to 'public'.
    */
-  constructor(config: MadaAdmConfigValues, schema: string = "public") {
+  constructor(
+    protected db: PostgresDbConnection,
+    config: MadaAdmConfigValues,
+    schema: string = "public",
+  ) {
     super(config, schema);
   }
 
@@ -38,7 +40,7 @@ export class ProvincesPostgresDDL extends BaseAdmTableDDL {
    */
   async create(transactionContext?: DbTransactionContext): Promise<void> {
     const geometryColumn = this.config.hasGeojson
-      ? "\n        geojson GEOMETRY(Geometry, 4326),"
+      ? "\n        geojson GEOMETRY(Geometry, 4326) NOT NULL,"
       : "";
     const admLevelColumn = this.config.hasAdmLevel
       ? "\n        adm_level SMALLINT NOT NULL DEFAULT 0,"
@@ -53,8 +55,8 @@ export class ProvincesPostgresDDL extends BaseAdmTableDDL {
       );
     `;
     const client = this.ensureIsPostgresDbTransactionCtx(transactionContext)
-      ? (transactionContext?.tx ?? this.#db.client)
-      : this.#db.client;
+      ? (transactionContext?.tx ?? this.db.client)
+      : this.db.client;
     await client.queryObject(query);
   }
 
@@ -66,8 +68,8 @@ export class ProvincesPostgresDDL extends BaseAdmTableDDL {
   async drop(transactionContext?: DbTransactionContext): Promise<void> {
     const query = `DROP TABLE IF EXISTS ${this.schema}.${this.tableName};`;
     const client = this.ensureIsPostgresDbTransactionCtx(transactionContext)
-      ? (transactionContext?.tx ?? this.#db.client)
-      : this.#db.client;
+      ? (transactionContext?.tx ?? this.db.client)
+      : this.db.client;
     await client.queryObject(query);
   }
 
@@ -85,8 +87,8 @@ export class ProvincesPostgresDDL extends BaseAdmTableDDL {
       );
     `;
     const client = this.ensureIsPostgresDbTransactionCtx(transactionContext)
-      ? (transactionContext?.tx ?? this.#db.client)
-      : this.#db.client;
+      ? (transactionContext?.tx ?? this.db.client)
+      : this.db.client;
     const result = await client.queryObject<{ exists: boolean }>(query);
     return result.rows[0]?.exists ?? false;
   }
@@ -98,13 +100,15 @@ let _instance: ProvincesPostgresDDL | null = null;
  * Injects (or creates) an instance of {@link ProvincesPostgresDDL}.
  *
  * @param config - The ADM configuration binding.
+ * @param db - The PostgreSQL database connection.
  * @param schema - The ADM schema binding.
  * @returns The instance of the provinces table DDL.
  */
 export function injectProvincesPostgresDDL(
   config: MadaAdmConfigValues,
+  db: PostgresDbConnection,
   schema: string = "public",
 ): ProvincesPostgresDDL {
-  if (!_instance) _instance = new ProvincesPostgresDDL(config, schema);
+  if (!_instance) _instance = new ProvincesPostgresDDL(db, config, schema);
   return _instance;
 }

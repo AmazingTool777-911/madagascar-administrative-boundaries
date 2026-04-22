@@ -1,6 +1,6 @@
 import { BaseAdmPostgresTableDML } from "./adm-table.postgres.dml.ts";
-import type { CommuneTableDML, DMLInsertManyResult } from "@scope/types/db";
-import type { CommuneValues, MadaAdmConfigValues } from "@scope/types/models";
+import type { CommuneTableDML, DMLCreateManyResult } from "@scope/types/db";
+import type { CommuneRecord, MadaAdmConfigValues } from "@scope/types/models";
 import type { PostgresDbConnection } from "../postgres-db.connection.ts";
 
 /**
@@ -22,7 +22,7 @@ export class CommunesPostgresDML extends BaseAdmPostgresTableDML
    * @param values - An array of commune values to insert.
    * @returns A result object containing the count of inserted rows.
    */
-  async createMany(values: CommuneValues[]): Promise<DMLInsertManyResult> {
+  async createMany(values: CommuneRecord[]): Promise<DMLCreateManyResult> {
     const tableName = this.getTableName("communes");
     const columns = ["commune", "district", "region", "district_id"];
 

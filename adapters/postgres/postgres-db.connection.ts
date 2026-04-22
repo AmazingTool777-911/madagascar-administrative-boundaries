@@ -91,7 +91,7 @@ export class PostgresDbConnection implements DbConnection {
   async transaction<T>(
     callback: (transactionContext: DbTransactionContext) => MaybePromise<T>,
   ): Promise<T> {
-    const transaction = this.client.createTransaction("postgres_tx");
+    const transaction = this.client.createTransaction(crypto.randomUUID());
 
     try {
       await transaction.begin();
@@ -102,6 +102,7 @@ export class PostgresDbConnection implements DbConnection {
       await transaction.commit();
       return result;
     } catch (error) {
+      console.log(error);
       await transaction.rollback();
       throw error;
     }

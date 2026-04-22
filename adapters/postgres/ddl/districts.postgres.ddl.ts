@@ -1,16 +1,18 @@
 import { BaseAdmTableDDL } from "@scope/db";
 import type { MadaAdmConfigValues } from "@scope/types/models";
 import type { DbTransactionContext } from "@scope/types/db";
-import { injectPostgresDbConnection } from "../postgres-db.connection.ts";
+import type { PostgresDbConnection } from "../postgres-db.connection.ts";
 
 /**
  * Concrete implementation of the DDL abstract class for the districts table
  * using PostgreSQL.
  */
 export class DistrictsPostgresDDL extends BaseAdmTableDDL {
-  #db = injectPostgresDbConnection();
-
-  constructor(config: MadaAdmConfigValues, schema: string = "public") {
+  constructor(
+    protected db: PostgresDbConnection,
+    config: MadaAdmConfigValues,
+    schema: string = "public",
+  ) {
     super(config, schema);
   }
 
@@ -20,7 +22,7 @@ export class DistrictsPostgresDDL extends BaseAdmTableDDL {
 
   async create(transactionContext?: DbTransactionContext): Promise<void> {
     const geometryColumn = this.config.hasGeojson
-      ? "\n        geojson GEOMETRY(Geometry, 4326),"
+      ? "\n        geojson GEOMETRY(Geometry, 4326) NOT NULL,"
       : "";
     const admLevelColumn = this.config.hasAdmLevel
       ? "\n        adm_level SMALLINT NOT NULL DEFAULT 2,"
@@ -53,16 +55,16 @@ export class DistrictsPostgresDDL extends BaseAdmTableDDL {
       );
     `;
     const client = this.ensureIsPostgresDbTransactionCtx(transactionContext)
-      ? (transactionContext?.tx ?? this.#db.client)
-      : this.#db.client;
+      ? (transactionContext?.tx ?? this.db.client)
+      : this.db.client;
     await client.queryObject(query);
   }
 
   async drop(transactionContext?: DbTransactionContext): Promise<void> {
     const query = `DROP TABLE IF EXISTS ${this.schema}.${this.tableName};`;
     const client = this.ensureIsPostgresDbTransactionCtx(transactionContext)
-      ? (transactionContext?.tx ?? this.#db.client)
-      : this.#db.client;
+      ? (transactionContext?.tx ?? this.db.client)
+      : this.db.client;
     await client.queryObject(query);
   }
 
@@ -80,8 +82,8 @@ export class DistrictsPostgresDDL extends BaseAdmTableDDL {
       );
     `;
     const client = this.ensureIsPostgresDbTransactionCtx(transactionContext)
-      ? (transactionContext?.tx ?? this.#db.client)
-      : this.#db.client;
+      ? (transactionContext?.tx ?? this.db.client)
+      : this.db.client;
     const result = await client.queryObject<{ exists: boolean }>(query);
     return result.rows[0]?.exists ?? false;
   }
@@ -93,12 +95,14 @@ let _instance: DistrictsPostgresDDL | null = null;
  * Injects (or creates) an instance of {@link DistrictsPostgresDDL}.
  *
  * @param config - The runtime ADM configuration.
+ * @param db - The PostgreSQL database connection.
  * @param schema - The ADM schema binding.
  */
 export function injectDistrictsPostgresDDL(
   config: MadaAdmConfigValues,
+  db: PostgresDbConnection,
   schema: string = "public",
 ): DistrictsPostgresDDL {
-  if (!_instance) _instance = new DistrictsPostgresDDL(config, schema);
+  if (!_instance) _instance = new DistrictsPostgresDDL(db, config, schema);
   return _instance;
 }

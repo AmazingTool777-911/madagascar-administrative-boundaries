@@ -1,8 +1,8 @@
 import type { MaybePromise } from "@scope/types/utils";
 import type {
-  TableDDL,
   DbTransactionContext,
   PostgresTransactionContext,
+  TableDDL,
 } from "@scope/types/db";
 import type { MadaAdmConfigValues } from "@scope/types/models";
 import { StringUtils } from "@scope/utils";
@@ -48,7 +48,9 @@ export abstract class BaseAdmTableDDL implements TableDDL {
   /**
    * Abstract method to check if the physical table exists in the database.
    */
-  abstract exists(transactionContext?: DbTransactionContext): MaybePromise<boolean>;
+  abstract exists(
+    transactionContext?: DbTransactionContext,
+  ): MaybePromise<boolean>;
 
   /**
    * Generates a dynamically prefixed table name in either snake_case or camelCase.

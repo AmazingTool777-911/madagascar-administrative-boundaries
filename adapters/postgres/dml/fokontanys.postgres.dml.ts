@@ -1,6 +1,6 @@
 import { BaseAdmPostgresTableDML } from "./adm-table.postgres.dml.ts";
-import type { DMLInsertManyResult, FokontanyTableDML } from "@scope/types/db";
-import type { FokontanyValues, MadaAdmConfigValues } from "@scope/types/models";
+import type { DMLCreateManyResult, FokontanyTableDML } from "@scope/types/db";
+import type { FokontanyRecord, MadaAdmConfigValues } from "@scope/types/models";
 import type { PostgresDbConnection } from "../postgres-db.connection.ts";
 
 /**
@@ -22,9 +22,15 @@ export class FokontanysPostgresDML extends BaseAdmPostgresTableDML
    * @param values - An array of fokontany values to insert.
    * @returns A result object containing the count of inserted rows.
    */
-  async createMany(values: FokontanyValues[]): Promise<DMLInsertManyResult> {
+  async createMany(values: FokontanyRecord[]): Promise<DMLCreateManyResult> {
     const tableName = this.getTableName("fokontanys");
-    const columns = ["fokontany", "commune", "district", "region", "commune_id"];
+    const columns = [
+      "fokontany",
+      "commune",
+      "district",
+      "region",
+      "commune_id",
+    ];
 
     if (this.config.isProvinceRepeated) columns.push("province");
     if (this.config.isFkRepeated || this.config.isProvinceFkRepeated) {

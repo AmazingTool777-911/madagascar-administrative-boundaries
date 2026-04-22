@@ -1,6 +1,10 @@
 import { BaseAdmPostgresTableDML } from "./adm-table.postgres.dml.ts";
-import type { DMLInsertManyResult, ProvinceTableDML } from "@scope/types/db";
-import type { MadaAdmConfigValues, ProvinceValues } from "@scope/types/models";
+import type { DMLCreateManyResult, ProvinceTableDML } from "@scope/types/db";
+import type {
+  MadaAdmConfigValues,
+  Province,
+  ProvinceRecord,
+} from "@scope/types/models";
 import type { PostgresDbConnection } from "../postgres-db.connection.ts";
 
 /**
@@ -16,13 +20,20 @@ export class ProvincesPostgresDML extends BaseAdmPostgresTableDML
     super(config, db, schema);
   }
 
+  async getManyByNames(names: string[]): Promise<Province[]> {
+    const tableName = this.getTableName("provinces");
+    const query = `SELECT * FROM ${tableName} WHERE province = ANY($1)`;
+    const result = await this.db.client.queryObject<Province>(query, [names]);
+    return result.rows;
+  }
+
   /**
    * Inserts multiple province records into the database in a single transaction.
    *
    * @param values - An array of province values to insert.
    * @returns A result object containing the count of inserted rows.
    */
-  async createMany(values: ProvinceValues[]): Promise<DMLInsertManyResult> {
+  async createMany(values: ProvinceRecord[]): Promise<DMLCreateManyResult> {
     const tableName = this.getTableName("provinces");
     const columns = ["province"];
     if (this.config.hasAdmLevel) columns.push("adm_level");

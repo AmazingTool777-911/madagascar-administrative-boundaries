@@ -24,10 +24,14 @@ After any code generation, file creation, or modification of TypeScript (.ts,
    - Always accept the formatter output without manual post-edits to avoid
      re-introducing style drift.
 
-4. If the scope of changes spans multiple files, run project-wide checks: `deno check **/*.ts && deno lint && deno fmt`
+4. If the scope of changes spans multiple files, run project-wide checks:
+   `deno check **/*.ts && deno lint && deno fmt`
 
 ## Constraints
 
-- Never skip type checking, linting, or formatting, even for small edits or single-line changes.
-- Never present code to the user as final until `deno check`, `deno lint`, and `deno fmt` pass with no errors.
-- If a lint rule conflicts with a formatting requirement, report it to the user instead of silently ignoring it.
+- Never skip type checking, linting, or formatting, even for small edits or
+  single-line changes.
+- Never present code to the user as final until `deno check`, `deno lint`, and
+  `deno fmt` pass with no errors.
+- If a lint rule conflicts with a formatting requirement, report it to the user
+  instead of silently ignoring it.

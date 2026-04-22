@@ -1,7 +1,7 @@
 import { StringUtils } from "@scope/utils";
 import type { MadaAdmConfigValues } from "@scope/types/models";
 import type { PostgresDbConnection } from "../postgres-db.connection.ts";
-import type { DMLInsertManyResult } from "@scope/types/db";
+import type { DMLCreateManyResult } from "@scope/types/db";
 
 /**
  * Abstract base class for ADM Data Manipulation Layer (DML) implementations
@@ -15,14 +15,18 @@ export abstract class BaseAdmPostgresTableDML {
   ) {}
 
   /**
-   * Generates the physical database table name by applying the prefix
-   * from the configuration and converting it to snake_case.
+   * Generates the fully qualified physical database table name by applying
+   * the prefix from the configuration and prepending the schema name.
    *
    * @param baseName - The base name of the administrative table (e.g., 'regions').
-   * @returns The fully qualified table name.
+   * @returns The fully qualified table name (e.g., 'public.mada_regions').
    */
   protected getTableName(baseName: string): string {
-    return StringUtils.prefixWithSnakeCase(this.config.tablesPrefix, baseName);
+    const tableName = StringUtils.prefixWithSnakeCase(
+      this.config.tablesPrefix,
+      baseName,
+    );
+    return `${this.schema}.${tableName}`;
   }
 
   /**
@@ -42,7 +46,7 @@ export abstract class BaseAdmPostgresTableDML {
       row: T,
       argIndex: number,
     ) => { placeholders: string[]; args: unknown[] },
-  ): Promise<DMLInsertManyResult> {
+  ): Promise<DMLCreateManyResult> {
     if (rows.length === 0) return { insertedCount: 0 };
 
     return await this.db.transaction(async ({ tx }) => {
@@ -56,18 +60,20 @@ export abstract class BaseAdmPostgresTableDML {
         allArgs.push(...args);
 
         // Calculate how many parameterized arguments were added (those starting with $)
-        const paramCount = placeholders.filter((p) => p.startsWith("$")).length;
+        const paramCount = placeholders
+          .map((p) => p.match(/\$/g)?.length ?? 0)
+          .reduce((sum, value) => sum + value, 0);
         currentArgIndex += paramCount;
       }
 
       const sql = `
-        INSERT INTO ${this.schema}.${tableName} (${columns.join(", ")})
+        INSERT INTO ${tableName} (${columns.join(", ")})
         VALUES ${allPlaceholders.join(", ")};
       `;
 
-      await tx.queryObject(sql, allArgs);
+      const res = await tx.queryObject<{ rowCount: number }>(sql, allArgs);
 
-      return { insertedCount: rows.length };
+      return { insertedCount: res.rowCount ?? 0 };
     });
   }
 }

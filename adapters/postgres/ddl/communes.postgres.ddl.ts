@@ -1,16 +1,18 @@
 import { BaseAdmTableDDL } from "@scope/db";
 import type { MadaAdmConfigValues } from "@scope/types/models";
 import type { DbTransactionContext } from "@scope/types/db";
-import { injectPostgresDbConnection } from "../postgres-db.connection.ts";
+import type { PostgresDbConnection } from "../postgres-db.connection.ts";
 
 /**
  * Concrete implementation of the DDL abstract class for the communes table
  * using PostgreSQL.
  */
 export class CommunesPostgresDDL extends BaseAdmTableDDL {
-  #db = injectPostgresDbConnection();
-
-  constructor(config: MadaAdmConfigValues, schema: string = "public") {
+  constructor(
+    protected db: PostgresDbConnection,
+    config: MadaAdmConfigValues,
+    schema: string = "public",
+  ) {
     super(config, schema);
   }
 
@@ -20,7 +22,7 @@ export class CommunesPostgresDDL extends BaseAdmTableDDL {
 
   async create(transactionContext?: DbTransactionContext): Promise<void> {
     const geometryColumn = this.config.hasGeojson
-      ? "\n        geojson GEOMETRY(Geometry, 4326),"
+      ? "\n        geojson GEOMETRY(Geometry, 4326) NOT NULL,"
       : "";
     const admLevelColumn = this.config.hasAdmLevel
       ? "\n        adm_level SMALLINT NOT NULL DEFAULT 3,"
@@ -38,13 +40,11 @@ export class CommunesPostgresDDL extends BaseAdmTableDDL {
     }
     if (this.config.isFkRepeated || this.config.isProvinceFkRepeated) {
       optionalCols += "\n        province_id INTEGER NOT NULL,";
-      optionalFk +=
-        `,\n        CONSTRAINT fk_commune_province FOREIGN KEY (province_id) REFERENCES ${this.schema}.${provincesTable}(id) ON DELETE CASCADE`;
+      optionalFk += `,\n        CONSTRAINT fk_commune_province FOREIGN KEY (province_id) REFERENCES ${this.schema}.${provincesTable}(id) ON DELETE CASCADE`;
     }
     if (this.config.isFkRepeated) {
       optionalCols += "\n        region_id INTEGER NOT NULL,";
-      optionalFk +=
-        `,\n        CONSTRAINT fk_commune_region FOREIGN KEY (region_id) REFERENCES ${this.schema}.${regionsTable}(id) ON DELETE CASCADE`;
+      optionalFk += `,\n        CONSTRAINT fk_commune_region FOREIGN KEY (region_id) REFERENCES ${this.schema}.${regionsTable}(id) ON DELETE CASCADE`;
     }
 
     const query = `
@@ -60,16 +60,16 @@ export class CommunesPostgresDDL extends BaseAdmTableDDL {
       );
     `;
     const client = this.ensureIsPostgresDbTransactionCtx(transactionContext)
-      ? (transactionContext?.tx ?? this.#db.client)
-      : this.#db.client;
+      ? (transactionContext?.tx ?? this.db.client)
+      : this.db.client;
     await client.queryObject(query);
   }
 
   async drop(transactionContext?: DbTransactionContext): Promise<void> {
     const query = `DROP TABLE IF EXISTS ${this.schema}.${this.tableName};`;
     const client = this.ensureIsPostgresDbTransactionCtx(transactionContext)
-      ? (transactionContext?.tx ?? this.#db.client)
-      : this.#db.client;
+      ? (transactionContext?.tx ?? this.db.client)
+      : this.db.client;
     await client.queryObject(query);
   }
 
@@ -87,8 +87,8 @@ export class CommunesPostgresDDL extends BaseAdmTableDDL {
       );
     `;
     const client = this.ensureIsPostgresDbTransactionCtx(transactionContext)
-      ? (transactionContext?.tx ?? this.#db.client)
-      : this.#db.client;
+      ? (transactionContext?.tx ?? this.db.client)
+      : this.db.client;
     const result = await client.queryObject<{ exists: boolean }>(query);
     return result.rows[0]?.exists ?? false;
   }
@@ -100,13 +100,15 @@ let _instance: CommunesPostgresDDL | null = null;
  * Injects (or creates) an instance of {@link CommunesPostgresDDL}.
  *
  * @param config - The runtime ADM configuration.
+ * @param db - The PostgreSQL database connection.
  * @param schema - The ADM schema binding.
  * @returns The instance of the communes table DDL.
  */
 export function injectCommunesPostgresDDL(
   config: MadaAdmConfigValues,
+  db: PostgresDbConnection,
   schema: string = "public",
 ): CommunesPostgresDDL {
-  if (!_instance) _instance = new CommunesPostgresDDL(config, schema);
+  if (!_instance) _instance = new CommunesPostgresDDL(db, config, schema);
   return _instance;
 }

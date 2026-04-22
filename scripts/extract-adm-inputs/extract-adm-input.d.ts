@@ -13,4 +13,8 @@ export type ExtractAdmInputJobContext = {
   pgConnection: PostgresConnectionParams["connection"];
   /** The current administrative level being processed. */
   currentAdmLevel: AdmLevelCode;
+  /** The physical database schema name. */
+  pgSchema: string;
+  /** The unique timestamp (milliseconds) identifying this job session. */
+  jobTimestamp: number;
 };

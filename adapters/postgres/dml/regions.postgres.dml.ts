@@ -1,6 +1,6 @@
 import { BaseAdmPostgresTableDML } from "./adm-table.postgres.dml.ts";
-import type { DMLInsertManyResult, RegionTableDML } from "@scope/types/db";
-import type { MadaAdmConfigValues, RegionValues } from "@scope/types/models";
+import type { DMLCreateManyResult, RegionTableDML } from "@scope/types/db";
+import type { MadaAdmConfigValues, RegionRecord } from "@scope/types/models";
 import type { PostgresDbConnection } from "../postgres-db.connection.ts";
 
 /**
@@ -22,7 +22,7 @@ export class RegionsPostgresDML extends BaseAdmPostgresTableDML
    * @param values - An array of region values to insert.
    * @returns A result object containing the count of inserted rows.
    */
-  async createMany(values: RegionValues[]): Promise<DMLInsertManyResult> {
+  async createMany(values: RegionRecord[]): Promise<DMLCreateManyResult> {
     const tableName = this.getTableName("regions");
     const columns = ["region", "province", "province_id"];
     if (this.config.hasAdmLevel) columns.push("adm_level");

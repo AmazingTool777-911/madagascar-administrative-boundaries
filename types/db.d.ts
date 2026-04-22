@@ -2,11 +2,12 @@ import type { Transaction } from "@db/postgres";
 import type { DbType } from "@scope/consts/db";
 import type { MaybePromise } from "./utils.d.ts";
 import type {
-  CommuneValues,
-  DistrictValues,
-  FokontanyValues,
-  ProvinceValues,
-  RegionValues,
+  CommuneRecord,
+  DistrictRecord,
+  FokontanyRecord,
+  Province,
+  ProvinceRecord,
+  RegionRecord,
 } from "./models.d.ts";
 
 /**
@@ -98,7 +99,7 @@ export interface TableDDL {
 /**
  * Result of a batch insertion operation.
  */
-export interface DMLInsertManyResult {
+export interface DMLCreateManyResult {
   /** The number of rows successfully inserted. */
   insertedCount: number;
 }
@@ -107,33 +108,35 @@ export interface DMLInsertManyResult {
  * Data Manipulation Layer interface for the provinces table.
  */
 export interface ProvinceTableDML {
-  createMany(values: ProvinceValues[]): MaybePromise<DMLInsertManyResult>;
+  getManyByNames(names: string[]): MaybePromise<Province[]>;
+
+  createMany(values: ProvinceRecord[]): MaybePromise<DMLCreateManyResult>;
 }
 
 /**
  * Data Manipulation Layer interface for the regions table.
  */
 export interface RegionTableDML {
-  createMany(values: RegionValues[]): MaybePromise<DMLInsertManyResult>;
+  createMany(values: RegionRecord[]): MaybePromise<DMLCreateManyResult>;
 }
 
 /**
  * Data Manipulation Layer interface for the districts table.
  */
 export interface DistrictTableDML {
-  createMany(values: DistrictValues[]): MaybePromise<DMLInsertManyResult>;
+  createMany(values: DistrictRecord[]): MaybePromise<DMLCreateManyResult>;
 }
 
 /**
  * Data Manipulation Layer interface for the communes table.
  */
 export interface CommuneTableDML {
-  createMany(values: CommuneValues[]): MaybePromise<DMLInsertManyResult>;
+  createMany(values: CommuneRecord[]): MaybePromise<DMLCreateManyResult>;
 }
 
 /**
  * Data Manipulation Layer interface for the fokontanys table.
  */
 export interface FokontanyTableDML {
-  createMany(values: FokontanyValues[]): MaybePromise<DMLInsertManyResult>;
+  createMany(values: FokontanyRecord[]): MaybePromise<DMLCreateManyResult>;
 }

@@ -1,6 +1,6 @@
 import { BaseAdmPostgresTableDML } from "./adm-table.postgres.dml.ts";
-import type { DMLInsertManyResult, DistrictTableDML } from "@scope/types/db";
-import type { DistrictValues, MadaAdmConfigValues } from "@scope/types/models";
+import type { DistrictTableDML, DMLCreateManyResult } from "@scope/types/db";
+import type { DistrictRecord, MadaAdmConfigValues } from "@scope/types/models";
 import type { PostgresDbConnection } from "../postgres-db.connection.ts";
 
 /**
@@ -22,7 +22,7 @@ export class DistrictsPostgresDML extends BaseAdmPostgresTableDML
    * @param values - An array of district values to insert.
    * @returns A result object containing the count of inserted rows.
    */
-  async createMany(values: DistrictValues[]): Promise<DMLInsertManyResult> {
+  async createMany(values: DistrictRecord[]): Promise<DMLCreateManyResult> {
     const tableName = this.getTableName("districts");
     const columns = ["district", "region", "region_id"];
 

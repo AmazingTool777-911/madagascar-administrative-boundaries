@@ -1,16 +1,18 @@
 import { BaseAdmTableDDL } from "@scope/db";
 import type { MadaAdmConfigValues } from "@scope/types/models";
 import type { DbTransactionContext } from "@scope/types/db";
-import { injectPostgresDbConnection } from "../postgres-db.connection.ts";
+import type { PostgresDbConnection } from "../postgres-db.connection.ts";
 
 /**
  * Concrete implementation of the DDL abstract class for the fokontanys table
  * using PostgreSQL.
  */
 export class FokontanysPostgresDDL extends BaseAdmTableDDL {
-  #db = injectPostgresDbConnection();
-
-  constructor(config: MadaAdmConfigValues, schema: string = "public") {
+  constructor(
+    protected db: PostgresDbConnection,
+    config: MadaAdmConfigValues,
+    schema: string = "public",
+  ) {
     super(config, schema);
   }
 
@@ -20,7 +22,7 @@ export class FokontanysPostgresDDL extends BaseAdmTableDDL {
 
   async create(transactionContext?: DbTransactionContext): Promise<void> {
     const geometryColumn = this.config.hasGeojson
-      ? "\n        geojson GEOMETRY(Geometry, 4326),"
+      ? "\n        geojson GEOMETRY(Geometry, 4326) NOT NULL,"
       : "";
     const admLevelColumn = this.config.hasAdmLevel
       ? "\n        adm_level SMALLINT NOT NULL DEFAULT 4,"
@@ -65,16 +67,16 @@ export class FokontanysPostgresDDL extends BaseAdmTableDDL {
       );
     `;
     const client = this.ensureIsPostgresDbTransactionCtx(transactionContext)
-      ? (transactionContext?.tx ?? this.#db.client)
-      : this.#db.client;
+      ? (transactionContext?.tx ?? this.db.client)
+      : this.db.client;
     await client.queryObject(query);
   }
 
   async drop(transactionContext?: DbTransactionContext): Promise<void> {
     const query = `DROP TABLE IF EXISTS ${this.schema}.${this.tableName};`;
     const client = this.ensureIsPostgresDbTransactionCtx(transactionContext)
-      ? (transactionContext?.tx ?? this.#db.client)
-      : this.#db.client;
+      ? (transactionContext?.tx ?? this.db.client)
+      : this.db.client;
     await client.queryObject(query);
   }
 
@@ -92,8 +94,8 @@ export class FokontanysPostgresDDL extends BaseAdmTableDDL {
       );
     `;
     const client = this.ensureIsPostgresDbTransactionCtx(transactionContext)
-      ? (transactionContext?.tx ?? this.#db.client)
-      : this.#db.client;
+      ? (transactionContext?.tx ?? this.db.client)
+      : this.db.client;
     const result = await client.queryObject<{ exists: boolean }>(query);
     return result.rows[0]?.exists ?? false;
   }
@@ -105,12 +107,14 @@ let _instance: FokontanysPostgresDDL | null = null;
  * Injects (or creates) an instance of {@link FokontanysPostgresDDL}.
  *
  * @param config - The runtime ADM configuration.
+ * @param db - The PostgreSQL database connection.
  * @param schema - The ADM schema binding.
  */
 export function injectFokontanysPostgresDDL(
   config: MadaAdmConfigValues,
+  db: PostgresDbConnection,
   schema: string = "public",
 ): FokontanysPostgresDDL {
-  if (!_instance) _instance = new FokontanysPostgresDDL(config, schema);
+  if (!_instance) _instance = new FokontanysPostgresDDL(db, config, schema);
   return _instance;
 }

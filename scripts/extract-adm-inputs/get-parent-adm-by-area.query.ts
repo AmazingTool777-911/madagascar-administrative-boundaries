@@ -1,21 +1,21 @@
 import { Client } from "@db/postgres";
 import { StringUtils } from "@scope/utils";
 import type { DbTransactionContext } from "@scope/types/db";
-import {
-  type AdmProperties,
-  type CommuneValues,
-  type DistrictValues,
-  type MadaAdmConfigValues,
-  type RegionValues,
+import type {
+  AdmProperties,
+  Commune,
+  District,
+  MadaAdmConfigValues,
+  Region,
 } from "@scope/types/models";
-import type { GeoJSONGeometry } from "@scope/types/utils";
+import type { GeoJSONFeature } from "@scope/types/utils";
 
 /**
  * Represents an input ADM record for parent matching.
  */
 export type InputRecord = [
   name: string,
-  geojson: GeoJSONGeometry<AdmProperties>,
+  geojson: GeoJSONFeature<AdmProperties>,
 ];
 
 /**
@@ -37,7 +37,7 @@ interface ParentMatchRow {
  * @param db - The database client or transaction context.
  * @returns A mapping of input ADM names to their matched parent records.
  */
-async function buildParentByAreaQuery<T>(
+async function buildParentsByAreaQuery<T>(
   inputs: InputRecord[],
   config: MadaAdmConfigValues,
   parentTableBaseName: string,
@@ -53,8 +53,8 @@ async function buildParentByAreaQuery<T>(
   // Map inputs to JSONB format expected by the query
   const inputJsonb = inputs.map(([name, geojson]) =>
     JSON.stringify({
-      id: name,
-      geojson: JSON.stringify(geojson),
+      encoding: name,
+      geojson: JSON.stringify(geojson.geometry),
     })
   );
 
@@ -62,18 +62,18 @@ async function buildParentByAreaQuery<T>(
 
   const query = `
     SELECT
-        i.id        AS input_id,
-        best.id     AS matched_id,
+        i.encoding        AS input_id,
+        best.matched_id,
         ${selectColumns.map((c) => `best.${c}`).join(", ")}
     FROM (
         SELECT
-            (rec->>'id')                        AS id,
+            (rec->>'encoding')                        AS encoding,
             ST_GeomFromGeoJSON(rec->>'geojson') AS geom
         FROM UNNEST($1::jsonb[]) AS rec
     ) AS i
     CROSS JOIN LATERAL (
         SELECT
-            t.id,
+            t.id     AS matched_id,
             ${selectClause},
             ST_Area(
                 ST_Intersection(
@@ -93,68 +93,63 @@ async function buildParentByAreaQuery<T>(
   ]);
 
   return result.rows.map((row) => {
-    const { input_id, matched_id: _matched_id, ...rest } = row as ParentMatchRow &
-      T;
+    const {
+      input_id,
+      matched_id: _matched_id,
+      ...rest
+    } = row as ParentMatchRow & T;
     return [input_id, rest as T];
   });
 }
 
 /**
- * Gets the parent Region for a list of Districts based on spatial intersection.
+ * Gets the parent Regions for a list of Districts based on spatial intersection.
  */
-export async function getParentRegionOfDistricts(
+export async function getParentRegionsOfDistricts(
   inputs: InputRecord[],
   config: MadaAdmConfigValues,
   db: Client | DbTransactionContext,
-): Promise<[string, RegionValues][]> {
-  return await buildParentByAreaQuery<RegionValues>(
+): Promise<[string, Region][]> {
+  return await buildParentsByAreaQuery<Region>(
     inputs,
     config,
     "regions",
-    ["region", "province", "province_id"],
+    ["id", "region", "province", "province_id"],
     db,
   );
 }
 
 /**
- * Gets the parent District for a list of Communes based on spatial intersection.
+ * Gets the parent Districts for a list of Communes based on spatial intersection.
  */
-export async function getParentDistrictOfCommunes(
+export async function getParentDistrictsOfCommunes(
   inputs: InputRecord[],
   config: MadaAdmConfigValues,
   db: Client | DbTransactionContext,
-): Promise<[string, DistrictValues][]> {
-  // DistrictValues also contains optional region/province fields
-  return await buildParentByAreaQuery<DistrictValues>(
+): Promise<[string, District][]> {
+  // District also contains optional region/province fields
+  return await buildParentsByAreaQuery<District>(
     inputs,
     config,
     "districts",
-    ["district", "region", "province", "region_id", "province_id"],
+    ["id", "district", "region", "province", "region_id"],
     db,
   );
 }
 
 /**
- * Gets the parent Commune for a list of Fokontanys based on spatial intersection.
+ * Gets the parent Communes for a list of Fokontanys based on spatial intersection.
  */
-export async function getParentCommuneOfFokontanys(
+export async function getParentCommunesOfFokontanys(
   inputs: InputRecord[],
   config: MadaAdmConfigValues,
   db: Client | DbTransactionContext,
-): Promise<[string, CommuneValues][]> {
-  return await buildParentByAreaQuery<CommuneValues>(
+): Promise<[string, Commune][]> {
+  return await buildParentsByAreaQuery<Commune>(
     inputs,
     config,
     "communes",
-    [
-      "commune",
-      "district",
-      "region",
-      "province",
-      "district_id",
-      "region_id",
-      "province_id",
-    ],
+    ["id", "commune", "district", "region", "province", "district_id"],
     db,
   );
 }

@@ -7,7 +7,12 @@ import {
 } from "@scope/lib/workers-mediators";
 import { DbType } from "@scope/consts/db";
 import { CliArgsEnvResolvers } from "@scope/helpers";
-import type { MadaAdmConfigValues } from "@scope/types/models";
+import type {
+  AdmRecords,
+  AdmValuesDiscriminated,
+  MadaAdmConfigValues,
+  ProvinceValues,
+} from "@scope/types/models";
 import type { PostgresConnectionParams, TableDDL } from "@scope/types/db";
 import {
   injectCommunesPostgresDDL,
@@ -19,14 +24,25 @@ import {
 } from "@scope/adapters/postgres";
 import type { ExtractAdmInputJobContext } from "./extract-adm-input.d.ts";
 import {
-  AdmLevelCode,
+  ADM_GEOJSON_FILES_PATHS,
   ADM_LEVEL_CODES_INDEXED,
-  ADM_LEVEL_TITLE_BY_CODE,
+  ADM_LEVEL_ENTRIES_COUNT_BY_CODE,
   ADM_LEVEL_INDEX_BY_CODE,
+  ADM_LEVEL_TITLE_BY_CODE,
+  ADM_SEEDING_INPUT_FILENAMES_BY_CODE,
+  ADM_SEEDING_INPUTS_GENERATED_DIR,
+  AdmLevelCode,
 } from "@scope/consts/models";
 import * as path from "@std/path";
 import { TextLineStream } from "@std/streams";
 import type { GeoJSONFeature } from "@scope/types/utils";
+import {
+  isCommuneValues,
+  isDistrictValues,
+  isFokontanyValues,
+  isRegionValues,
+  mapAdmRecordToValues,
+} from "@scope/helpers/models";
 
 type Feature = GeoJSONFeature<{
   shapeName: string;
@@ -245,6 +261,9 @@ const config: MadaAdmConfigValues = {
 };
 
 let pgConnectionParams: PostgresConnectionParams;
+const startTime = Date.now();
+let jobOutputDir: string | undefined;
+
 try {
   // 3. Establish PostgreSQL Connection
   if (pgParams.url) {
@@ -281,9 +300,9 @@ try {
   let mediator: QueueWorkersMediator<
     ExtractAdmInputJobContext,
     Feature,
-    Feature,
+    AdmRecords,
     ExtractAdmInputJobContext,
-    Feature
+    AdmValuesDiscriminated
   >;
 
   // 4. Optionally Establish Redis Connection
@@ -319,9 +338,9 @@ try {
     mediator = Redis.injectRedisQueueWorkersMediator<
       ExtractAdmInputJobContext,
       Feature,
-      Feature,
+      AdmRecords,
       ExtractAdmInputJobContext,
-      Feature
+      AdmValuesDiscriminated
     >(redis.client!, redisConfig, {
       processingContextKey: "extract-adm:processing:context",
       processingStreamKey: "extract-adm:processing:stream",
@@ -346,9 +365,9 @@ try {
     mediator = InMemory.injectInMemoryQueueWorkersMediator<
       ExtractAdmInputJobContext,
       Feature,
-      Feature,
+      AdmRecords,
       ExtractAdmInputJobContext,
-      Feature
+      AdmValuesDiscriminated
     >({
       processingHwm: mediatorCliArgs.inMemoryProcessingHwm,
       insertHwm: mediatorCliArgs.inMemoryInsertHwm,
@@ -360,11 +379,11 @@ try {
   console.log("\n🚀 Preparing ADM Level tables...");
 
   const ddls: TableDDL[] = [
-    injectProvincesPostgresDDL(config, pgParams.schema),
-    injectRegionsPostgresDDL(config, pgParams.schema),
-    injectDistrictsPostgresDDL(config, pgParams.schema),
-    injectCommunesPostgresDDL(config, pgParams.schema),
-    injectFokontanysPostgresDDL(config, pgParams.schema),
+    injectProvincesPostgresDDL(config, pg, pgParams.schema),
+    injectRegionsPostgresDDL(config, pg, pgParams.schema),
+    injectDistrictsPostgresDDL(config, pg, pgParams.schema),
+    injectCommunesPostgresDDL(config, pg, pgParams.schema),
+    injectFokontanysPostgresDDL(config, pg, pgParams.schema),
   ];
 
   // Check if all tables are already defined to decide whether to prompt for clearing
@@ -435,13 +454,20 @@ try {
    * 1. Resume from previous context if available and DB was not cleared.
    * 2. Otherwise, start a fresh context from Level 0 (Province).
    */
+  const jobTimestamp =
+    !shouldClearDatabase && prevJobContext?.jobTimestamp
+      ? prevJobContext.jobTimestamp
+      : Date.now();
+
   const jobContext: ExtractAdmInputJobContext =
     !shouldClearDatabase && prevJobContext
-      ? prevJobContext
+      ? { ...prevJobContext, jobTimestamp }
       : {
           config,
           currentAdmLevel: AdmLevelCode.PROVINCE,
           pgConnection: pgConnectionParams.connection,
+          pgSchema: pgParams.schema,
+          jobTimestamp,
         };
 
   if (!shouldClearDatabase && prevJobContext) {
@@ -450,10 +476,15 @@ try {
     console.log("🆕 Starting fresh extraction process.");
   }
 
-  console.log("\n📝 Job Configuration:");
-  console.log(`   Current Level:  ${jobContext.currentAdmLevel}`);
-  console.log(`   Tables Prefix:  ${jobContext.config.tablesPrefix}`);
   console.log(`   Target Schema:  ${pgParams.schema}`);
+
+  const jobOutputDirPath = path.join(
+    Deno.cwd(),
+    ADM_SEEDING_INPUTS_GENERATED_DIR,
+    jobContext.jobTimestamp.toString(),
+  );
+  jobOutputDir = jobOutputDirPath;
+  console.log(`   Output Folder:  ${jobOutputDir}`);
 
   // 6. Extraction Loop
   const startIndex = ADM_LEVEL_INDEX_BY_CODE.get(
@@ -466,12 +497,10 @@ try {
     jobContext.currentAdmLevel = levelCode;
 
     const levelTitle = ADM_LEVEL_TITLE_BY_CODE.get(levelCode) as string;
-    const ndjsonFileName = `${levelTitle}s.ndjson`;
+    const levelIndex = ADM_LEVEL_INDEX_BY_CODE.get(levelCode) as number;
     const ndjsonFilePath = path.join(
       Deno.cwd(),
-      "data",
-      "ndjson",
-      ndjsonFileName,
+      ADM_GEOJSON_FILES_PATHS[levelIndex],
     );
 
     console.log(
@@ -503,74 +532,172 @@ try {
     );
     insertWorkerUrl.search = disableRedisParam;
 
-    const insertWorker = new Worker(insertWorkerUrl.href, workerOptions);
+    let insertWorker: Worker | undefined;
+    if (levelCode !== AdmLevelCode.FOKONTANY) {
+      insertWorker = new Worker(insertWorkerUrl.href, workerOptions);
+    }
 
-    const workers = {
+    const workers: { processing: Worker[]; insert?: Worker } = {
       processing: processingWorkers,
-      insert: insertWorker,
     };
 
-    // Prepare feature stream with resumption support
-    const lastPersisted = await mediator.persistedLastMessage;
-    let skipping =
-      !!lastPersisted &&
-      (lastPersisted as Feature).properties?.shapeType === levelCode;
+    if (insertWorker) {
+      workers.insert = insertWorker;
+    }
 
-    const featureStream = (await Deno.open(ndjsonFilePath)).readable
-      .pipeThrough(new TextDecoderStream())
-      .pipeThrough(new TextLineStream())
-      .pipeThrough(
-        new TransformStream<string, Feature>({
-          transform(chunk, controller) {
-            const feature = JSON.parse(chunk) as Feature;
-            if (skipping && lastPersisted) {
-              const last = lastPersisted as Feature;
-              if (
-                feature.properties.shapeID === last.properties.shapeID &&
-                feature.properties.shapeType === last.properties.shapeType
-              ) {
-                console.log(
-                  `   ⏭️  Reached last checkpoint: ${feature.properties.shapeName}. Resuming...`,
-                );
-                skipping = false;
-                // We skip the matched one as it was already inserted
+    // Prepare feature stream with resumption support
+    let featureStream: ReadableStream<Feature>;
+
+    if (await mediator.isJobEnded) {
+      console.log(
+        `   ✅ Level ${levelCode} already completed in previous session. Skipping...`,
+      );
+      featureStream = new ReadableStream({
+        start(controller) {
+          controller.close();
+        },
+      });
+    } else {
+      const lastPersisted = await mediator.persistedLastMessage;
+      let skipping =
+        !!lastPersisted &&
+        (lastPersisted as Feature).properties?.shapeType === levelCode;
+
+      featureStream = (await Deno.open(ndjsonFilePath)).readable
+        .pipeThrough(new TextDecoderStream())
+        .pipeThrough(new TextLineStream())
+        .pipeThrough(
+          new TransformStream<string, Feature>({
+            transform(chunk, controller) {
+              const feature = JSON.parse(chunk) as Feature;
+              if (skipping && lastPersisted) {
+                const last = lastPersisted as Feature;
+                if (
+                  feature.properties.shapeID === last.properties.shapeID &&
+                  feature.properties.shapeType === last.properties.shapeType
+                ) {
+                  console.log(
+                    `   ⏭️  Reached last checkpoint: ${feature.properties.shapeName}. Resuming...`,
+                  );
+                  skipping = false;
+                  // We skip the matched one as it was already inserted
+                  return;
+                }
+                // Still skipping
                 return;
               }
-              // Still skipping
-              return;
-            }
-            controller.enqueue(feature);
-          },
-        }),
-      );
+              controller.enqueue(feature);
+            },
+          }),
+        );
+    }
 
-    await mediator.queue(
-      { processing: jobContext, insert: jobContext },
-      featureStream,
-      workers,
-      {
-        onProcessingFinished: (payloads) => {
-          for (const feature of payloads) {
+    const admLevelTotalEntriesCount =
+        ADM_LEVEL_ENTRIES_COUNT_BY_CODE.get(levelCode)!,
+      admLevelTotalEntriesCountFormatted =
+        admLevelTotalEntriesCount.toLocaleString();
+    let admLevelProcessedEntriesCounter = 0;
+    let admLevelInsertedEntriesCounter = 0;
+
+    const outputFilename = ADM_SEEDING_INPUT_FILENAMES_BY_CODE.get(levelCode)!;
+    let outputWriter: WritableStreamDefaultWriter<Uint8Array> | undefined;
+    let outputFile: Deno.FsFile | undefined;
+
+    if (outputFilename) {
+      await Deno.mkdir(jobOutputDir, { recursive: true });
+      const outputPath = path.join(jobOutputDir, outputFilename);
+      outputFile = await Deno.open(outputPath, {
+        create: true,
+        append: true,
+        write: true,
+      });
+      outputWriter = outputFile.writable.getWriter();
+    }
+
+    try {
+      await mediator.queue(
+        { processing: jobContext, insert: jobContext },
+        featureStream,
+        workers,
+        {
+          onProcessingFinished: async (payloads) => {
+            const encoder = new TextEncoder();
+            for (const payload of payloads) {
+              const valuesToPersist = mapAdmRecordToValues(payload);
+
+              let value: string | undefined;
+              if (isFokontanyValues(valuesToPersist)) {
+                value = valuesToPersist.fokontany;
+              } else if (isCommuneValues(valuesToPersist)) {
+                value = valuesToPersist.commune;
+              } else if (isDistrictValues(valuesToPersist)) {
+                value = valuesToPersist.district;
+              } else if (isRegionValues(valuesToPersist)) {
+                value = valuesToPersist.region;
+              } else {
+                value = (valuesToPersist as ProvinceValues).province;
+              }
+
+              console.log(`✅ Processed ${levelTitle}: ${value}`);
+
+              if (outputWriter) {
+                await outputWriter.write(
+                  encoder.encode(JSON.stringify(valuesToPersist) + "\n"),
+                );
+              }
+            }
+
+            admLevelProcessedEntriesCounter += payloads.length;
             console.log(
-              `   ✅ Processed ${levelTitle}: ${feature.properties.shapeName}`,
+              `⏳ Processing progress: ${admLevelProcessedEntriesCounter.toLocaleString()} / ${admLevelTotalEntriesCountFormatted} ${levelTitle}s (${Math.floor(
+                (admLevelProcessedEntriesCounter / admLevelTotalEntriesCount) *
+                  100,
+              )}%)`,
             );
-          }
-        },
-        onInsertFinished: (payloads) => {
-          for (const feature of payloads) {
+          },
+          onInsertFinished: (payloads) => {
+            for (const { admLevelCode, values } of payloads) {
+              let value: string | undefined;
+              switch (admLevelCode) {
+                case AdmLevelCode.PROVINCE:
+                  value = values.province;
+                  break;
+                case AdmLevelCode.REGION:
+                  value = values.region;
+                  break;
+                case AdmLevelCode.DISTRICT:
+                  value = values.district;
+                  break;
+                case AdmLevelCode.COMMUNE:
+                  value = values.commune;
+                  break;
+                case AdmLevelCode.FOKONTANY:
+                  value = values.fokontany;
+                  break;
+              }
+              console.log(`💾 Inserted ${levelTitle}: ${value}`);
+            }
+            admLevelInsertedEntriesCounter += payloads.length;
             console.log(
-              `   💾 Inserted ${levelTitle}: ${feature.properties.shapeName}`,
+              `⏳ Insert progress: ${admLevelInsertedEntriesCounter.toLocaleString()} / ${admLevelTotalEntriesCountFormatted} ${levelTitle}s (${Math.floor(
+                (admLevelInsertedEntriesCounter / admLevelTotalEntriesCount) *
+                  100,
+              )}%)`,
             );
-          }
+          },
+          batchSize: mediatorCliArgs.queueBatchSize,
+          maxRetries: mediatorCliArgs.queueMaxRetries,
         },
-        batchSize: mediatorCliArgs.queueBatchSize,
-        maxRetries: mediatorCliArgs.queueMaxRetries,
-      },
-    );
+      );
+    } finally {
+      if (outputWriter) {
+        await outputWriter.close();
+      }
+    }
 
     // Cleanup for this level
     for (const w of processingWorkers) w.terminate();
-    insertWorker.terminate();
+    insertWorker?.terminate();
     await mediator.clearQueue();
 
     console.log(`✅ ${levelTitle.toUpperCase()} extraction complete.`);
@@ -578,6 +705,7 @@ try {
 
   // Final Cleanup
   await mediator.clearPersisted();
+
   console.log("\n🏁 Extraction process completed successfully.");
 } catch (err) {
   console.error(`\n❌ Fatal Error: ${(err as Error).message}`);
@@ -585,5 +713,13 @@ try {
 } finally {
   await pg.close();
   redis.close();
+
+  const totalDurationMs = Date.now() - startTime;
+  const totalDurationSeconds = (totalDurationMs / 1000).toFixed(2);
+  console.log(`⏱️  Total duration: ${totalDurationSeconds}s`);
+  if (jobOutputDir) {
+    console.log(`📂 Final outputs stored in: ${jobOutputDir}`);
+  }
+
   console.log("\n👋 Connections closed.");
 }
