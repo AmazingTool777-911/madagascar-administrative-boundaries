@@ -84,9 +84,28 @@ export type CliConfig = {
   pgCaCertFile?: string;
   /** Environment variable mapped for --pg.ca-cert-path. */
   pgCaCertPath?: string;
+  /** Environment variable mapped for --disable-redis. */
+  disableRedisEnv?: boolean;
+  /** Environment variable mapped for --redis.url. */
+  redisUrl?: string;
+  /** Environment variable mapped for --redis.host. */
+  redisHost?: string;
+  /** Environment variable mapped for --redis.port. */
+  redisPort?: number;
+  /** Environment variable mapped for --redis.username. */
+  redisUsername?: string;
+  /** Environment variable mapped for --redis.password. */
+  redisPassword?: string;
+  /** Environment variable mapped for --redis.db. */
+  redisDb?: number;
+  /** Environment variable mapped for --redis.ssl. */
+  redisSsl?: boolean;
 };
 
-export type GlobalCliConfig = Pick<CliConfig, "dbType" | "pg">;
+export type GlobalCliConfig = Pick<
+  CliConfig,
+  "dbType" | "pg" | "disableRedis" | "redis"
+>;
 
 /**
  * A comprehensive configuration object encompassing all possible connection values

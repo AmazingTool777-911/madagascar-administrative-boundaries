@@ -5,6 +5,7 @@ import {
   CLI_NAME,
   CLI_VERSION,
   DB_TYPE_DESCRIPTION,
+  DISABLE_REDIS_DESCRIPTION,
   PG_CA_CERT_FILE_DESCRIPTION,
   PG_CA_CERT_PATH_DESCRIPTION,
   PG_DATABASE_DESCRIPTION,
@@ -15,14 +16,23 @@ import {
   PG_SSL_DESCRIPTION,
   PG_URL_DESCRIPTION,
   PG_USER_DESCRIPTION,
+  REDIS_DB_DESCRIPTION,
+  REDIS_HOST_DESCRIPTION,
+  REDIS_PASSWORD_DESCRIPTION,
+  REDIS_PORT_DESCRIPTION,
+  REDIS_SSL_DESCRIPTION,
+  REDIS_URL_DESCRIPTION,
+  REDIS_USERNAME_DESCRIPTION,
 } from "@scope/consts/cli";
 import { DbType } from "@scope/consts/db";
 import {
-  CliConfig,
-  GlobalCliConfig,
-  PostgresDbConnectionCliConfig,
+  type CliConfig,
+  type GlobalCliConfig,
+  type PostgresDbConnectionCliConfig,
+  type RedisDbConnectionCliConfig,
 } from "@scope/types/cli";
 import { attemptDbConnection, injectDbConnection } from "@scope/db";
+import { injectRedisConnection } from "@scope/redis";
 
 /**
  * The root CLI command for the administrative data pipeline.
@@ -92,6 +102,32 @@ export class CliIndexCommand extends Command<void, void, CliConfig> {
           depends: ["--pg.ssl"],
         },
       )
+      .globalOption(
+        "--disable-redis <disabled:boolean>",
+        DISABLE_REDIS_DESCRIPTION,
+        {
+          default: false,
+        },
+      )
+      .globalOption("--redis.url <url:string>", REDIS_URL_DESCRIPTION)
+      .globalOption("--redis.host <host:string>", REDIS_HOST_DESCRIPTION, {
+        default: "localhost",
+      })
+      .globalOption("--redis.port <port:number>", REDIS_PORT_DESCRIPTION, {
+        default: 6379,
+      })
+      .globalOption(
+        "--redis.user <username:string>",
+        REDIS_USERNAME_DESCRIPTION,
+      )
+      .globalOption(
+        "--redis.password <password:string>",
+        REDIS_PASSWORD_DESCRIPTION,
+      )
+      .globalOption("--redis.db <db:number>", REDIS_DB_DESCRIPTION)
+      .globalOption("--redis.ssl <ssl:boolean>", REDIS_SSL_DESCRIPTION, {
+        default: false,
+      })
       .globalEnv("DB_TYPE=<type:string>", DB_TYPE_DESCRIPTION)
       .globalEnv("PG_URL=<url:string>", PG_URL_DESCRIPTION)
       .globalEnv("PG_HOST=<host:string>", PG_HOST_DESCRIPTION)
@@ -103,6 +139,14 @@ export class CliIndexCommand extends Command<void, void, CliConfig> {
       .globalEnv("PG_SSL=<ssl:boolean>", PG_SSL_DESCRIPTION)
       .globalEnv("PG_CA_CERT_FILE=<file:string>", PG_CA_CERT_FILE_DESCRIPTION)
       .globalEnv("PG_CA_CERT_PATH=<path:string>", PG_CA_CERT_PATH_DESCRIPTION)
+      .globalEnv("DISABLE_REDIS=<disabled:boolean>", DISABLE_REDIS_DESCRIPTION)
+      .globalEnv("REDIS_URL=<url:string>", REDIS_URL_DESCRIPTION)
+      .globalEnv("REDIS_HOST=<host:string>", REDIS_HOST_DESCRIPTION)
+      .globalEnv("REDIS_PORT=<port:number>", REDIS_PORT_DESCRIPTION)
+      .globalEnv("REDIS_USERNAME=<user:string>", REDIS_USERNAME_DESCRIPTION)
+      .globalEnv("REDIS_PASSWORD=<password:string>", REDIS_PASSWORD_DESCRIPTION)
+      .globalEnv("REDIS_DB=<db:number>", REDIS_DB_DESCRIPTION)
+      .globalEnv("REDIS_SSL=<ssl:boolean>", REDIS_SSL_DESCRIPTION)
       .globalAction(async (args) => {
         const pg: PostgresDbConnectionCliConfig = {
           url: args.pg?.url ?? args.pgUrl,
@@ -116,10 +160,26 @@ export class CliIndexCommand extends Command<void, void, CliConfig> {
           caCertFile: args.pg?.caCertFile ?? args.pgCaCertFile,
           caCertPath: args.pg?.caCertPath ?? args.pgCaCertPath,
         };
+
+        const redis: RedisDbConnectionCliConfig = {
+          url: args.redis?.url ?? args.redisUrl,
+          host: args.redis?.host ?? args.redisHost,
+          port: args.redis?.port ?? args.redisPort,
+          user: args.redis?.user ?? args.redisUsername,
+          password: args.redis?.password ?? args.redisPassword,
+          db: args.redis?.db ?? args.redisDb,
+          ssl: args.redis?.ssl ?? args.redisSsl,
+        };
+
         await this.handleGlobalAction({
-          dbType: args.dbType as DbType,
+          dbType: args.dbType as unknown as DbType,
+          disableRedis: (args.disableRedis ?? args.disableRedisEnv) as boolean,
           pg,
+          redis,
         });
+      })
+      .action(async (args) => {
+        await this.handleIndexAction(args as unknown as CliConfig);
       });
   }
 
@@ -152,6 +212,30 @@ export class CliIndexCommand extends Command<void, void, CliConfig> {
     console.log(
       colors.green.bold(`✅ Database connection established successfully!\n`),
     );
+  }
+
+  private async handleIndexAction(args: CliConfig) {
+    if (!args.disableRedis && args.redis) {
+      const redis = injectRedisConnection();
+      console.log(colors.blue(`🔌 Establishing Redis connection...`));
+      console.log(
+        colors.gray(`   Redis Host: ${args.redis.host}:${args.redis.port}`),
+      );
+
+      await redis.connect(
+        args.redis.url || {
+          host: args.redis.host,
+          port: args.redis.port,
+          username: args.redis.user,
+          password: args.redis.password,
+          db: args.redis.db,
+          ssl: args.redis.ssl,
+        },
+      );
+      console.log(
+        colors.green.bold(`✅ Redis connection established successfully!\n`),
+      );
+    }
   }
 }
 
