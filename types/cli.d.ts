@@ -93,3 +93,11 @@ export type GlobalCliConfig = Pick<CliConfig, "dbType" | "pg">;
  * grouped by database type, typically parsed from CLI arguments or environment variables.
  */
 export type DbConnectionCliConfig = Pick<CliConfig, "dbType" | "pg">;
+
+/**
+ * Extra options passed to database DDL injectors.
+ */
+export interface DbDDLExtraOptionsCliConfig {
+  /** The PostgreSQL schema to use for the table. */
+  pgSchema?: string;
+}
