@@ -1,5 +1,6 @@
 {
   "tasks": {
+    "cli": "deno -E --env -N -R -W commands/index.ts",
     "dev": "deno run --watch main.ts",
     "extract-adm-inputs": "deno run --allow-env --allow-net --allow-read --allow-write --env scripts/extract-adm-inputs/extract-adm-inputs.script.ts",
     "test": "deno test -R -E --env"

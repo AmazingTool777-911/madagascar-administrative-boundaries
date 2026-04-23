@@ -1,1 +1,2 @@
-export * from "./adm-table.ddl.ts";
+export * from "./db.connection.ts";
+export * from "./ddl/index.ts";

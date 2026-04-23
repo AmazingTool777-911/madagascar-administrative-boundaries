@@ -4,6 +4,7 @@
   "exports": {
     ".": "./index.ts",
     "./db": "./db.consts.ts",
-    "./models": "./models.consts.ts"
+    "./models": "./models.consts.ts",
+    "./cli": "./cli.consts.ts"
   }
 }

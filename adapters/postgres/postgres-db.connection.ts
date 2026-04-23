@@ -1,11 +1,12 @@
 import { Client } from "@db/postgres";
+import * as path from "@std/path";
 import type {
   DbConnection,
   DbConnectionParams,
   DbTransactionContext,
 } from "@scope/types/db";
 import type { MaybePromise } from "@scope/types/utils";
-import { DbType } from "@scope/consts/db";
+import { DB_CA_CERTIFICATES_DIR, DbType } from "@scope/consts/db";
 
 /**
  * Implementation of a database connection specifically for PostgreSQL.
@@ -53,6 +54,18 @@ export class PostgresDbConnection implements DbConnection {
       this.#client = new Client(params.connection);
     } else {
       const config = params.connection;
+
+      let caCertificates: string[] | undefined;
+      if (config.ssl) {
+        const certPath = config.caCertFile
+          ? path.join(Deno.cwd(), DB_CA_CERTIFICATES_DIR, config.caCertFile)
+          : config.caCertPath;
+        if (certPath) {
+          const certContent = await Deno.readTextFile(certPath);
+          caCertificates = [certContent];
+        }
+      }
+
       this.#client = new Client({
         hostname: config.host,
         port: config.port,
@@ -62,6 +75,7 @@ export class PostgresDbConnection implements DbConnection {
         tls: {
           enabled: config.ssl ?? true,
           enforce: config.ssl ?? false,
+          caCertificates,
         },
       });
     }

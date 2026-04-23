@@ -13,7 +13,15 @@ import type {
   MadaAdmConfigValues,
   ProvinceValues,
 } from "@scope/types/models";
-import type { PostgresConnectionParams, TableDDL } from "@scope/types/db";
+import type {
+  PostgresDbConnectionCliConfig,
+  RedisDbConnectionCliConfig,
+} from "@scope/types/cli";
+import type {
+  PostgresConnectionConfig,
+  PostgresConnectionParams,
+  TableDDL,
+} from "@scope/types/db";
 import {
   injectCommunesPostgresDDL,
   injectCommunesPostgresDML,
@@ -54,49 +62,7 @@ type Feature = GeoJSONFeature<{
   shapeType: string;
 }>;
 
-/**
- * Parsed CLI arguments for the PostgreSQL connection.
- */
-interface PostgresCliArgs {
-  /** Connection URL for PostgreSQL. */
-  url?: string;
-  /** Hostname or IP address of the Postgres server. */
-  host: string;
-  /** Port the Postgres server listens on. */
-  port: number;
-  /** Username for Postgres authentication. */
-  username: string;
-  /** Password for Postgres authentication. */
-  password: string;
-  /** Name of the database to connect to. */
-  database: string;
-  /** The physical database schema name. */
-  schema: string;
-  /** Whether to enable SSL for the connection. */
-  ssl?: boolean;
-}
 
-/**
- * Parsed CLI arguments for the Redis connection.
- */
-interface RedisCliArgs {
-  /** Whether to skip the Redis connection. Defaults to false. */
-  disableRedis: boolean;
-  /** Connection URL for Redis. */
-  url?: string;
-  /** Hostname or IP address of the Redis server. */
-  host: string;
-  /** Port the Redis server listens on. */
-  port: number;
-  /** Optional username for Redis authentication. */
-  username?: string;
-  /** Optional password for Redis authentication. */
-  password?: string;
-  /** Optional database index to select after connection. */
-  db?: number;
-  /** Whether to use TLS for the connection. */
-  ssl?: boolean;
-}
 
 /**
  * Parsed CLI arguments for the worker mediators configuration.
@@ -114,17 +80,21 @@ interface MediatorCliArgs {
 
 const args = parseArgs(Deno.args, {
   string: [
-    "pg-url",
-    "pg-host",
-    "pg-port",
-    "pg-username",
-    "pg-password",
-    "pg-database",
-    "pg-schema",
-    "redis-url",
-    "redis-host",
-    "redis-username",
-    "redis-password",
+    "pg.url",
+    "pg.host",
+    "pg.port",
+    "pg.user",
+    "pg.password",
+    "pg.database",
+    "pg.schema",
+    "pg.ca-cert-file",
+    "pg.ca-cert-path",
+    "redis.url",
+    "redis.host",
+    "redis.port",
+    "redis.user",
+    "redis.password",
+    "redis.db",
     "queue-batch-size",
     "queue-max-retries",
     "in-memory-processing-hwm",
@@ -133,84 +103,93 @@ const args = parseArgs(Deno.args, {
     "worker-pending-min-duration-threshold",
     "processing-workers-count",
   ],
-  boolean: ["pg-ssl", "disable-redis", "redis-ssl", "debug"],
+  boolean: ["pg.ssl", "disable-redis", "redis.ssl", "debug"],
   default: {},
 });
 
 // 1. Resolve PostgreSQL Parameters
-const pgParams: PostgresCliArgs = {
-  url: CliArgsEnvResolvers.resolveOptionalString(args["pg-url"], "PG_URL"),
+const pgParams: PostgresDbConnectionCliConfig = {
+  url: CliArgsEnvResolvers.resolveOptionalString(args["pg"].url, "PG_URL"),
   host: CliArgsEnvResolvers.resolveString(
-    args["pg-host"],
+    args["pg"].host,
     "PG_HOST",
     "localhost",
   ),
   port: CliArgsEnvResolvers.resolveNumber(
-    args["pg-port"] as number | undefined,
+    args["pg"].port as number | undefined,
     "PG_PORT",
     5432,
   ),
-  username: CliArgsEnvResolvers.resolveString(
-    args["pg-username"],
-    "PG_USERNAME",
+  user: CliArgsEnvResolvers.resolveString(
+    args["pg"].user,
+    "PG_USER",
     "postgres",
   ),
   password: CliArgsEnvResolvers.resolveString(
-    args["pg-password"],
+    args["pg"].password,
     "PG_PASSWORD",
     "",
   ),
   database: CliArgsEnvResolvers.resolveString(
-    args["pg-database"],
+    args["pg"].database,
     "PG_DATABASE",
     "postgres",
   ),
   schema: CliArgsEnvResolvers.resolveString(
-    args["pg-schema"],
+    args["pg"].schema,
     "PG_SCHEMA",
     "public",
   ),
   ssl: CliArgsEnvResolvers.resolveBoolean(
-    args["pg-ssl"] as boolean | undefined,
+    args["pg"].ssl as boolean | undefined,
     "PG_SSL",
+  ) ?? false,
+  caCertFile: CliArgsEnvResolvers.resolveOptionalString(
+    args["pg"]["ca-cert-file"] as string | undefined,
+    "PG_CA_CERT_FILE",
+  ),
+  caCertPath: CliArgsEnvResolvers.resolveOptionalString(
+    args["pg"]["ca-cert-path"] as string | undefined,
+    "PG_CA_CERT_PATH",
   ),
 };
 
+const disableRedis = !!CliArgsEnvResolvers.resolveBoolean(
+  args["disable-redis"] as boolean | undefined,
+  "DISABLE_REDIS",
+);
+
 // 2. Resolve Redis Parameters
-const redisCliArgs: RedisCliArgs = {
-  disableRedis: !!CliArgsEnvResolvers.resolveBoolean(
-    args["disable-redis"] as boolean | undefined,
-    "DISABLE_REDIS",
-  ),
+const redisCliArgs: RedisDbConnectionCliConfig = {
   url: CliArgsEnvResolvers.resolveOptionalString(
-    args["redis-url"],
+    args["redis"].url,
     "REDIS_URL",
   ),
   host: CliArgsEnvResolvers.resolveString(
-    args["redis-host"],
+    args["redis"].host,
     "REDIS_HOST",
     "localhost",
   ),
   port: CliArgsEnvResolvers.resolveNumber(
-    args["redis-port"] as number | undefined,
+    args["redis"].port as number | undefined,
     "REDIS_PORT",
     6379,
   ),
-  username: CliArgsEnvResolvers.resolveOptionalString(
-    args["redis-username"],
-    "REDIS_USERNAME",
+  user: CliArgsEnvResolvers.resolveOptionalString(
+    args["redis"].user,
+    "REDIS_USER",
   ),
   password: CliArgsEnvResolvers.resolveOptionalString(
-    args["redis-password"],
+    args["redis"].password,
     "REDIS_PASSWORD",
   ),
   db: CliArgsEnvResolvers.resolveNumber(
-    args["redis-db"] as number | undefined,
+    args["redis"].db as number | undefined,
     "REDIS_DB",
     0,
   ),
-  ssl: CliArgsEnvResolvers.resolveBoolean(
-    args["redis-ssl"] as boolean | undefined,
+  ssl: !!CliArgsEnvResolvers.resolveBoolean(
+    args["redis"].ssl as boolean | undefined,
     "REDIS_SSL",
   ),
 };
@@ -278,20 +257,24 @@ try {
     console.log("🐘 Connecting to PostgreSQL database via configuration...");
     console.log(`   Host:     ${pgParams.host}`);
     console.log(`   Port:     ${pgParams.port}`);
-    console.log(`   User:     ${pgParams.username}`);
+    console.log(`   User:     ${pgParams.user}`);
     console.log(`   Database: ${pgParams.database}`);
     console.log(`   SSL:      ${pgParams.ssl ?? "false"}`);
 
+    const connection: PostgresConnectionConfig = {
+      host: pgParams.host,
+      port: pgParams.port,
+      username: pgParams.user,
+      password: pgParams.password,
+      database: pgParams.database,
+      ssl: pgParams.ssl,
+      caCertFile: pgParams.caCertFile,
+      caCertPath: pgParams.caCertPath,
+    };
+
     pgConnectionParams = {
       dbType: DbType.Postgres,
-      connection: {
-        host: pgParams.host,
-        port: pgParams.port,
-        username: pgParams.username,
-        password: pgParams.password,
-        database: pgParams.database,
-        ssl: pgParams.ssl,
-      },
+      connection,
     };
   }
   await pg.connect(pgConnectionParams);
@@ -310,17 +293,15 @@ try {
   >;
 
   // 4. Optionally Establish Redis Connection
-  if (!redisCliArgs.disableRedis) {
-    const redisConfig = redisCliArgs.url
-      ? redisCliArgs.url
-      : {
-          host: redisCliArgs.host,
-          port: redisCliArgs.port,
-          username: redisCliArgs.username,
-          password: redisCliArgs.password,
-          db: redisCliArgs.db,
-          ssl: redisCliArgs.ssl,
-        };
+  if (!disableRedis) {
+    const redisConfig = redisCliArgs.url ? redisCliArgs.url : {
+      host: redisCliArgs.host,
+      port: redisCliArgs.port,
+      username: redisCliArgs.user,
+      password: redisCliArgs.password,
+      db: redisCliArgs.db,
+      ssl: redisCliArgs.ssl,
+    };
 
     if (typeof redisConfig === "string") {
       console.log("\n🔴 Connecting to Redis via URL...");
@@ -397,7 +378,7 @@ try {
 
   let shouldClearDatabase = false;
 
-  if (!redisCliArgs.disableRedis && admTablesAreDefined) {
+  if (!disableRedis && admTablesAreDefined) {
     console.log();
     shouldClearDatabase = confirm(
       "⚠️  ADM tables already exist. Do you want to drop and recreate them? (This will clear all ADM data)",
@@ -458,21 +439,20 @@ try {
    * 1. Resume from previous context if available and DB was not cleared.
    * 2. Otherwise, start a fresh context from Level 0 (Province).
    */
-  const jobTimestamp =
-    !shouldClearDatabase && prevJobContext?.jobTimestamp
-      ? prevJobContext.jobTimestamp
-      : Date.now();
+  const jobTimestamp = !shouldClearDatabase && prevJobContext?.jobTimestamp
+    ? prevJobContext.jobTimestamp
+    : Date.now();
 
   const jobContext: ExtractAdmInputJobContext =
     !shouldClearDatabase && prevJobContext
       ? { ...prevJobContext, jobTimestamp }
       : {
-          config,
-          currentAdmLevel: AdmLevelCode.PROVINCE,
-          pgConnection: pgConnectionParams.connection,
-          pgSchema: pgParams.schema,
-          jobTimestamp,
-        };
+        config,
+        currentAdmLevel: AdmLevelCode.PROVINCE,
+        pgConnection: pgConnectionParams.connection,
+        pgSchema: pgParams.schema,
+        jobTimestamp,
+      };
 
   if (!shouldClearDatabase && prevJobContext) {
     console.log("🔄 Resuming extraction from previous state.");
@@ -518,7 +498,7 @@ try {
       type: "module" as const,
     };
 
-    const disableRedisParam = `disable-redis=${redisCliArgs.disableRedis}`;
+    const disableRedisParam = `disable-redis=${disableRedis}`;
 
     const processingWorkerUrl = new URL(
       "./workers/processing.worker.ts",
@@ -563,8 +543,7 @@ try {
       });
     } else {
       const lastPersisted = await mediator.persistedLastMessage;
-      let skipping =
-        !!lastPersisted &&
+      let skipping = !!lastPersisted &&
         (lastPersisted as Feature).properties?.shapeType === levelCode;
 
       featureStream = (await Deno.open(ndjsonFilePath)).readable
@@ -596,10 +575,11 @@ try {
         );
     }
 
-    const admLevelTotalEntriesCount =
-        ADM_LEVEL_ENTRIES_COUNT_BY_CODE.get(levelCode)!,
-      admLevelTotalEntriesCountFormatted =
-        admLevelTotalEntriesCount.toLocaleString();
+    const admLevelTotalEntriesCount = ADM_LEVEL_ENTRIES_COUNT_BY_CODE.get(
+        levelCode,
+      )!,
+      admLevelTotalEntriesCountFormatted = admLevelTotalEntriesCount
+        .toLocaleString();
     let admLevelProcessedEntriesCounter = 0;
     let admLevelInsertedEntriesCounter = 0;
 
@@ -653,10 +633,13 @@ try {
 
             admLevelProcessedEntriesCounter += payloads.length;
             console.log(
-              `⏳ Processing progress: ${admLevelProcessedEntriesCounter.toLocaleString()} / ${admLevelTotalEntriesCountFormatted} ${levelTitle}s (${Math.floor(
-                (admLevelProcessedEntriesCounter / admLevelTotalEntriesCount) *
-                  100,
-              )}%)`,
+              `⏳ Processing progress: ${admLevelProcessedEntriesCounter.toLocaleString()} / ${admLevelTotalEntriesCountFormatted} ${levelTitle}s (${
+                Math.floor(
+                  (admLevelProcessedEntriesCounter /
+                    admLevelTotalEntriesCount) *
+                    100,
+                )
+              }%)`,
             );
           },
           onInsertFinished: (payloads) => {
@@ -683,10 +666,12 @@ try {
             }
             admLevelInsertedEntriesCounter += payloads.length;
             console.log(
-              `⏳ Insert progress: ${admLevelInsertedEntriesCounter.toLocaleString()} / ${admLevelTotalEntriesCountFormatted} ${levelTitle}s (${Math.floor(
-                (admLevelInsertedEntriesCounter / admLevelTotalEntriesCount) *
-                  100,
-              )}%)`,
+              `⏳ Insert progress: ${admLevelInsertedEntriesCounter.toLocaleString()} / ${admLevelTotalEntriesCountFormatted} ${levelTitle}s (${
+                Math.floor(
+                  (admLevelInsertedEntriesCounter / admLevelTotalEntriesCount) *
+                    100,
+                )
+              }%)`,
             );
           },
           batchSize: mediatorCliArgs.queueBatchSize,
@@ -701,14 +686,13 @@ try {
 
     // 10. Deduplicate records for this level
     console.log(`🧹 Deleting duplicates for ${levelTitle}...`);
-    const dml =
-      levelCode === AdmLevelCode.PROVINCE
-        ? injectProvincesPostgresDML(config, pg, pgParams.schema)
-        : levelCode === AdmLevelCode.REGION
-          ? injectRegionsPostgresDML(config, pg, pgParams.schema)
-          : levelCode === AdmLevelCode.DISTRICT
-            ? injectDistrictsPostgresDML(config, pg, pgParams.schema)
-            : injectCommunesPostgresDML(config, pg, pgParams.schema);
+    const dml = levelCode === AdmLevelCode.PROVINCE
+      ? injectProvincesPostgresDML(config, pg, pgParams.schema)
+      : levelCode === AdmLevelCode.REGION
+      ? injectRegionsPostgresDML(config, pg, pgParams.schema)
+      : levelCode === AdmLevelCode.DISTRICT
+      ? injectDistrictsPostgresDML(config, pg, pgParams.schema)
+      : injectCommunesPostgresDML(config, pg, pgParams.schema);
 
     await dml.deleteDuplicates();
     console.log(`✅ Duplicates removed for ${levelTitle}.`);

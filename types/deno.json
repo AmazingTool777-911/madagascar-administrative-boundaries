@@ -5,6 +5,7 @@
     ".": "./index.d.ts",
     "./db": "./db.d.ts",
     "./utils": "./utils.d.ts",
-    "./models": "./models.d.ts"
+    "./models": "./models.d.ts",
+    "./cli": "./cli.d.ts"
   }
 }

@@ -70,6 +70,13 @@ export interface PostgresConnectionConfig {
   ssl?: boolean;
   /** The maximum size of the connection pool. */
   poolSize?: number;
+  /**
+   * Filename of a CA certificate located under the shared `db/.ca-certificates/`
+   * directory. Takes precedence over `caCertPath` when both are provided.
+   */
+  caCertFile?: string;
+  /** Full pathname to the CA certificate file, used when `caCertFile` is not set. */
+  caCertPath?: string;
 }
 
 /**
@@ -87,6 +94,8 @@ export interface PostgresConnectionParams {
  * Initially supports only PostgreSQL.
  */
 export type DbConnectionParams = PostgresConnectionParams;
+
+
 
 export interface TableDDL {
   /** The physical database table name. */
