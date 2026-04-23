@@ -24,9 +24,19 @@ import {
 import { attemptDbConnection, injectDbConnection } from "@scope/db";
 import type { DbConnection } from "@scope/types/db";
 
+/**
+ * The root CLI command for the administrative data pipeline.
+ * Responsible for parsing global database connection arguments,
+ * merging CLI flags with environment variables, and initializing
+ * the appropriate database adapter.
+ */
 export class CliIndexCommand extends Command<void, void, CliConfig> {
   #db!: DbConnection;
 
+  /**
+   * Initializes the root CLI command with global options and environment
+   * variable mappings for database configuration.
+   */
   constructor() {
     super();
     this.name(CLI_NAME)
@@ -115,6 +125,12 @@ export class CliIndexCommand extends Command<void, void, CliConfig> {
       });
   }
 
+  /**
+   * Internal handler executed when the global CLI command runs.
+   * Instantiates and connects to the database based on the resolved configuration.
+   *
+   * @param args The globally resolved CLI and environment configurations.
+   */
   private async handleGlobalAction(args: GlobalCliConfig) {
     this.#db = injectDbConnection(args.dbType);
 
@@ -127,6 +143,11 @@ export class CliIndexCommand extends Command<void, void, CliConfig> {
 
 let _cliIndexCommand!: CliIndexCommand;
 
+/**
+ * Injects and manages a singleton instance of the CliIndexCommand.
+ *
+ * @returns The singleton instance of the CLI root command.
+ */
 export function injectCliIndexCommand() {
   if (!_cliIndexCommand) {
     _cliIndexCommand = new CliIndexCommand();

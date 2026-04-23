@@ -64,15 +64,25 @@ export type CliConfig = {
   redis?: RedisDbConnectionCliConfig;
 
   // Environment variables mapped by Cliffy
+  /** Environment variable mapped for --pg.url. */
   pgUrl?: string;
+  /** Environment variable mapped for --pg.host. */
   pgHost?: string;
+  /** Environment variable mapped for --pg.port. */
   pgPort?: number;
+  /** Environment variable mapped for --pg.user. */
   pgUser?: string;
+  /** Environment variable mapped for --pg.password. */
   pgPassword?: string;
+  /** Environment variable mapped for --pg.database. */
   pgDatabase?: string;
+  /** Environment variable mapped for --pg.schema. */
   pgSchema?: string;
+  /** Environment variable mapped for --pg.ssl. */
   pgSsl?: boolean;
+  /** Environment variable mapped for --pg.ca-cert-file. */
   pgCaCertFile?: string;
+  /** Environment variable mapped for --pg.ca-cert-path. */
   pgCaCertPath?: string;
 };
 
