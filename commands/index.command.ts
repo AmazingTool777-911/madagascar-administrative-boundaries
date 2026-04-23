@@ -1,4 +1,5 @@
 import { Command } from "@cliffy/command";
+import { colors } from "@cliffy/ansi/colors";
 import {
   CLI_DESCRIPTION,
   CLI_NAME,
@@ -22,7 +23,6 @@ import {
   PostgresDbConnectionCliConfig,
 } from "@scope/types/cli";
 import { attemptDbConnection, injectDbConnection } from "@scope/db";
-import type { DbConnection } from "@scope/types/db";
 
 /**
  * The root CLI command for the administrative data pipeline.
@@ -31,8 +31,6 @@ import type { DbConnection } from "@scope/types/db";
  * the appropriate database adapter.
  */
 export class CliIndexCommand extends Command<void, void, CliConfig> {
-  #db!: DbConnection;
-
   /**
    * Initializes the root CLI command with global options and environment
    * variable mappings for database configuration.
@@ -132,12 +130,28 @@ export class CliIndexCommand extends Command<void, void, CliConfig> {
    * @param args The globally resolved CLI and environment configurations.
    */
   private async handleGlobalAction(args: GlobalCliConfig) {
-    this.#db = injectDbConnection(args.dbType);
+    console.log(
+      colors.blue.bold(`\n🚀 Initializing Administrative Data Pipeline`),
+    );
+    console.log(colors.gray(`   Database Type: ${args.dbType}`));
+    if (args.dbType === DbType.Postgres && args.pg) {
+      console.log(
+        colors.gray(`   PostgreSQL Host: ${args.pg.host}:${args.pg.port}`),
+      );
+      console.log(colors.gray(`   PostgreSQL User: ${args.pg.user}`));
+      console.log(colors.gray(`   Target Database: ${args.pg.database}`));
+    }
 
-    await attemptDbConnection(this.#db, {
+    const db = injectDbConnection(args.dbType);
+
+    console.log(colors.blue(`\n🔌 Establishing database connection...`));
+    await attemptDbConnection(db, {
       dbType: args.dbType,
       pg: args.pg,
     });
+    console.log(
+      colors.green.bold(`✅ Database connection established successfully!\n`),
+    );
   }
 }
 
