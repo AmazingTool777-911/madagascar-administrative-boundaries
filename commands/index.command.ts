@@ -25,11 +25,10 @@ import {
   REDIS_USERNAME_DESCRIPTION,
 } from "@scope/consts/cli";
 import { DbType } from "@scope/consts/db";
-import {
-  type CliConfig,
-  type GlobalCliConfig,
-  type PostgresDbConnectionCliConfig,
-  type RedisDbConnectionCliConfig,
+import type {
+  CliConfig,
+  GlobalCliConfig,
+  PostgresDbConnectionCliConfig,
 } from "@scope/types/cli";
 import { attemptDbConnection, injectDbConnection } from "@scope/db";
 import { injectRedisConnection } from "@scope/redis";
@@ -161,21 +160,9 @@ export class CliIndexCommand extends Command<void, void, CliConfig> {
           caCertPath: args.pg?.caCertPath ?? args.pgCaCertPath,
         };
 
-        const redis: RedisDbConnectionCliConfig = {
-          url: args.redis?.url ?? args.redisUrl,
-          host: args.redis?.host ?? args.redisHost,
-          port: args.redis?.port ?? args.redisPort,
-          user: args.redis?.user ?? args.redisUsername,
-          password: args.redis?.password ?? args.redisPassword,
-          db: args.redis?.db ?? args.redisDb,
-          ssl: args.redis?.ssl ?? args.redisSsl,
-        };
-
         await this.handleGlobalAction({
           dbType: args.dbType as unknown as DbType,
-          disableRedis: (args.disableRedis ?? args.disableRedisEnv) as boolean,
           pg,
-          redis,
         });
       })
       .action(async (args) => {
@@ -194,12 +181,25 @@ export class CliIndexCommand extends Command<void, void, CliConfig> {
       colors.blue.bold(`\n🚀 Initializing Administrative Data Pipeline`),
     );
     console.log(colors.gray(`   Database Type: ${args.dbType}`));
-    if (args.dbType === DbType.Postgres && args.pg) {
-      console.log(
-        colors.gray(`   PostgreSQL Host: ${args.pg.host}:${args.pg.port}`),
-      );
-      console.log(colors.gray(`   PostgreSQL User: ${args.pg.user}`));
-      console.log(colors.gray(`   Target Database: ${args.pg.database}`));
+    switch (args.dbType) {
+      case DbType.Postgres: {
+        if (args.pg.url) {
+          const maskedUrl = args.pg.url.replace(
+            /^(postgres(?:ql)?:\/\/.*:)(.*)(@.*)$/,
+            "$1****$3",
+          );
+          console.log(colors.gray(`   PostgreSQL URL: ${maskedUrl}`));
+        } else {
+          console.log(
+            colors.gray(`   PostgreSQL Host: ${args.pg.host}:${args.pg.port}`),
+          );
+          console.log(colors.gray(`   PostgreSQL User: ${args.pg.user}`));
+          console.log(colors.gray(`   Target Database: ${args.pg.database}`));
+        }
+        break;
+      }
+      default:
+        break;
     }
 
     const db = injectDbConnection(args.dbType);

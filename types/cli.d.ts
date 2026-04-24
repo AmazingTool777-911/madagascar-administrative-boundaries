@@ -102,10 +102,7 @@ export type CliConfig = {
   redisSsl?: boolean;
 };
 
-export type GlobalCliConfig = Pick<
-  CliConfig,
-  "dbType" | "pg" | "disableRedis" | "redis"
->;
+export type GlobalCliConfig = Pick<CliConfig, "dbType" | "pg">;
 
 /**
  * A comprehensive configuration object encompassing all possible connection values

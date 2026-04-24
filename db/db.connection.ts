@@ -48,18 +48,16 @@ export async function attemptDbConnection(
       const pg = config.pg;
       params = {
         dbType: DbType.Postgres,
-        connection: pg.url
-          ? pg.url
-          : {
-              host: pg.host,
-              port: pg.port,
-              username: pg.user,
-              password: pg.password,
-              database: pg.database,
-              ssl: pg.ssl,
-              caCertFile: pg.ssl ? pg.caCertFile : undefined,
-              caCertPath: pg.ssl ? pg.caCertPath : undefined,
-            },
+        connection: pg.url ? pg.url : {
+          host: pg.host,
+          port: pg.port,
+          username: pg.user,
+          password: pg.password,
+          database: pg.database,
+          ssl: pg.ssl,
+          caCertFile: pg.ssl ? pg.caCertFile : undefined,
+          caCertPath: pg.ssl ? pg.caCertPath : undefined,
+        },
       };
       break;
     }
