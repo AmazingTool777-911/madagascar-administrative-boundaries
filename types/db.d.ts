@@ -5,6 +5,8 @@ import type {
   CommuneRecord,
   DistrictRecord,
   FokontanyRecord,
+  MadaAdmConfig,
+  MadaAdmConfigValues,
   Province,
   ProvinceRecord,
   RegionRecord,
@@ -109,6 +111,14 @@ export interface TableDDL {
 export interface DMLCreateManyResult {
   /** The number of rows successfully inserted. */
   insertedCount: number;
+}
+
+/**
+ * Data Manipulation Layer interface for the mada adm config table.
+ */
+export interface MadaAdmConfigDML {
+  get(): MaybePromise<MadaAdmConfig | null>;
+  create(values: MadaAdmConfigValues): MaybePromise<MadaAdmConfig>;
 }
 
 /**

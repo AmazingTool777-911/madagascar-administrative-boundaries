@@ -139,3 +139,9 @@ export const PROVINCE_BY_REGION_MAP: Map<string, ProvinceName> = new Map([
   ["Androy", ProvinceName.TOLIARA],
   ["Anosy", ProvinceName.TOLIARA],
 ]);
+
+/** The physical table name for MadaAdmConfig in snake_case databases (e.g. Postgres). */
+export const MADA_ADM_CONFIG_TABLE_NAME_SNAKE = "mada_adm_config";
+
+/** The physical table name for MadaAdmConfig in camelCase databases (e.g. MongoDB). */
+export const MADA_ADM_CONFIG_TABLE_NAME_CAMEL = "madaAdmConfig";

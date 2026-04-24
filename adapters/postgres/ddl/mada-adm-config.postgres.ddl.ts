@@ -1,4 +1,5 @@
 import { DbType } from "@scope/consts/db";
+import { MADA_ADM_CONFIG_TABLE_NAME_SNAKE } from "@scope/consts/models";
 import type {
   DbTransactionContext,
   PostgresTransactionContext,
@@ -12,7 +13,7 @@ import type { PostgresDbConnection } from "../postgres-db.connection.ts";
  */
 export class MadaAdmConfigPostgresDDL implements TableDDL {
   /** The physical database table name. */
-  static readonly TABLE_NAME = "mada_adm_config";
+  static readonly TABLE_NAME = MADA_ADM_CONFIG_TABLE_NAME_SNAKE;
 
   /** The physical database schema name. */
   readonly schema: string;

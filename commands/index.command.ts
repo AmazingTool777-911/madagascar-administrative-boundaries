@@ -1,3 +1,6 @@
+import { Confirm, Input } from "@cliffy/prompt";
+import { injectMadaAdmConfigDDL } from "@scope/db/ddl";
+import { injectMadaAdmConfigDML } from "@scope/db/dml";
 import { Command } from "@cliffy/command";
 import { colors } from "@cliffy/ansi/colors";
 import {
@@ -50,6 +53,7 @@ import type {
   AdmRecord,
   AdmValues,
   AdmValuesDiscriminated,
+  MadaAdmConfigValues,
 } from "@scope/types/models";
 import { attemptDbConnection, injectDbConnection } from "@scope/db";
 import { injectRedisConnection } from "@scope/redis";
@@ -371,6 +375,85 @@ export class CliIndexCommand extends Command<void, void, CliConfig> {
    * @param args - The resolved CLI and environment configurations.
    */
   private async handleIndexAction(args: CliConfig) {
+    const db = injectDbConnection(args.dbType);
+    let configValues: MadaAdmConfigValues | null = null;
+
+    const configDdl = injectMadaAdmConfigDDL(args.dbType, db, {
+      pgSchema: args.pg.schema,
+    });
+    const configDml = injectMadaAdmConfigDML(args.dbType, db, {
+      pgSchema: args.pg.schema,
+    });
+
+    const tableExists = await configDdl.exists();
+    if (tableExists) {
+      const existingConfig = await configDml.get();
+      if (existingConfig) {
+        configValues = {
+          tablesPrefix: existingConfig.tablesPrefix,
+          isFkRepeated: existingConfig.isFkRepeated,
+          isProvinceRepeated: existingConfig.isProvinceRepeated,
+          isProvinceFkRepeated: existingConfig.isProvinceFkRepeated,
+          hasGeojson: existingConfig.hasGeojson,
+          hasAdmLevel: existingConfig.hasAdmLevel,
+        };
+        console.log(
+          colors.green(`ℹ️  Found existing ADM configuration in database.`),
+        );
+      }
+    }
+
+    if (!configValues) {
+      console.log(
+        colors.yellow(
+          `\nℹ️  No existing ADM configuration found. Please provide the configuration values:`,
+        ),
+      );
+      const tablesPrefixInput = await Input.prompt({
+        message: "Tables Prefix (leave empty for none):",
+      });
+      const tablesPrefix = tablesPrefixInput.trim() || null;
+
+      const isFkRepeated = await Confirm.prompt({
+        message: "Are foreign keys repeated?",
+        default: true,
+      });
+
+      const isProvinceRepeated = await Confirm.prompt({
+        message: "Is province name repeated across sub-tables?",
+        default: false,
+      });
+
+      const isProvinceFkRepeated = await Confirm.prompt({
+        message: "Is province foreign key repeated across sub-tables?",
+        default: false,
+      });
+
+      const hasGeojson = await Confirm.prompt({
+        message: "Do the tables include spatial GeoJSON geometries?",
+        default: false,
+      });
+
+      const hasAdmLevel = await Confirm.prompt({
+        message: "Do the tables include an adm level index (0 to 4) column?",
+        default: true,
+      });
+
+      configValues = {
+        tablesPrefix,
+        isFkRepeated,
+        isProvinceRepeated,
+        isProvinceFkRepeated,
+        hasGeojson,
+        hasAdmLevel,
+      };
+    }
+
+    console.log(
+      colors.blue(`\n⚙️  Active Mada ADM Configuration:`),
+      `\n${JSON.stringify(configValues, null, 2)}\n`,
+    );
+
     const redisConfig: RedisDbConnectionCliConfig = {
       url: args.redis?.url ?? args.redisUrl,
       host: args.redis?.host ?? args.redisHost ?? "localhost",

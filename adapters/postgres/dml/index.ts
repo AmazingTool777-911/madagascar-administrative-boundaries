@@ -1,3 +1,4 @@
+export * from "./mada-adm-config.postgres.dml.ts";
 export * from "./adm-table.postgres.dml.ts";
 export * from "./provinces.postgres.dml.ts";
 export * from "./regions.postgres.dml.ts";

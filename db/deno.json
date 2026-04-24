@@ -2,6 +2,8 @@
   "name": "@scope/db",
   "version": "0.0.1",
   "exports": {
-    ".": "./index.ts"
+    ".": "./index.ts",
+    "./ddl": "./ddl/index.ts",
+    "./dml": "./dml/index.ts"
   }
 }
