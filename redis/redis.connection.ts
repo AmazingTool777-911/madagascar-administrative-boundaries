@@ -1,4 +1,6 @@
 import { RedisClient } from "@iuioiua/redis";
+import * as path from "@std/path";
+import { REDIS_CA_CERTIFICATES_DIR } from "@scope/consts/db";
 
 /**
  * Configuration for a Redis connection.
@@ -16,6 +18,18 @@ export interface RedisConnectionConfig {
   db?: number;
   /** Whether to use TLS for the connection. */
   ssl?: boolean;
+  /** Filename of the client certificate under `redis/.ca-certificates/`. */
+  certFile?: string;
+  /** Full path to the client certificate file. */
+  certPath?: string;
+  /** Filename of the client key under `redis/.ca-certificates/`. */
+  keyFile?: string;
+  /** Full path to the client key file. */
+  keyPath?: string;
+  /** Filename of the CA certificate under `redis/.ca-certificates/`. */
+  caCertFile?: string;
+  /** Full path to the CA certificate file. */
+  caCertPath?: string;
 }
 
 /**
@@ -92,9 +106,43 @@ export class RedisConnection {
       ssl = params.ssl ?? false;
     }
 
-    this.#conn = ssl
-      ? await Deno.connectTls({ hostname: host, port })
-      : await Deno.connect({ hostname: host, port });
+    if (ssl) {
+      let tlsOptions: Parameters<typeof Deno.connectTls>[0] = {
+        hostname: host,
+        port,
+      };
+
+      if (typeof params !== "string") {
+        const resolvePath = (file?: string, full?: string) => {
+          if (file) {
+            return path.join(Deno.cwd(), REDIS_CA_CERTIFICATES_DIR, file);
+          }
+          return full;
+        };
+
+        const certPath = resolvePath(params.certFile, params.certPath);
+
+        const keyPath = resolvePath(params.keyFile, params.keyPath);
+        if (certPath && keyPath) {
+          tlsOptions = {
+            ...tlsOptions,
+            cert: await Deno.readTextFile(certPath),
+            key: await Deno.readTextFile(keyPath),
+          };
+        }
+
+        const caCertPath = resolvePath(params.caCertFile, params.caCertPath);
+        if (caCertPath) {
+          tlsOptions.caCerts = [await Deno.readTextFile(caCertPath)];
+        }
+      }
+
+      this.#conn = await Deno.connectTls(
+        tlsOptions,
+      );
+    } else {
+      this.#conn = await Deno.connect({ hostname: host, port });
+    }
     this.#client = new RedisClient(this.#conn);
 
     if (password) {

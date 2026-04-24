@@ -15,7 +15,7 @@ import { DbType } from "@scope/consts/db";
 import type { ExtractAdmInputJobContext } from "../extract-adm-input.d.ts";
 import { ADM_LEVEL_TITLE_BY_CODE, AdmLevelCode } from "@scope/consts/models";
 import {
-  type AdmRecords,
+  type AdmRecord,
   type AdmValuesDiscriminated,
   type CommuneRecord,
   type DistrictRecord,
@@ -44,12 +44,12 @@ const executorType =
 const executor = executorType === "redis"
   ? Redis.injectRedisQueueWorkerExecutor<
     ExtractAdmInputJobContext,
-    AdmRecords,
+    AdmRecord,
     AdmValuesDiscriminated
   >()
   : InMemory.injectInMemoryQueueWorkerExecutor<
     ExtractAdmInputJobContext,
-    AdmRecords,
+    AdmRecord,
     AdmValuesDiscriminated
   >();
 
@@ -61,10 +61,26 @@ executor.run({
         dbType: DbType.Postgres,
         connection: context.pgConnection,
       });
-      provincesDML = injectProvincesPostgresDML(context.config, pg, context.pgSchema);
-      regionsDML = injectRegionsPostgresDML(context.config, pg, context.pgSchema);
-      districtsDML = injectDistrictsPostgresDML(context.config, pg, context.pgSchema);
-      communesDML = injectCommunesPostgresDML(context.config, pg, context.pgSchema);
+      provincesDML = injectProvincesPostgresDML(
+        context.config,
+        pg,
+        context.pgSchema,
+      );
+      regionsDML = injectRegionsPostgresDML(
+        context.config,
+        pg,
+        context.pgSchema,
+      );
+      districtsDML = injectDistrictsPostgresDML(
+        context.config,
+        pg,
+        context.pgSchema,
+      );
+      communesDML = injectCommunesPostgresDML(
+        context.config,
+        pg,
+        context.pgSchema,
+      );
     }
   },
   async execute(_context, batch, { retryCount }) {

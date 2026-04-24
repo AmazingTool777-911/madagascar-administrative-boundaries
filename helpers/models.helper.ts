@@ -1,5 +1,5 @@
 import type {
-  AdmRecords,
+  AdmRecord,
   AdmValues,
   Commune,
   CommuneRecord,
@@ -244,7 +244,7 @@ export function mapFokontanyRecordToValues(
 /**
  * Polymorphic mapper that converts any ADM record into its corresponding values.
  */
-export function mapAdmRecordToValues(record: AdmRecords): AdmValues {
+export function mapAdmRecordToValues(record: AdmRecord): AdmValues {
   if (isFokontanyValues(record)) {
     return mapFokontanyRecordToValues(record as FokontanyRecord);
   } else if (isCommuneValues(record)) {
@@ -259,7 +259,7 @@ export function mapAdmRecordToValues(record: AdmRecords): AdmValues {
 }
 
 export function isProvinceValues(
-  values: AdmValues | AdmRecords,
+  values: AdmValues | AdmRecord,
 ): values is ProvinceValues {
   if (typeof values.admLevel === "number") return values.admLevel === 0;
   return (
@@ -271,7 +271,7 @@ export function isProvinceValues(
 }
 
 export function isRegionValues(
-  values: AdmValues | AdmRecords,
+  values: AdmValues | AdmRecord,
 ): values is RegionValues {
   if (typeof values.admLevel === "number") return values.admLevel === 1;
   return (
@@ -283,7 +283,7 @@ export function isRegionValues(
 }
 
 export function isDistrictValues(
-  values: AdmValues | AdmRecords,
+  values: AdmValues | AdmRecord,
 ): values is DistrictValues {
   if (typeof values.admLevel === "number") return values.admLevel === 2;
   return (
@@ -295,7 +295,7 @@ export function isDistrictValues(
 }
 
 export function isCommuneValues(
-  values: AdmValues | AdmRecords,
+  values: AdmValues | AdmRecord,
 ): values is CommuneValues {
   if (typeof values.admLevel === "number") return values.admLevel === 3;
   return (
@@ -307,14 +307,14 @@ export function isCommuneValues(
 }
 
 export function isFokontanyValues(
-  values: AdmValues | AdmRecords,
+  values: AdmValues | AdmRecord,
 ): values is FokontanyValues {
   if (typeof values.admLevel === "number") return values.admLevel === 4;
   return "fokontany" in values;
 }
 
 export function getAdmValuesEncodedString(
-  values: AdmValues | AdmRecords,
+  values: AdmValues | AdmRecord,
 ): string {
   if (isProvinceValues(values)) return (values as ProvinceRecord).province;
   else if (isRegionValues(values)) return (values as RegionRecord).region;

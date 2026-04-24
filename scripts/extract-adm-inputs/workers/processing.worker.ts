@@ -16,7 +16,7 @@ import {
 } from "../get-parent-adm-by-area.query.ts";
 import {
   type AdmProperties,
-  type AdmRecords,
+  type AdmRecord,
   type CommuneRecord,
   type DistrictRecord,
   type FokontanyRecord,
@@ -43,12 +43,12 @@ const executor = executorType === "redis"
   ? Redis.injectRedisQueueWorkerExecutor<
     ExtractAdmInputJobContext,
     Feature,
-    AdmRecords
+    AdmRecord
   >()
   : InMemory.injectInMemoryQueueWorkerExecutor<
     ExtractAdmInputJobContext,
     Feature,
-    AdmRecords
+    AdmRecord
   >();
 
 executor.run({
@@ -61,7 +61,11 @@ executor.run({
         dbType: DbType.Postgres,
         connection: context.pgConnection,
       });
-      provincesDML = injectProvincesPostgresDML(context.config, pg, context.pgSchema);
+      provincesDML = injectProvincesPostgresDML(
+        context.config,
+        pg,
+        context.pgSchema,
+      );
     }
   },
   async execute(_context, batch, { workerMetadata, retryCount }) {

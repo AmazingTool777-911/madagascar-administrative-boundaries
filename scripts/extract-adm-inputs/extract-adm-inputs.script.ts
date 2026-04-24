@@ -8,7 +8,7 @@ import {
 import { DbType } from "@scope/consts/db";
 import { CliArgsEnvResolvers } from "@scope/helpers";
 import type {
-  AdmRecords,
+  AdmRecord,
   AdmValuesDiscriminated,
   MadaAdmConfigValues,
   ProvinceValues,
@@ -61,8 +61,6 @@ type Feature = GeoJSONFeature<{
   shapeID: string;
   shapeType: string;
 }>;
-
-
 
 /**
  * Parsed CLI arguments for the worker mediators configuration.
@@ -287,7 +285,7 @@ try {
   let mediator: QueueWorkersMediator<
     ExtractAdmInputJobContext,
     Feature,
-    AdmRecords,
+    AdmRecord,
     ExtractAdmInputJobContext,
     AdmValuesDiscriminated
   >;
@@ -323,7 +321,7 @@ try {
     mediator = Redis.injectRedisQueueWorkersMediator<
       ExtractAdmInputJobContext,
       Feature,
-      AdmRecords,
+      AdmRecord,
       ExtractAdmInputJobContext,
       AdmValuesDiscriminated
     >(redis.client!, redisConfig, {
@@ -350,7 +348,7 @@ try {
     mediator = InMemory.injectInMemoryQueueWorkersMediator<
       ExtractAdmInputJobContext,
       Feature,
-      AdmRecords,
+      AdmRecord,
       ExtractAdmInputJobContext,
       AdmValuesDiscriminated
     >({

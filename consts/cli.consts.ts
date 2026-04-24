@@ -19,6 +19,9 @@ export const CLI_DESCRIPTION: string =
 export const DB_TYPE_DESCRIPTION: string =
   `The database type that the command is working with. Either SQLite, MySQL, PostgreSQL (+ PostGIS), or MongoDB. Value: "${DbType.SQLite}" | "${DbType.MySQL}" | "${DbType.Postgres}" | "${DbType.MongoDB}"`;
 
+export const DEBUG_DESCRIPTION: string =
+  "Enable debug logging across the pipeline.";
+
 export const PG_SCHEMA_DESCRIPTION: string =
   "The PostgreSQL schema to use (e.g. public).";
 
@@ -49,6 +52,11 @@ export const PG_CA_CERT_FILE_DESCRIPTION: string =
 export const PG_CA_CERT_PATH_DESCRIPTION: string =
   "Full path to the CA certificate file. Used when --pg.ca-cert-file is not set.";
 
+// ── Redis descriptions ─────────────────────────────────────────────────────
+
+export const DISABLE_REDIS_DESCRIPTION: string =
+  'Disable Redis connection ("true" / "1" = disabled, default = enabled).';
+
 export const REDIS_URL_DESCRIPTION: string =
   "Full Redis connection URL. When set, all individual fields are ignored.";
 
@@ -70,5 +78,46 @@ export const REDIS_DB_DESCRIPTION: string =
 export const REDIS_SSL_DESCRIPTION: string =
   "Enable TLS/SSL for the connection.";
 
-export const DISABLE_REDIS_DESCRIPTION: string =
-  'Disable Redis connection ("true" / "1" = disabled, default = enabled).';
+export const REDIS_CERT_FILE_DESCRIPTION: string =
+  "Filename of the client certificate under redis/.ca-certificates/.";
+
+export const REDIS_CERT_PATH_DESCRIPTION: string =
+  "Full path to the client certificate file.";
+
+export const REDIS_KEY_FILE_DESCRIPTION: string =
+  "Filename of the client key under redis/.ca-certificates/.";
+
+export const REDIS_KEY_PATH_DESCRIPTION: string =
+  "Full path to the client key file.";
+
+export const REDIS_CA_CERT_FILE_DESCRIPTION: string =
+  "Filename of the CA certificate under redis/.ca-certificates/.";
+
+export const REDIS_CA_CERT_PATH_DESCRIPTION: string =
+  "Full path to the CA certificate file for Redis.";
+
+// ── Mediator / Worker descriptions ──────────────────────────────────────────
+
+export const QUEUE_BATCH_SIZE_DESCRIPTION: string =
+  "Batch size for processing messages concurrently.";
+
+export const QUEUE_MAX_RETRIES_DESCRIPTION: string =
+  "Maximum number of retries per batch in case of an error.";
+
+export const IN_MEMORY_PROCESSING_HWM_DESCRIPTION: string =
+  "Default high water mark for in-memory processing workers.";
+
+export const IN_MEMORY_INSERT_HWM_DESCRIPTION: string =
+  "Default high water mark for the in-memory insert worker.";
+
+export const WORKER_HEALTHCHECK_INTERVAL_DESCRIPTION: string =
+  "Interval for worker healthcheck in milliseconds.";
+
+export const WORKER_PENDING_MIN_DURATION_THRESHOLD_DESCRIPTION: string =
+  "Threshold for claiming pending messages in milliseconds.";
+
+export const XREAD_BLOCK_DURATION_DESCRIPTION: string =
+  "Duration in milliseconds for XREAD BLOCK calls in Redis.";
+
+export const PROCESSING_WORKERS_COUNT_DESCRIPTION: string =
+  "Number of concurrent processing workers to spawn per ADM level.";

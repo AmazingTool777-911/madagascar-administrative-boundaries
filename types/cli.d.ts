@@ -51,19 +51,62 @@ export interface RedisDbConnectionCliConfig {
   db?: number;
   /** Whether to use TLS for the connection. */
   ssl: boolean;
+  /**
+   * Filename of the client certificate located under the shared
+   * `redis/.ca-certificates/` directory.
+   */
+  certFile?: string;
+  /** Full path to the client certificate file. */
+  certPath?: string;
+  /**
+   * Filename of the client key located under the shared
+   * `redis/.ca-certificates/` directory.
+   */
+  keyFile?: string;
+  /** Full path to the client key file. */
+  keyPath?: string;
+  /**
+   * Filename of the CA certificate located under the shared
+   * `redis/.ca-certificates/` directory.
+   */
+  caCertFile?: string;
+  /** Full path to the CA certificate file. */
+  caCertPath?: string;
 }
 
+/**
+ * Full CLI configuration encompassing all global and command-scoped options.
+ */
 export type CliConfig = {
   /** The target database type. */
   dbType: DbType;
-  /** Whether to skip the Redis connection. Defaults to false. */
-  disableRedis: boolean;
+  /** Whether to enable debug logging across the pipeline. */
+  debug: boolean;
   /** Configuration specific to PostgreSQL. */
   pg: PostgresDbConnectionCliConfig;
+  /** Whether to skip the Redis connection. Defaults to false. */
+  disableRedis: boolean;
   /** Configuration specific to Redis. */
-  redis?: RedisDbConnectionCliConfig;
+  redis: RedisDbConnectionCliConfig;
+  /** Batch size for processing messages concurrently. */
+  queueBatchSize?: number;
+  /** Maximum number of retries per batch in case of an error. */
+  queueMaxRetries?: number;
+  /** Default high water mark for in-memory processing workers. */
+  inMemoryProcessingHwm?: number;
+  /** Default high water mark for the in-memory insert worker. */
+  inMemoryInsertHwm?: number;
+  /** Interval for worker healthcheck in milliseconds. */
+  workerHealthcheckInterval?: number;
+  /** Threshold for claiming pending messages in milliseconds. */
+  workerPendingMinDurationThreshold?: number;
+  /** Duration in milliseconds for XREAD BLOCK calls in Redis. */
+  xreadBlockDuration?: number;
+  /** Number of concurrent processing workers to spawn per ADM level. */
+  processingWorkersCount: number;
 
-  // Environment variables mapped by Cliffy
+  // ── Environment variable mappings (populated by Cliffy) ──────────────────
+
   /** Environment variable mapped for --pg.url. */
   pgUrl?: string;
   /** Environment variable mapped for --pg.host. */
@@ -100,9 +143,25 @@ export type CliConfig = {
   redisDb?: number;
   /** Environment variable mapped for --redis.ssl. */
   redisSsl?: boolean;
+  /** Environment variable mapped for --redis.cert-file. */
+  redisCertFile?: string;
+  /** Environment variable mapped for --redis.cert-path. */
+  redisCertPath?: string;
+  /** Environment variable mapped for --redis.key-file. */
+  redisKeyFile?: string;
+  /** Environment variable mapped for --redis.key-path. */
+  redisKeyPath?: string;
+  /** Environment variable mapped for --redis.ca-cert-file. */
+  redisCaCertFile?: string;
+  /** Environment variable mapped for --redis.ca-cert-path. */
+  redisCaCertPath?: string;
 };
 
-export type GlobalCliConfig = Pick<CliConfig, "dbType" | "pg">;
+/**
+ * Subset of CliConfig representing the globally resolved configuration,
+ * available to all commands including subcommands.
+ */
+export type GlobalCliConfig = Pick<CliConfig, "dbType" | "pg" | "debug">;
 
 /**
  * A comprehensive configuration object encompassing all possible connection values

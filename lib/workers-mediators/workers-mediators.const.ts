@@ -23,3 +23,6 @@ export const WORKER_EVENTS = {
 
 /** Default number of retries before a worker job fails completely. */
 export const DEFAULT_MAX_RETRIES = 3;
+
+/** Default number of processing workers to spawn. */
+export const DEFAULT_PROCESSING_WORKERS_COUNT = 2;

@@ -6,6 +6,7 @@
     "./db": "./db.d.ts",
     "./utils": "./utils.d.ts",
     "./models": "./models.d.ts",
-    "./cli": "./cli.d.ts"
+    "./cli": "./cli.d.ts",
+    "./command": "./command.d.ts"
   }
 }

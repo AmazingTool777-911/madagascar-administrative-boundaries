@@ -5,7 +5,10 @@ import {
   CLI_NAME,
   CLI_VERSION,
   DB_TYPE_DESCRIPTION,
+  DEBUG_DESCRIPTION,
   DISABLE_REDIS_DESCRIPTION,
+  IN_MEMORY_INSERT_HWM_DESCRIPTION,
+  IN_MEMORY_PROCESSING_HWM_DESCRIPTION,
   PG_CA_CERT_FILE_DESCRIPTION,
   PG_CA_CERT_PATH_DESCRIPTION,
   PG_DATABASE_DESCRIPTION,
@@ -16,22 +19,57 @@ import {
   PG_SSL_DESCRIPTION,
   PG_URL_DESCRIPTION,
   PG_USER_DESCRIPTION,
+  PROCESSING_WORKERS_COUNT_DESCRIPTION,
+  QUEUE_BATCH_SIZE_DESCRIPTION,
+  QUEUE_MAX_RETRIES_DESCRIPTION,
+  REDIS_CA_CERT_FILE_DESCRIPTION,
+  REDIS_CA_CERT_PATH_DESCRIPTION,
+  REDIS_CERT_FILE_DESCRIPTION,
+  REDIS_CERT_PATH_DESCRIPTION,
   REDIS_DB_DESCRIPTION,
   REDIS_HOST_DESCRIPTION,
+  REDIS_KEY_FILE_DESCRIPTION,
+  REDIS_KEY_PATH_DESCRIPTION,
   REDIS_PASSWORD_DESCRIPTION,
   REDIS_PORT_DESCRIPTION,
   REDIS_SSL_DESCRIPTION,
   REDIS_URL_DESCRIPTION,
   REDIS_USERNAME_DESCRIPTION,
+  WORKER_HEALTHCHECK_INTERVAL_DESCRIPTION,
+  WORKER_PENDING_MIN_DURATION_THRESHOLD_DESCRIPTION,
+  XREAD_BLOCK_DURATION_DESCRIPTION,
 } from "@scope/consts/cli";
 import { DbType } from "@scope/consts/db";
 import type {
   CliConfig,
   GlobalCliConfig,
   PostgresDbConnectionCliConfig,
+  RedisDbConnectionCliConfig,
 } from "@scope/types/cli";
+import type {
+  AdmRecord,
+  AdmValues,
+  AdmValuesDiscriminated,
+} from "@scope/types/models";
 import { attemptDbConnection, injectDbConnection } from "@scope/db";
 import { injectRedisConnection } from "@scope/redis";
+import {
+  DEFAULT_MAX_RETRIES,
+  DEFAULT_PROCESSING_WORKERS_COUNT,
+  type QueueWorkersMediator,
+} from "@scope/lib/workers-mediators";
+import {
+  DEFAULT_BATCH_SIZE,
+  DEFAULT_WORKER_JOB_HWM,
+  injectInMemoryQueueWorkersMediator,
+} from "@scope/lib/in-memory-workers-mediators";
+import {
+  DEFAULT_HEALTHCHECK_INTERVAL,
+  DEFAULT_PENDING_MIN_DURATION_THRESHOLD,
+  DEFAULT_XREAD_BLOCK_DURATION,
+  injectRedisQueueWorkersMediator,
+} from "@scope/lib/redis-workers-mediators";
+import type { SeedAdmJobContext } from "@scope/types/command";
 
 /**
  * The root CLI command for the administrative data pipeline.
@@ -49,8 +87,12 @@ export class CliIndexCommand extends Command<void, void, CliConfig> {
     this.name(CLI_NAME)
       .version(CLI_VERSION)
       .description(CLI_DESCRIPTION)
+      // ── Global options ──────────────────────────────────────────────────
       .globalOption("--db-type <type:string>", DB_TYPE_DESCRIPTION, {
         default: DbType.SQLite,
+      })
+      .globalOption("--debug <debug:boolean>", DEBUG_DESCRIPTION, {
+        default: false,
       })
       .globalOption("--pg.schema <schema:string>", PG_SCHEMA_DESCRIPTION, {
         default: "public",
@@ -101,33 +143,9 @@ export class CliIndexCommand extends Command<void, void, CliConfig> {
           depends: ["--pg.ssl"],
         },
       )
-      .globalOption(
-        "--disable-redis <disabled:boolean>",
-        DISABLE_REDIS_DESCRIPTION,
-        {
-          default: false,
-        },
-      )
-      .globalOption("--redis.url <url:string>", REDIS_URL_DESCRIPTION)
-      .globalOption("--redis.host <host:string>", REDIS_HOST_DESCRIPTION, {
-        default: "localhost",
-      })
-      .globalOption("--redis.port <port:number>", REDIS_PORT_DESCRIPTION, {
-        default: 6379,
-      })
-      .globalOption(
-        "--redis.user <username:string>",
-        REDIS_USERNAME_DESCRIPTION,
-      )
-      .globalOption(
-        "--redis.password <password:string>",
-        REDIS_PASSWORD_DESCRIPTION,
-      )
-      .globalOption("--redis.db <db:number>", REDIS_DB_DESCRIPTION)
-      .globalOption("--redis.ssl <ssl:boolean>", REDIS_SSL_DESCRIPTION, {
-        default: false,
-      })
+      // ── Global env variables ────────────────────────────────────────────
       .globalEnv("DB_TYPE=<type:string>", DB_TYPE_DESCRIPTION)
+      .globalEnv("DEBUG=<debug:boolean>", DEBUG_DESCRIPTION)
       .globalEnv("PG_URL=<url:string>", PG_URL_DESCRIPTION)
       .globalEnv("PG_HOST=<host:string>", PG_HOST_DESCRIPTION)
       .globalEnv("PG_PORT=<port:number>", PG_PORT_DESCRIPTION)
@@ -136,16 +154,14 @@ export class CliIndexCommand extends Command<void, void, CliConfig> {
       .globalEnv("PG_DATABASE=<database:string>", PG_DATABASE_DESCRIPTION)
       .globalEnv("PG_SCHEMA=<schema:string>", PG_SCHEMA_DESCRIPTION)
       .globalEnv("PG_SSL=<ssl:boolean>", PG_SSL_DESCRIPTION)
-      .globalEnv("PG_CA_CERT_FILE=<file:string>", PG_CA_CERT_FILE_DESCRIPTION)
-      .globalEnv("PG_CA_CERT_PATH=<path:string>", PG_CA_CERT_PATH_DESCRIPTION)
-      .globalEnv("DISABLE_REDIS=<disabled:boolean>", DISABLE_REDIS_DESCRIPTION)
-      .globalEnv("REDIS_URL=<url:string>", REDIS_URL_DESCRIPTION)
-      .globalEnv("REDIS_HOST=<host:string>", REDIS_HOST_DESCRIPTION)
-      .globalEnv("REDIS_PORT=<port:number>", REDIS_PORT_DESCRIPTION)
-      .globalEnv("REDIS_USERNAME=<user:string>", REDIS_USERNAME_DESCRIPTION)
-      .globalEnv("REDIS_PASSWORD=<password:string>", REDIS_PASSWORD_DESCRIPTION)
-      .globalEnv("REDIS_DB=<db:number>", REDIS_DB_DESCRIPTION)
-      .globalEnv("REDIS_SSL=<ssl:boolean>", REDIS_SSL_DESCRIPTION)
+      .globalEnv(
+        "PG_CA_CERT_FILE=<file:string>",
+        PG_CA_CERT_FILE_DESCRIPTION,
+      )
+      .globalEnv(
+        "PG_CA_CERT_PATH=<path:string>",
+        PG_CA_CERT_PATH_DESCRIPTION,
+      )
       .globalAction(async (args) => {
         const pg: PostgresDbConnectionCliConfig = {
           url: args.pg?.url ?? args.pgUrl,
@@ -162,9 +178,142 @@ export class CliIndexCommand extends Command<void, void, CliConfig> {
 
         await this.handleGlobalAction({
           dbType: args.dbType as unknown as DbType,
+          debug: !!args.debug,
           pg,
         });
       })
+      // ── Command-scoped Redis options ────────────────────────────────────
+      .option(
+        "--disable-redis [disabled:boolean]",
+        DISABLE_REDIS_DESCRIPTION,
+        { default: false },
+      )
+      .option("--redis.url <url:string>", REDIS_URL_DESCRIPTION)
+      .option("--redis.host <host:string>", REDIS_HOST_DESCRIPTION, {
+        default: "localhost",
+      })
+      .option("--redis.port <port:number>", REDIS_PORT_DESCRIPTION, {
+        default: 6379,
+      })
+      .option("--redis.user <username:string>", REDIS_USERNAME_DESCRIPTION)
+      .option(
+        "--redis.password <password:string>",
+        REDIS_PASSWORD_DESCRIPTION,
+      )
+      .option("--redis.db <db:number>", REDIS_DB_DESCRIPTION)
+      .option("--redis.ssl <ssl:boolean>", REDIS_SSL_DESCRIPTION, {
+        default: false,
+      })
+      .option(
+        "--redis.cert-file <filename:string>",
+        REDIS_CERT_FILE_DESCRIPTION,
+      )
+      .option("--redis.cert-path <path:string>", REDIS_CERT_PATH_DESCRIPTION)
+      .option(
+        "--redis.key-file <filename:string>",
+        REDIS_KEY_FILE_DESCRIPTION,
+      )
+      .option("--redis.key-path <path:string>", REDIS_KEY_PATH_DESCRIPTION)
+      .option(
+        "--redis.ca-cert-file <filename:string>",
+        REDIS_CA_CERT_FILE_DESCRIPTION,
+      )
+      .option(
+        "--redis.ca-cert-path <path:string>",
+        REDIS_CA_CERT_PATH_DESCRIPTION,
+      )
+      // ── Command-scoped Redis env variables ──────────────────────────────
+      .env("DISABLE_REDIS=<disabled:boolean>", DISABLE_REDIS_DESCRIPTION)
+      .env("REDIS_URL=<url:string>", REDIS_URL_DESCRIPTION)
+      .env("REDIS_HOST=<host:string>", REDIS_HOST_DESCRIPTION)
+      .env("REDIS_PORT=<port:number>", REDIS_PORT_DESCRIPTION)
+      .env("REDIS_USERNAME=<user:string>", REDIS_USERNAME_DESCRIPTION)
+      .env("REDIS_PASSWORD=<password:string>", REDIS_PASSWORD_DESCRIPTION)
+      .env("REDIS_DB=<db:number>", REDIS_DB_DESCRIPTION)
+      .env("REDIS_SSL=<ssl:boolean>", REDIS_SSL_DESCRIPTION)
+      .env("REDIS_CERT_FILE=<file:string>", REDIS_CERT_FILE_DESCRIPTION)
+      .env("REDIS_CERT_PATH=<path:string>", REDIS_CERT_PATH_DESCRIPTION)
+      .env("REDIS_KEY_FILE=<file:string>", REDIS_KEY_FILE_DESCRIPTION)
+      .env("REDIS_KEY_PATH=<path:string>", REDIS_KEY_PATH_DESCRIPTION)
+      .env(
+        "REDIS_CA_CERT_FILE=<file:string>",
+        REDIS_CA_CERT_FILE_DESCRIPTION,
+      )
+      .env(
+        "REDIS_CA_CERT_PATH=<path:string>",
+        REDIS_CA_CERT_PATH_DESCRIPTION,
+      )
+      // ── Command-scoped mediator/worker options ──────────────────────────
+      .option(
+        "--queue-batch-size <size:number>",
+        QUEUE_BATCH_SIZE_DESCRIPTION,
+        { default: DEFAULT_BATCH_SIZE },
+      )
+      .option(
+        "--queue-max-retries <retries:number>",
+        QUEUE_MAX_RETRIES_DESCRIPTION,
+        { default: DEFAULT_MAX_RETRIES },
+      )
+      .option(
+        "--in-memory-processing-hwm <hwm:number>",
+        IN_MEMORY_PROCESSING_HWM_DESCRIPTION,
+        { default: DEFAULT_WORKER_JOB_HWM },
+      )
+      .option(
+        "--in-memory-insert-hwm <hwm:number>",
+        IN_MEMORY_INSERT_HWM_DESCRIPTION,
+        { default: DEFAULT_WORKER_JOB_HWM },
+      )
+      .option(
+        "--worker-healthcheck-interval <ms:number>",
+        WORKER_HEALTHCHECK_INTERVAL_DESCRIPTION,
+        { default: DEFAULT_HEALTHCHECK_INTERVAL },
+      )
+      .option(
+        "--worker-pending-min-duration-threshold <ms:number>",
+        WORKER_PENDING_MIN_DURATION_THRESHOLD_DESCRIPTION,
+        { default: DEFAULT_PENDING_MIN_DURATION_THRESHOLD },
+      )
+      .option(
+        "--xread-block-duration <ms:number>",
+        XREAD_BLOCK_DURATION_DESCRIPTION,
+        { default: DEFAULT_XREAD_BLOCK_DURATION },
+      )
+      .option(
+        "--processing-workers-count <count:number>",
+        PROCESSING_WORKERS_COUNT_DESCRIPTION,
+        { default: DEFAULT_PROCESSING_WORKERS_COUNT },
+      )
+      // ── Command-scoped mediator/worker env variables ────────────────────
+      .env("QUEUE_BATCH_SIZE=<size:number>", QUEUE_BATCH_SIZE_DESCRIPTION)
+      .env(
+        "QUEUE_MAX_RETRIES=<retries:number>",
+        QUEUE_MAX_RETRIES_DESCRIPTION,
+      )
+      .env(
+        "IN_MEMORY_PROCESSING_HWM=<hwm:number>",
+        IN_MEMORY_PROCESSING_HWM_DESCRIPTION,
+      )
+      .env(
+        "IN_MEMORY_INSERT_HWM=<hwm:number>",
+        IN_MEMORY_INSERT_HWM_DESCRIPTION,
+      )
+      .env(
+        "WORKER_HEALTHCHECK_INTERVAL=<ms:number>",
+        WORKER_HEALTHCHECK_INTERVAL_DESCRIPTION,
+      )
+      .env(
+        "WORKER_PENDING_MIN_DURATION_THRESHOLD=<ms:number>",
+        WORKER_PENDING_MIN_DURATION_THRESHOLD_DESCRIPTION,
+      )
+      .env(
+        "XREAD_BLOCK_DURATION=<ms:number>",
+        XREAD_BLOCK_DURATION_DESCRIPTION,
+      )
+      .env(
+        "PROCESSING_WORKERS_COUNT=<count:number>",
+        PROCESSING_WORKERS_COUNT_DESCRIPTION,
+      )
       .action(async (args) => {
         await this.handleIndexAction(args as unknown as CliConfig);
       });
@@ -174,7 +323,7 @@ export class CliIndexCommand extends Command<void, void, CliConfig> {
    * Internal handler executed when the global CLI command runs.
    * Instantiates and connects to the database based on the resolved configuration.
    *
-   * @param args The globally resolved CLI and environment configurations.
+   * @param args - The globally resolved CLI and environment configurations.
    */
   private async handleGlobalAction(args: GlobalCliConfig) {
     console.log(
@@ -214,28 +363,131 @@ export class CliIndexCommand extends Command<void, void, CliConfig> {
     );
   }
 
+  /**
+   * Internal handler executed when the index command action runs.
+   * Resolves Redis configuration, connects if enabled, and initializes
+   * the appropriate queue workers mediator (Redis-backed or in-memory).
+   *
+   * @param args - The resolved CLI and environment configurations.
+   */
   private async handleIndexAction(args: CliConfig) {
-    if (!args.disableRedis && args.redis) {
+    const redisConfig: RedisDbConnectionCliConfig = {
+      url: args.redis?.url ?? args.redisUrl,
+      host: args.redis?.host ?? args.redisHost ?? "localhost",
+      port: args.redis?.port ?? args.redisPort ?? 6379,
+      user: args.redis?.user ?? args.redisUsername,
+      password: args.redis?.password ?? args.redisPassword,
+      db: args.redis?.db ?? args.redisDb,
+      ssl: args.redis?.ssl ?? args.redisSsl ?? false,
+      certFile: args.redis?.certFile ?? args.redisCertFile,
+      certPath: args.redis?.certPath ?? args.redisCertPath,
+      keyFile: args.redis?.keyFile ?? args.redisKeyFile,
+      keyPath: args.redis?.keyPath ?? args.redisKeyPath,
+      caCertFile: args.redis?.caCertFile ?? args.redisCaCertFile,
+      caCertPath: args.redis?.caCertPath ?? args.redisCaCertPath,
+    };
+    const disableRedis = (args.disableRedis ?? args.disableRedisEnv) as boolean;
+
+    let mediator: QueueWorkersMediator<
+      SeedAdmJobContext,
+      AdmValues,
+      AdmRecord,
+      SeedAdmJobContext,
+      AdmValuesDiscriminated
+    >;
+
+    if (!disableRedis) {
       const redis = injectRedisConnection();
       console.log(colors.blue(`🔌 Establishing Redis connection...`));
       console.log(
-        colors.gray(`   Redis Host: ${args.redis.host}:${args.redis.port}`),
+        colors.gray(`   Redis Host: ${redisConfig.host}:${redisConfig.port}`),
       );
 
       await redis.connect(
-        args.redis.url || {
-          host: args.redis.host,
-          port: args.redis.port,
-          username: args.redis.user,
-          password: args.redis.password,
-          db: args.redis.db,
-          ssl: args.redis.ssl,
+        redisConfig.url || {
+          host: redisConfig.host,
+          port: redisConfig.port,
+          username: redisConfig.user,
+          password: redisConfig.password,
+          db: redisConfig.db,
+          ssl: redisConfig.ssl,
+          certFile: redisConfig.certFile,
+          certPath: redisConfig.certPath,
+          keyFile: redisConfig.keyFile,
+          keyPath: redisConfig.keyPath,
+          caCertFile: redisConfig.caCertFile,
+          caCertPath: redisConfig.caCertPath,
         },
       );
       console.log(
         colors.green.bold(`✅ Redis connection established successfully!\n`),
       );
+
+      mediator = injectRedisQueueWorkersMediator<
+        SeedAdmJobContext,
+        AdmValues,
+        AdmRecord,
+        SeedAdmJobContext,
+        AdmValuesDiscriminated
+      >(
+        redis.client,
+        redisConfig.url || {
+          host: redisConfig.host,
+          port: redisConfig.port,
+          username: redisConfig.user,
+          password: redisConfig.password,
+          db: redisConfig.db,
+          ssl: redisConfig.ssl,
+        },
+        {
+          processingContextKey: "seed-adm:processing:context",
+          processingStreamKey: "seed-adm:processing:stream",
+          insertContextKey: "seed-adm:insert:context",
+          insertStreamKey: "seed-adm:insert:stream",
+          processingConsumerGroupName: "seed-adm:processing-group",
+          insertConsumerGroupName: "seed-adm:insert-group",
+          persistedLastMessageKey: "seed-adm:persisted-last:message",
+          persistedLastInsertMessageKey:
+            "seed-adm:persisted-last-insert:message",
+          processingDlqStreamKey: "seed-adm:processing:dlq",
+          insertDlqStreamKey: "seed-adm:insert:dlq",
+          healthcheckInterval: args.workerHealthcheckInterval,
+          pendingMinDurationThreshold: args.workerPendingMinDurationThreshold,
+          xreadBlockDuration: args.xreadBlockDuration,
+          debug: args.debug,
+        },
+      );
+
+      console.log(
+        colors.green.bold(`✅ Redis Queue Workers Mediator initialized.\n`),
+      );
+    } else {
+      console.log(
+        colors.yellow(`\nℹ️  Redis disabled. Using in-memory mediator.`),
+      );
+
+      mediator = injectInMemoryQueueWorkersMediator<
+        SeedAdmJobContext,
+        AdmValues,
+        AdmRecord,
+        SeedAdmJobContext,
+        AdmValuesDiscriminated
+      >({
+        processingHwm: args.inMemoryProcessingHwm,
+        insertHwm: args.inMemoryInsertHwm,
+      });
+
+      console.log(
+        colors.green.bold(
+          `✅ In-Memory Queue Workers Mediator initialized.\n`,
+        ),
+      );
     }
+
+    // Mediator is ready for use in the seeding pipeline
+    void mediator;
+
+    this.showHelp();
   }
 }
 
@@ -246,7 +498,7 @@ let _cliIndexCommand!: CliIndexCommand;
  *
  * @returns The singleton instance of the CLI root command.
  */
-export function injectCliIndexCommand() {
+export function injectCliIndexCommand(): CliIndexCommand {
   if (!_cliIndexCommand) {
     _cliIndexCommand = new CliIndexCommand();
   }

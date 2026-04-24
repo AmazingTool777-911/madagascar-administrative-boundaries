@@ -12,4 +12,10 @@ export enum DbType {
  * Directory under `db/` where CA certificate files are stored for secure
  * database adapter connections.
  */
-export const DB_CA_CERTIFICATES_DIR = "db/.ca-certificates";
+export const DB_CA_CERTIFICATES_DIR: string = "db/.ca-certificates";
+
+/**
+ * Directory under `redis/` where certificate files are stored for secure
+ * Redis connections.
+ */
+export const REDIS_CA_CERTIFICATES_DIR: string = "redis/.ca-certificates";

@@ -210,7 +210,7 @@ export type AdmValues =
   | CommuneValues
   | FokontanyValues;
 
-export type AdmRecords =
+export type AdmRecord =
   | ProvinceRecord
   | RegionRecord
   | DistrictRecord

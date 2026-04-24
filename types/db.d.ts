@@ -95,8 +95,6 @@ export interface PostgresConnectionParams {
  */
 export type DbConnectionParams = PostgresConnectionParams;
 
-
-
 export interface TableDDL {
   /** The physical database table name. */
   readonly tableName: string;
