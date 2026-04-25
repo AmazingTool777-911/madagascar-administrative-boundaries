@@ -123,3 +123,10 @@ export function injectCommunesPostgresDDL(
   if (!_instance) _instance = new CommunesPostgresDDL(db, config, schema);
   return _instance;
 }
+
+/**
+ * Resets the singleton instance of the communes table DDL.
+ */
+export function resetCommunesPostgresDDL(): void {
+  _instance = null;
+}

@@ -113,3 +113,10 @@ export function injectDistrictsPostgresDDL(
   if (!_instance) _instance = new DistrictsPostgresDDL(db, config, schema);
   return _instance;
 }
+
+/**
+ * Resets the singleton instance of the districts table DDL.
+ */
+export function resetDistrictsPostgresDDL(): void {
+  _instance = null;
+}

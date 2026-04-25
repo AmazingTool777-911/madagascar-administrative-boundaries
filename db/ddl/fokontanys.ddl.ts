@@ -5,6 +5,7 @@ import type { MadaAdmConfigValues } from "@scope/types/models";
 import {
   injectFokontanysPostgresDDL,
   type PostgresDbConnection,
+  resetFokontanysPostgresDDL,
 } from "@scope/adapters/postgres";
 
 /**
@@ -33,6 +34,24 @@ export function injectFokontanysDDL(
     default:
       throw new Error(
         `Unsupported database type for fokontanys DDL: ${dbType}`,
+      );
+  }
+}
+
+/**
+ * Resets the instance of the fokontanys table DDL adapter based on the database type.
+ *
+ * @param dbType - The target database type.
+ * @throws {Error} If the database type is unsupported.
+ */
+export function resetFokontanysDDL(dbType: DbType): void {
+  switch (dbType) {
+    case DbType.Postgres:
+      resetFokontanysPostgresDDL();
+      break;
+    default:
+      throw new Error(
+        `Unsupported database type for fokontanys DDL reset: ${dbType}`,
       );
   }
 }

@@ -97,3 +97,10 @@ export function injectRegionsPostgresDDL(
   if (!_instance) _instance = new RegionsPostgresDDL(db, config, schema);
   return _instance;
 }
+
+/**
+ * Resets the singleton instance of the regions table DDL.
+ */
+export function resetRegionsPostgresDDL(): void {
+  _instance = null;
+}

@@ -125,3 +125,10 @@ export function injectMadaAdmConfigPostgresDDL(
   if (!_instance) _instance = new MadaAdmConfigPostgresDDL(db, schema);
   return _instance;
 }
+
+/**
+ * Resets the singleton instance of the mada adm config table DDL.
+ */
+export function resetMadaAdmConfigPostgresDDL(): void {
+  _instance = null;
+}

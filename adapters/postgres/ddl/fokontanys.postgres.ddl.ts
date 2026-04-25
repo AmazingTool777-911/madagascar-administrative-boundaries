@@ -129,3 +129,10 @@ export function injectFokontanysPostgresDDL(
   if (!_instance) _instance = new FokontanysPostgresDDL(db, config, schema);
   return _instance;
 }
+
+/**
+ * Resets the singleton instance of the fokontanys table DDL.
+ */
+export function resetFokontanysPostgresDDL(): void {
+  _instance = null;
+}

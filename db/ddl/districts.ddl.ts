@@ -5,6 +5,7 @@ import type { MadaAdmConfigValues } from "@scope/types/models";
 import {
   injectDistrictsPostgresDDL,
   type PostgresDbConnection,
+  resetDistrictsPostgresDDL,
 } from "@scope/adapters/postgres";
 
 /**
@@ -32,5 +33,23 @@ export function injectDistrictsDDL(
       );
     default:
       throw new Error(`Unsupported database type for districts DDL: ${dbType}`);
+  }
+}
+
+/**
+ * Resets the instance of the districts table DDL adapter based on the database type.
+ *
+ * @param dbType - The target database type.
+ * @throws {Error} If the database type is unsupported.
+ */
+export function resetDistrictsDDL(dbType: DbType): void {
+  switch (dbType) {
+    case DbType.Postgres:
+      resetDistrictsPostgresDDL();
+      break;
+    default:
+      throw new Error(
+        `Unsupported database type for districts DDL reset: ${dbType}`,
+      );
   }
 }

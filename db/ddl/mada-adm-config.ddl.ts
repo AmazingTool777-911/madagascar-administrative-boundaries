@@ -4,6 +4,7 @@ import type { DbDDLExtraOptionsCliConfig } from "@scope/types/cli";
 import {
   injectMadaAdmConfigPostgresDDL,
   type PostgresDbConnection,
+  resetMadaAdmConfigPostgresDDL,
 } from "@scope/adapters/postgres";
 
 /**
@@ -29,6 +30,24 @@ export function injectMadaAdmConfigDDL(
     default:
       throw new Error(
         `Unsupported database type for mada adm config DDL: ${dbType}`,
+      );
+  }
+}
+
+/**
+ * Resets the instance of the mada adm config table DDL adapter based on the database type.
+ *
+ * @param dbType - The target database type.
+ * @throws {Error} If the database type is unsupported.
+ */
+export function resetMadaAdmConfigDDL(dbType: DbType): void {
+  switch (dbType) {
+    case DbType.Postgres:
+      resetMadaAdmConfigPostgresDDL();
+      break;
+    default:
+      throw new Error(
+        `Unsupported database type for mada adm config DDL reset: ${dbType}`,
       );
   }
 }

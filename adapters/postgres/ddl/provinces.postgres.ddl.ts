@@ -115,3 +115,10 @@ export function injectProvincesPostgresDDL(
   if (!_instance) _instance = new ProvincesPostgresDDL(db, config, schema);
   return _instance;
 }
+
+/**
+ * Resets the singleton instance of the provinces table DDL.
+ */
+export function resetProvincesPostgresDDL(): void {
+  _instance = null;
+}
