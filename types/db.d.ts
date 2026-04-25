@@ -30,6 +30,11 @@ export type DbTransactionContext = PostgresTransactionContext;
  */
 export interface DbConnection {
   /**
+   * The lastest db connection params used to connect to the database.
+   */
+  get params(): DbConnectionParams;
+
+  /**
    * Attempts to establish a connection to the database.
    * @param params - The parameters for connecting to the database.
    */

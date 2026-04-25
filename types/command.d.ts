@@ -1,6 +1,7 @@
 import type { AdmLevelCode } from "@scope/consts/models";
 import type { DbConnectionParams } from "./db.d.ts";
 import type { MadaAdmConfigValues } from "./models.d.ts";
+import type { DbDDLExtraOptionsCliConfig } from "./cli.d.ts";
 
 /**
  * Shared job context for the ADM seeding pipeline.
@@ -15,4 +16,6 @@ export interface SeedAdmJobContext {
   currentAdmLevel: AdmLevelCode;
   /** The unique timestamp (milliseconds) identifying this job session. */
   jobTimestamp: number;
+  /** Extra options from the CLI for DDLs */
+  ddlExtraOptions: DbDDLExtraOptionsCliConfig;
 }

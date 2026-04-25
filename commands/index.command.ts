@@ -56,6 +56,7 @@ import type {
   AdmValuesDiscriminated,
   MadaAdmConfigValues,
 } from "@scope/types/models";
+import { DbConnection, TableDDL } from "@scope/types/db";
 import {
   attemptDbConnection,
   injectCommunesDDL,
@@ -88,7 +89,7 @@ import {
   injectRedisQueueWorkersMediator,
 } from "@scope/lib/redis-workers-mediators";
 import type { SeedAdmJobContext } from "@scope/types/command";
-import { DbConnection, TableDDL } from "@scope/types/db";
+import { AdmLevelCode } from "@scope/consts/models";
 
 /**
  * The root CLI command for the administrative data pipeline.
@@ -199,7 +200,6 @@ export class CliIndexCommand extends Command<void, void, CliConfig> {
           caCertFile: args.pg?.caCertFile ?? args.pgCaCertFile,
           caCertPath: args.pg?.caCertPath ?? args.pgCaCertPath,
         };
-
         await this.handleGlobalAction({
           dbType: args.dbType as unknown as DbType,
           debug: !!args.debug,
@@ -538,7 +538,7 @@ export class CliIndexCommand extends Command<void, void, CliConfig> {
     }
 
     const madaAdmConfigDDL = injectMadaAdmConfigDDL(args.dbType, this.#db, {
-      pgSchema: args.pgSchema,
+      pgSchema: args.pg.schema,
     });
     let provincesDDL!: TableDDL;
     let regionsDDL!: TableDDL;
@@ -547,7 +547,7 @@ export class CliIndexCommand extends Command<void, void, CliConfig> {
     let fokontanysDDL!: TableDDL;
 
     const madaAdmConfigDML = injectMadaAdmConfigDML(args.dbType, this.#db, {
-      pgSchema: args.pgSchema,
+      pgSchema: args.pg.schema,
     });
 
     const madaAdmConfigTableExists = await madaAdmConfigDDL.exists();
@@ -583,7 +583,7 @@ export class CliIndexCommand extends Command<void, void, CliConfig> {
           args.dbType,
           this.#db,
           {
-            pgSchema: args.pgSchema,
+            pgSchema: args.pg.schema,
           },
         );
         regionsDDL = injectRegionsDDL(
@@ -591,7 +591,7 @@ export class CliIndexCommand extends Command<void, void, CliConfig> {
           args.dbType,
           this.#db,
           {
-            pgSchema: args.pgSchema,
+            pgSchema: args.pg.schema,
           },
         );
         districtsDDL = injectDistrictsDDL(
@@ -599,7 +599,7 @@ export class CliIndexCommand extends Command<void, void, CliConfig> {
           args.dbType,
           this.#db,
           {
-            pgSchema: args.pgSchema,
+            pgSchema: args.pg.schema,
           },
         );
         communesDDL = injectCommunesDDL(
@@ -607,7 +607,7 @@ export class CliIndexCommand extends Command<void, void, CliConfig> {
           args.dbType,
           this.#db,
           {
-            pgSchema: args.pgSchema,
+            pgSchema: args.pg.schema,
           },
         );
         fokontanysDDL = injectFokontanysDDL(
@@ -615,7 +615,7 @@ export class CliIndexCommand extends Command<void, void, CliConfig> {
           args.dbType,
           this.#db,
           {
-            pgSchema: args.pgSchema,
+            pgSchema: args.pg.schema,
           },
         );
         const admTablesExist = (await Promise.all([
@@ -720,7 +720,7 @@ export class CliIndexCommand extends Command<void, void, CliConfig> {
       args.dbType,
       this.#db,
       {
-        pgSchema: args.pgSchema,
+        pgSchema: args.pg.schema,
       },
     );
     regionsDDL = injectRegionsDDL(
@@ -728,7 +728,7 @@ export class CliIndexCommand extends Command<void, void, CliConfig> {
       args.dbType,
       this.#db,
       {
-        pgSchema: args.pgSchema,
+        pgSchema: args.pg.schema,
       },
     );
     districtsDDL = injectDistrictsDDL(
@@ -736,7 +736,7 @@ export class CliIndexCommand extends Command<void, void, CliConfig> {
       args.dbType,
       this.#db,
       {
-        pgSchema: args.pgSchema,
+        pgSchema: args.pg.schema,
       },
     );
     communesDDL = injectCommunesDDL(
@@ -744,7 +744,7 @@ export class CliIndexCommand extends Command<void, void, CliConfig> {
       args.dbType,
       this.#db,
       {
-        pgSchema: args.pgSchema,
+        pgSchema: args.pg.schema,
       },
     );
     fokontanysDDL = injectFokontanysDDL(
@@ -752,7 +752,7 @@ export class CliIndexCommand extends Command<void, void, CliConfig> {
       args.dbType,
       this.#db,
       {
-        pgSchema: args.pgSchema,
+        pgSchema: args.pg.schema,
       },
     );
     const admTablesExist = (await Promise.all([
@@ -831,6 +831,21 @@ export class CliIndexCommand extends Command<void, void, CliConfig> {
         );
       });
     }
+    const jobContext: SeedAdmJobContext = !shouldClearJobContext
+      ? prevJobContext!
+      : {
+        config: activeAdmConfigValues,
+        currentAdmLevel: AdmLevelCode.PROVINCE,
+        dbConnectionParams: this.#db.params,
+        jobTimestamp: Date.now(),
+        ddlExtraOptions: {
+          pgSchema: args.pg.schema,
+        },
+      };
+    console.log(
+      colors.cyan("\nCurrent job context"),
+      JSON.stringify(jobContext, null, 2),
+    );
   }
 
   /**

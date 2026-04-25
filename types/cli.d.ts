@@ -174,5 +174,5 @@ export type DbConnectionCliConfig = Pick<CliConfig, "dbType" | "pg">;
  */
 export interface DbDDLExtraOptionsCliConfig {
   /** The PostgreSQL schema to use for the table. */
-  pgSchema?: string;
+  pgSchema: string;
 }

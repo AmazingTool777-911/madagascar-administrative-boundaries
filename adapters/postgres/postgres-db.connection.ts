@@ -17,6 +17,23 @@ export class PostgresDbConnection implements DbConnection {
   #client: Client | null = null;
 
   /**
+   * The lastest db connection params used to connect to the database.
+   */
+  #params: DbConnectionParams | null = null;
+
+  /**
+   * Getter for the lastest db connection params used to connect to the database.
+   */
+  get params(): DbConnectionParams {
+    if (!this.#params) {
+      throw new Error(
+        "PostgreSQL connection params have not been set. Call connect() first.",
+      );
+    }
+    return this.#params;
+  }
+
+  /**
    * Native getter for the PostgreSQL client.
    *
    * @returns The active PostgreSQL client.
@@ -49,6 +66,8 @@ export class PostgresDbConnection implements DbConnection {
     if (this.#client) {
       await this.#client.end();
     }
+
+    this.#params = params;
 
     if (typeof params.connection === "string") {
       this.#client = new Client(params.connection);
