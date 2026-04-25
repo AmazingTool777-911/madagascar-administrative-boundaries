@@ -17,6 +17,20 @@ export class MadaAdmConfigPostgresDML implements MadaAdmConfigDML {
     this.schema = schema;
   }
 
+  private _mapRowToConfig(row: MadaAdmConfigSnakeCased): MadaAdmConfig {
+    return {
+      id: row.id,
+      createdAt: row.created_at?.toString(),
+      updatedAt: row.updated_at?.toString(),
+      tablesPrefix: row.tables_prefix,
+      isFkRepeated: row.is_fk_repeated,
+      isProvinceRepeated: row.is_province_repeated,
+      isProvinceFkRepeated: row.is_province_fk_repeated,
+      hasGeojson: row.has_geojson,
+      hasAdmLevel: row.has_adm_level,
+    };
+  }
+
   /**
    * Retrieves the first MadaAdmConfig record from the database.
    */
@@ -32,63 +46,74 @@ export class MadaAdmConfigPostgresDML implements MadaAdmConfigDML {
       return null;
     }
 
-    return {
-      id: row.id,
-      createdAt: row.created_at?.toString(),
-      updatedAt: row.updated_at?.toString(),
-      tablesPrefix: row.tables_prefix,
-      isFkRepeated: row.is_fk_repeated,
-      isProvinceRepeated: row.is_province_repeated,
-      isProvinceFkRepeated: row.is_province_fk_repeated,
-      hasGeojson: row.has_geojson,
-      hasAdmLevel: row.has_adm_level,
-    };
+    return this._mapRowToConfig(row);
   }
 
   /**
-   * Inserts a new MadaAdmConfig record into the database.
+   * Inserts or updates the MadaAdmConfig record in the database.
    */
-  async create(values: MadaAdmConfigValues): Promise<MadaAdmConfig> {
-    const query = `
-      INSERT INTO ${this.schema}.${MADA_ADM_CONFIG_TABLE_NAME_SNAKE} (
-        tables_prefix,
-        is_fk_repeated,
-        is_province_repeated,
-        is_province_fk_repeated,
-        has_geojson,
-        has_adm_level
-      )
-      VALUES ($1, $2, $3, $4, $5, $6)
-      RETURNING *;
-    `;
-    const params = [
-      values.tablesPrefix,
-      values.isFkRepeated,
-      values.isProvinceRepeated,
-      values.isProvinceFkRepeated,
-      values.hasGeojson,
-      values.hasAdmLevel,
-    ];
+  async createOrUpdate(values: MadaAdmConfigValues): Promise<MadaAdmConfig> {
+    return await this.db.transaction(async (transactionContext) => {
+      const tx = transactionContext.tx;
+      const checkQuery =
+        `SELECT id FROM ${this.schema}.${MADA_ADM_CONFIG_TABLE_NAME_SNAKE} LIMIT 1;`;
+      const checkResult = await tx.queryObject<{ id: number }>(checkQuery);
+      const existingRow = checkResult.rows[0];
 
-    const client = this.db.client;
-
-    const result = await client.queryObject<MadaAdmConfigSnakeCased>(
-      query,
-      params,
-    );
-    const row = result.rows[0];
-
-    return {
-      id: row.id,
-      createdAt: row.created_at?.toString(),
-      updatedAt: row.updated_at?.toString(),
-      tablesPrefix: row.tables_prefix,
-      isFkRepeated: row.is_fk_repeated,
-      isProvinceRepeated: row.is_province_repeated,
-      isProvinceFkRepeated: row.is_province_fk_repeated,
-      hasGeojson: row.has_geojson,
-      hasAdmLevel: row.has_adm_level,
-    };
+      if (existingRow) {
+        const updateQuery = `
+          UPDATE ${this.schema}.${MADA_ADM_CONFIG_TABLE_NAME_SNAKE}
+          SET
+            tables_prefix = $1,
+            is_fk_repeated = $2,
+            is_province_repeated = $3,
+            is_province_fk_repeated = $4,
+            has_geojson = $5,
+            has_adm_level = $6,
+            updated_at = NOW()
+          WHERE id = $7
+          RETURNING *;
+        `;
+        const result = await tx.queryObject<MadaAdmConfigSnakeCased>(
+          updateQuery,
+          [
+            values.tablesPrefix,
+            values.isFkRepeated,
+            values.isProvinceRepeated,
+            values.isProvinceFkRepeated,
+            values.hasGeojson,
+            values.hasAdmLevel,
+            existingRow.id,
+          ],
+        );
+        return this._mapRowToConfig(result.rows[0]);
+      } else {
+        const insertQuery = `
+          INSERT INTO ${this.schema}.${MADA_ADM_CONFIG_TABLE_NAME_SNAKE} (
+            tables_prefix,
+            is_fk_repeated,
+            is_province_repeated,
+            is_province_fk_repeated,
+            has_geojson,
+            has_adm_level
+          )
+          VALUES ($1, $2, $3, $4, $5, $6)
+          RETURNING *;
+        `;
+        const result = await tx.queryObject<MadaAdmConfigSnakeCased>(
+          insertQuery,
+          [
+            values.tablesPrefix,
+            values.isFkRepeated,
+            values.isProvinceRepeated,
+            values.isProvinceFkRepeated,
+            values.hasGeojson,
+            values.hasAdmLevel,
+          ],
+        );
+        return this._mapRowToConfig(result.rows[0]);
+      }
+    });
   }
 }
 

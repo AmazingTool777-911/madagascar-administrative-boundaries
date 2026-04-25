@@ -118,7 +118,7 @@ export interface DMLCreateManyResult {
  */
 export interface MadaAdmConfigDML {
   get(): MaybePromise<MadaAdmConfig | null>;
-  create(values: MadaAdmConfigValues): MaybePromise<MadaAdmConfig>;
+  createOrUpdate(values: MadaAdmConfigValues): MaybePromise<MadaAdmConfig>;
 }
 
 /**
