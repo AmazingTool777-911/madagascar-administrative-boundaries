@@ -203,6 +203,8 @@ export type FokontanySnakeCased = EntitySnakeCased<
 >;
 export type Fokontany = Entity<FokontanyRecord>;
 
+export type AdmEntity = Province | Region | District | Commune | Fokontany;
+
 export type AdmValues =
   | ProvinceValues
   | RegionValues

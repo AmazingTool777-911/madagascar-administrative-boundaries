@@ -27,26 +27,43 @@ export class FokontanysPostgresDML extends BaseAdmPostgresTableDML
     super(config, db, schema);
   }
 
-  async getByAttributes(
-    attributes: FokontanyAttributes,
-  ): Promise<Fokontany | null> {
+  async getManyByAttributes(
+    attributes: FokontanyAttributes[],
+  ): Promise<Fokontany[]> {
     const tableName = this.getTableName(
       ADM_LEVEL_TITLE_BY_CODE.get(AdmLevelCode.FOKONTANY)! + "s",
     );
-    const query =
-      `SELECT * FROM ${tableName} WHERE fokontany = $1 AND commune = $2 AND district = $3 AND region = $4`;
-    const result = await this.db.client.queryObject<FokontanySnakeCased>(
-      query,
-      [
-        attributes.fokontany,
-        attributes.commune,
-        attributes.district,
-        attributes.region,
-      ],
-    );
 
-    if (result.rows.length === 0) return null;
-    return mapFokontanySnakeToCamel(result.rows[0]);
+    const columns = [
+      `${tableName}.id`,
+      `${tableName}.fokontany`,
+      `${tableName}.commune`,
+      `${tableName}.district`,
+      `${tableName}.region`,
+      `${tableName}.commune_id`,
+      `${tableName}.created_at`,
+      `${tableName}.updated_at`,
+    ];
+
+    if (this.config.isProvinceRepeated) columns.push(`${tableName}.province`);
+    if (this.config.isFkRepeated || this.config.isProvinceFkRepeated) {
+      columns.push(`${tableName}.province_id`);
+    }
+    if (this.config.isFkRepeated) {
+      columns.push(`${tableName}.region_id`);
+      columns.push(`${tableName}.district_id`);
+    }
+    if (this.config.hasAdmLevel) columns.push(`${tableName}.adm_level`);
+    if (this.config.hasGeojson) {
+      columns.push(`ST_AsGeoJSON(${tableName}.geojson) as geojson`);
+    }
+
+    return await this._getManyByAttributes<Fokontany, FokontanySnakeCased>(
+      tableName,
+      columns,
+      attributes,
+      mapFokontanySnakeToCamel,
+    );
   }
 
   /**

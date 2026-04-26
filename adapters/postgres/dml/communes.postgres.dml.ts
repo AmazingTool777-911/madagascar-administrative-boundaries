@@ -27,22 +27,39 @@ export class CommunesPostgresDML extends BaseAdmPostgresTableDML
     super(config, db, schema);
   }
 
-  async getByAttributes(
-    attributes: CommuneAttributes,
-  ): Promise<Commune | null> {
+  async getManyByAttributes(
+    attributes: CommuneAttributes[],
+  ): Promise<Commune[]> {
     const tableName = this.getTableName(
       ADM_LEVEL_TITLE_BY_CODE.get(AdmLevelCode.COMMUNE)! + "s",
     );
-    const query =
-      `SELECT * FROM ${tableName} WHERE commune = $1 AND district = $2 AND region = $3`;
-    const result = await this.db.client.queryObject<CommuneSnakeCased>(query, [
-      attributes.commune,
-      attributes.district,
-      attributes.region,
-    ]);
 
-    if (result.rows.length === 0) return null;
-    return mapCommuneSnakeToCamel(result.rows[0]);
+    const columns = [
+      `${tableName}.id`,
+      `${tableName}.commune`,
+      `${tableName}.district`,
+      `${tableName}.region`,
+      `${tableName}.district_id`,
+      `${tableName}.created_at`,
+      `${tableName}.updated_at`,
+    ];
+
+    if (this.config.isProvinceRepeated) columns.push(`${tableName}.province`);
+    if (this.config.isFkRepeated || this.config.isProvinceFkRepeated) {
+      columns.push(`${tableName}.province_id`);
+    }
+    if (this.config.isFkRepeated) columns.push(`${tableName}.region_id`);
+    if (this.config.hasAdmLevel) columns.push(`${tableName}.adm_level`);
+    if (this.config.hasGeojson) {
+      columns.push(`ST_AsGeoJSON(${tableName}.geojson) as geojson`);
+    }
+
+    return await this._getManyByAttributes<Commune, CommuneSnakeCased>(
+      tableName,
+      columns,
+      attributes,
+      mapCommuneSnakeToCamel,
+    );
   }
 
   /**

@@ -180,15 +180,11 @@ export type FokontanyAttributes = {
  */
 export interface ProvinceTableDML extends BaseAdmTableDML {
   /**
-   * Retrieves a province by its name.
+   * Retrieves multiple provinces by their names.
    *
-   * @param attributes - The province name attributes.
-   * @returns The matching province entity, or null if not found.
+   * @param names - The province names to retrieve.
+   * @returns An array of matching province entities.
    */
-  getByAttributes(
-    attributes: ProvinceAttributes,
-  ): MaybePromise<Province | null>;
-
   getManyByNames(names: string[]): MaybePromise<Province[]>;
 
   createMany(values: ProvinceRecord[]): MaybePromise<DMLCreateManyResult>;
@@ -199,12 +195,12 @@ export interface ProvinceTableDML extends BaseAdmTableDML {
  */
 export interface RegionTableDML extends BaseAdmTableDML {
   /**
-   * Retrieves a region by its unique attributes.
+   * Retrieves multiple regions by their names.
    *
-   * @param attributes - The region identifying attributes.
-   * @returns The matching region entity, or null if not found.
+   * @param names - The region names to retrieve.
+   * @returns An array of matching region entities.
    */
-  getByAttributes(attributes: RegionAttributes): MaybePromise<Region | null>;
+  getManyByNames(names: string[]): MaybePromise<Region[]>;
 
   createMany(values: RegionRecord[]): MaybePromise<DMLCreateManyResult>;
 }
@@ -214,14 +210,14 @@ export interface RegionTableDML extends BaseAdmTableDML {
  */
 export interface DistrictTableDML extends BaseAdmTableDML {
   /**
-   * Retrieves a district by its unique attributes.
+   * Retrieves multiple districts by their unique attributes.
    *
-   * @param attributes - The district identifying attributes.
-   * @returns The matching district entity, or null if not found.
+   * @param attributes - The list of district identifying attributes.
+   * @returns An array of matching district entities.
    */
-  getByAttributes(
-    attributes: DistrictAttributes,
-  ): MaybePromise<District | null>;
+  getManyByAttributes(
+    attributes: DistrictAttributes[],
+  ): MaybePromise<District[]>;
 
   createMany(values: DistrictRecord[]): MaybePromise<DMLCreateManyResult>;
 }
@@ -231,12 +227,14 @@ export interface DistrictTableDML extends BaseAdmTableDML {
  */
 export interface CommuneTableDML extends BaseAdmTableDML {
   /**
-   * Retrieves a commune by its unique attributes.
+   * Retrieves multiple communes by their unique attributes.
    *
-   * @param attributes - The commune identifying attributes.
-   * @returns The matching commune entity, or null if not found.
+   * @param attributes - The list of commune identifying attributes.
+   * @returns An array of matching commune entities.
    */
-  getByAttributes(attributes: CommuneAttributes): MaybePromise<Commune | null>;
+  getManyByAttributes(
+    attributes: CommuneAttributes[],
+  ): MaybePromise<Commune[]>;
 
   createMany(values: CommuneRecord[]): MaybePromise<DMLCreateManyResult>;
 }
@@ -246,14 +244,14 @@ export interface CommuneTableDML extends BaseAdmTableDML {
  */
 export interface FokontanyTableDML extends BaseAdmTableDML {
   /**
-   * Retrieves a fokontany by its unique attributes.
+   * Retrieves multiple fokontanys by their unique attributes.
    *
-   * @param attributes - The fokontany identifying attributes.
-   * @returns The matching fokontany entity, or null if not found.
+   * @param attributes - The list of fokontany identifying attributes.
+   * @returns An array of matching fokontany entities.
    */
-  getByAttributes(
-    attributes: FokontanyAttributes,
-  ): MaybePromise<Fokontany | null>;
+  getManyByAttributes(
+    attributes: FokontanyAttributes[],
+  ): MaybePromise<Fokontany[]>;
 
   createMany(values: FokontanyRecord[]): MaybePromise<DMLCreateManyResult>;
 }

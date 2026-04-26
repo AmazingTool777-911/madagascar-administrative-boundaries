@@ -27,21 +27,37 @@ export class DistrictsPostgresDML extends BaseAdmPostgresTableDML
     super(config, db, schema);
   }
 
-  async getByAttributes(
-    attributes: DistrictAttributes,
-  ): Promise<District | null> {
+  async getManyByAttributes(
+    attributes: DistrictAttributes[],
+  ): Promise<District[]> {
     const tableName = this.getTableName(
       ADM_LEVEL_TITLE_BY_CODE.get(AdmLevelCode.DISTRICT)! + "s",
     );
-    const query =
-      `SELECT * FROM ${tableName} WHERE district = $1 AND region = $2`;
-    const result = await this.db.client.queryObject<DistrictSnakeCased>(query, [
-      attributes.district,
-      attributes.region,
-    ]);
 
-    if (result.rows.length === 0) return null;
-    return mapDistrictSnakeToCamel(result.rows[0]);
+    const columns = [
+      `${tableName}.id`,
+      `${tableName}.district`,
+      `${tableName}.region`,
+      `${tableName}.region_id`,
+      `${tableName}.created_at`,
+      `${tableName}.updated_at`,
+    ];
+
+    if (this.config.isProvinceRepeated) columns.push(`${tableName}.province`);
+    if (this.config.isFkRepeated || this.config.isProvinceFkRepeated) {
+      columns.push(`${tableName}.province_id`);
+    }
+    if (this.config.hasAdmLevel) columns.push(`${tableName}.adm_level`);
+    if (this.config.hasGeojson) {
+      columns.push(`ST_AsGeoJSON(${tableName}.geojson) as geojson`);
+    }
+
+    return await this._getManyByAttributes<District, DistrictSnakeCased>(
+      tableName,
+      columns,
+      attributes,
+      mapDistrictSnakeToCamel,
+    );
   }
 
   /**

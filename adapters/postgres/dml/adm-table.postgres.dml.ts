@@ -1,6 +1,7 @@
 import { StringUtils } from "@scope/utils";
 import type { MadaAdmConfigValues } from "@scope/types/models";
 import type { PostgresDbConnection } from "../postgres-db.connection.ts";
+import type { AdmEntity } from "@scope/types/models";
 import type { DMLCreateManyResult } from "@scope/types/db";
 
 /**
@@ -27,6 +28,38 @@ export abstract class BaseAdmPostgresTableDML {
       baseName,
     );
     return `${this.schema}.${tableName}`;
+  }
+
+  protected async _getManyByAttributes<T extends AdmEntity, R>(
+    tableName: string,
+    selectedColumns: string[],
+    attributesValues: Record<string, string>[],
+    mapper: (record: R) => T,
+  ): Promise<T[]> {
+    if (attributesValues.length === 0) return [];
+    const attributes = Object.keys(attributesValues[0]);
+    const sql = `
+      SELECT t.*
+      FROM (
+        SELECT ${
+      attributes.map((attr) => `(row->>'${attr}') as ${attr}`).join(", ")
+    }
+        FROM UNNEST($1::jsonb[]) AS row
+      ) AS inputs
+      CROSS JOIN LATERAL (
+        SELECT ${selectedColumns.join(", ")}
+        FROM ${tableName}
+        WHERE ${
+      attributes.map((attr) => `${tableName}.${attr} = inputs.${attr}`).join(
+        " AND ",
+      )
+    }
+      ) AS t;
+    `;
+    const result = await this.db.client.queryObject<R>(sql, [
+      attributesValues.map((v) => JSON.stringify(v)),
+    ]);
+    return result.rows.map(mapper);
   }
 
   /**
