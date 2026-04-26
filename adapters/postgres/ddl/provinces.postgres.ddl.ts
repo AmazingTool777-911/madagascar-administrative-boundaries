@@ -61,6 +61,12 @@ export class ProvincesPostgresDDL extends BaseAdmTableDDL {
       ? (transactionContext?.tx ?? this.db.client)
       : this.db.client;
     await client.queryObject(query);
+
+    const indexQuery = `
+      CREATE INDEX IF NOT EXISTS idx_${this.tableName}_province_lower 
+      ON ${this.schema}.${this.tableName} (lower(province) text_pattern_ops);
+    `;
+    await client.queryObject(indexQuery);
   }
 
   /**

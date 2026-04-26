@@ -81,6 +81,30 @@ export class FokontanysPostgresDDL extends BaseAdmTableDDL {
       ? (transactionContext?.tx ?? this.db.client)
       : this.db.client;
     await client.queryObject(query);
+
+    let indexesQuery = `
+      CREATE INDEX IF NOT EXISTS idx_${this.tableName}_fokontany_lower 
+      ON ${this.schema}.${this.tableName} (lower(fokontany) text_pattern_ops);
+      CREATE INDEX IF NOT EXISTS idx_${this.tableName}_commune_id 
+      ON ${this.schema}.${this.tableName} (commune_id);
+    `;
+
+    if (this.config.isProvinceFkRepeated) {
+      indexesQuery += `
+        CREATE INDEX IF NOT EXISTS idx_${this.tableName}_province_id 
+        ON ${this.schema}.${this.tableName} (province_id);
+      `;
+    }
+    if (this.config.isFkRepeated) {
+      indexesQuery += `
+        CREATE INDEX IF NOT EXISTS idx_${this.tableName}_region_id 
+        ON ${this.schema}.${this.tableName} (region_id);
+        CREATE INDEX IF NOT EXISTS idx_${this.tableName}_district_id 
+        ON ${this.schema}.${this.tableName} (district_id);
+      `;
+    }
+
+    await client.queryObject(indexesQuery);
   }
 
   async drop(transactionContext?: DbTransactionContext): Promise<void> {

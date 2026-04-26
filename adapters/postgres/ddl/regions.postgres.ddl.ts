@@ -49,6 +49,14 @@ export class RegionsPostgresDDL extends BaseAdmTableDDL {
       ? (transactionContext?.tx ?? this.db.client)
       : this.db.client;
     await client.queryObject(query);
+
+    const indexesQuery = `
+      CREATE INDEX IF NOT EXISTS idx_${this.tableName}_region_lower 
+      ON ${this.schema}.${this.tableName} (lower(region) text_pattern_ops);
+      CREATE INDEX IF NOT EXISTS idx_${this.tableName}_province_id 
+      ON ${this.schema}.${this.tableName} (province_id);
+    `;
+    await client.queryObject(indexesQuery);
   }
 
   async drop(transactionContext?: DbTransactionContext): Promise<void> {
