@@ -59,6 +59,7 @@ export class CommunesPostgresDML extends BaseAdmPostgresTableDML
       columns,
       attributes,
       mapCommuneSnakeToCamel,
+      "commune",
     );
   }
 

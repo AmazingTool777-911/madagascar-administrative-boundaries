@@ -57,6 +57,7 @@ export class DistrictsPostgresDML extends BaseAdmPostgresTableDML
       columns,
       attributes,
       mapDistrictSnakeToCamel,
+      "district",
     );
   }
 

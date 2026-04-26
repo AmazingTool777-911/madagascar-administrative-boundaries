@@ -63,6 +63,7 @@ export class FokontanysPostgresDML extends BaseAdmPostgresTableDML
       columns,
       attributes,
       mapFokontanySnakeToCamel,
+      "fokontany",
     );
   }
 

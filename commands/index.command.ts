@@ -859,10 +859,6 @@ export class CliIndexCommand extends Command<void, void, CliConfig> {
           pgSchema: args.pg.schema,
         },
       };
-    console.log(
-      colors.cyan("\n📑 Current job context:\n"),
-      JSON.stringify(jobContext, null, 2),
-    );
 
     const initialAdmLevelIndex = ADM_LEVEL_INDEX_BY_CODE.get(
       jobContext.currentAdmLevel,
@@ -874,6 +870,13 @@ export class CliIndexCommand extends Command<void, void, CliConfig> {
       i++
     ) {
       const admLevelCode = ADM_LEVEL_CODES_INDEXED[i];
+
+      jobContext.currentAdmLevel = admLevelCode;
+      console.log(
+        colors.cyan("\n📑 Current job context:\n"),
+        JSON.stringify(jobContext, null, 2),
+        "\n",
+      );
 
       let inputReadableStream: ReadableStream<AdmValues>;
       if (await mediator.isJobEnded) {
@@ -925,8 +928,6 @@ export class CliIndexCommand extends Command<void, void, CliConfig> {
             }),
           );
       }
-
-      jobContext.currentAdmLevel = admLevelCode;
 
       const disableRedisUrlSearch = `disable-redis=${args.disableRedis}`;
       const processingWorkerURL = new URL(

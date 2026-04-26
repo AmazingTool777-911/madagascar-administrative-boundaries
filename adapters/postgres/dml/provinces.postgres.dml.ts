@@ -27,10 +27,10 @@ export class ProvincesPostgresDML extends BaseAdmPostgresTableDML
     const tableName = this.getTableName(
       ADM_LEVEL_TITLE_BY_CODE.get(AdmLevelCode.PROVINCE)! + "s",
     );
-    const query = `SELECT * FROM ${tableName} WHERE province = ANY($1)`;
+    const query = `SELECT * FROM ${tableName} WHERE LOWER(province) = ANY($1)`;
     const result = await this.db.client.queryObject<ProvinceSnakedCased>(
       query,
-      [names],
+      [names.map((n) => n.toLowerCase())],
     );
     return result.rows.map(mapProvinceSnakeToCamel);
   }

@@ -35,6 +35,7 @@ export abstract class BaseAdmPostgresTableDML {
     selectedColumns: string[],
     attributesValues: Record<string, string>[],
     mapper: (record: R) => T,
+    lowercaseAttribute?: string,
   ): Promise<T[]> {
     if (attributesValues.length === 0) return [];
     const attributes = Object.keys(attributesValues[0]);
@@ -50,9 +51,14 @@ export abstract class BaseAdmPostgresTableDML {
         SELECT ${selectedColumns.join(", ")}
         FROM ${tableName}
         WHERE ${
-      attributes.map((attr) => `${tableName}.${attr} = inputs.${attr}`).join(
-        " AND ",
-      )
+      attributes.map((attr) => {
+        const isLower = attr === lowercaseAttribute;
+        const lhs = isLower
+          ? `LOWER(${tableName}.${attr})`
+          : `${tableName}.${attr}`;
+        const rhs = isLower ? `LOWER(inputs.${attr})` : `inputs.${attr}`;
+        return `${lhs} = ${rhs}`;
+      }).join(" AND ")
     }
       ) AS t;
     `;
