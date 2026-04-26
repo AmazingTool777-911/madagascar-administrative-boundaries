@@ -258,6 +258,12 @@ export function mapAdmRecordToValues(record: AdmRecord): AdmValues {
   }
 }
 
+/**
+ * Type guard that checks if a value object represents a province.
+ *
+ * @param values - The administrative values or record to check.
+ * @returns True if the values represent a province, false otherwise.
+ */
 export function isProvinceValues(
   values: AdmValues | AdmRecord,
 ): values is ProvinceValues {
@@ -270,6 +276,12 @@ export function isProvinceValues(
   );
 }
 
+/**
+ * Type guard that checks if a value object represents a region.
+ *
+ * @param values - The administrative values or record to check.
+ * @returns True if the values represent a region, false otherwise.
+ */
 export function isRegionValues(
   values: AdmValues | AdmRecord,
 ): values is RegionValues {
@@ -282,6 +294,12 @@ export function isRegionValues(
   );
 }
 
+/**
+ * Type guard that checks if a value object represents a district.
+ *
+ * @param values - The administrative values or record to check.
+ * @returns True if the values represent a district, false otherwise.
+ */
 export function isDistrictValues(
   values: AdmValues | AdmRecord,
 ): values is DistrictValues {
@@ -294,6 +312,12 @@ export function isDistrictValues(
   );
 }
 
+/**
+ * Type guard that checks if a value object represents a commune.
+ *
+ * @param values - The administrative values or record to check.
+ * @returns True if the values represent a commune, false otherwise.
+ */
 export function isCommuneValues(
   values: AdmValues | AdmRecord,
 ): values is CommuneValues {
@@ -306,6 +330,12 @@ export function isCommuneValues(
   );
 }
 
+/**
+ * Type guard that checks if a value object represents a fokontany.
+ *
+ * @param values - The administrative values or record to check.
+ * @returns True if the values represent a fokontany, false otherwise.
+ */
 export function isFokontanyValues(
   values: AdmValues | AdmRecord,
 ): values is FokontanyValues {
@@ -313,6 +343,14 @@ export function isFokontanyValues(
   return "fokontany" in values;
 }
 
+/**
+ * Generates a unique deterministic string representation for administrative values.
+ *
+ * For levels above province/region, it includes parent names to ensure uniqueness.
+ *
+ * @param values - The administrative values or record to encode.
+ * @returns A unique string identifying the administrative unit.
+ */
 export function getAdmValuesEncodedString(
   values: AdmValues | AdmRecord,
 ): string {
@@ -333,4 +371,38 @@ export function getAdmValuesEncodedString(
     }_${(values as FokontanyRecord).fokontany}`;
   }
   return encodedString;
+}
+
+/**
+ * Compares two sets of administrative values for deep equality.
+ *
+ * @param admValues1 - The first set of values to compare.
+ * @param admValues2 - The second set of values to compare.
+ * @returns True if both values represent the same administrative unit, false otherwise.
+ */
+export function compareAdmValues(
+  admValues1: AdmValues,
+  admValues2: AdmValues,
+): boolean {
+  if (isFokontanyValues(admValues1)) {
+    return isFokontanyValues(admValues2) &&
+      admValues1.fokontany === admValues2.fokontany &&
+      admValues1.commune === admValues2.commune &&
+      admValues1.district === admValues2.district &&
+      admValues1.region === admValues2.region;
+  } else if (isCommuneValues(admValues1)) {
+    return isCommuneValues(admValues2) &&
+      admValues1.commune === admValues2.commune &&
+      admValues1.district === admValues2.district &&
+      admValues1.region === admValues2.region;
+  } else if (isDistrictValues(admValues1)) {
+    return isDistrictValues(admValues2) &&
+      admValues1.district === admValues2.district &&
+      admValues1.region === admValues2.region;
+  } else if (isRegionValues(admValues1)) {
+    return isRegionValues(admValues2) &&
+      admValues1.region === admValues2.region;
+  } else {
+    return admValues1.province === admValues2.province;
+  }
 }
