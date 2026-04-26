@@ -253,6 +253,8 @@ export class InMemoryQueueWorkersMediator<
       insertHwm?: number;
     };
 
+  #isJobEnded = false;
+
   /**
    * Initializes a new instance of the InMemoryQueueWorkersMediator.
    *
@@ -442,6 +444,8 @@ export class InMemoryQueueWorkersMediator<
     ].filter((t): t is Promise<void> => t !== null);
 
     await Promise.all(pendingTasks);
+
+    this.#isJobEnded = true;
   }
 
   /**
@@ -480,7 +484,7 @@ export class InMemoryQueueWorkersMediator<
    * In-memory implementation always returns false for fresh runs.
    */
   get isJobEnded(): boolean {
-    return false;
+    return this.#isJobEnded;
   }
 }
 

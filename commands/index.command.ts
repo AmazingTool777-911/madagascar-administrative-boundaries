@@ -1,3 +1,4 @@
+import * as path from "node:path";
 import { Confirm, Input, prompt } from "@cliffy/prompt";
 import { Command } from "@cliffy/command";
 import { colors } from "@cliffy/ansi/colors";
@@ -76,6 +77,7 @@ import {
   DEFAULT_MAX_RETRIES,
   DEFAULT_PROCESSING_WORKERS_COUNT,
   type QueueWorkersMediator,
+  WorkerPool,
 } from "@scope/lib/workers-mediators";
 import {
   DEFAULT_BATCH_SIZE,
@@ -89,7 +91,15 @@ import {
   injectRedisQueueWorkersMediator,
 } from "@scope/lib/redis-workers-mediators";
 import type { SeedAdmJobContext } from "@scope/types/command";
-import { AdmLevelCode } from "@scope/consts/models";
+import {
+  ADM_LEVEL_CODES_INDEXED,
+  ADM_LEVEL_INDEX_BY_CODE,
+  ADM_SEEDING_INPUT_FILENAMES_BY_CODE,
+  ADM_SEEDING_INPUTS_DIR,
+  AdmLevelCode,
+} from "@scope/consts/models";
+import { TextLineStream } from "@std/streams";
+import { compareAdmValues } from "@scope/helpers/models";
 
 /**
  * The root CLI command for the administrative data pipeline.
@@ -708,7 +718,14 @@ export class CliIndexCommand extends Command<void, void, CliConfig> {
         activeAdmConfigValues,
       );
     } else {
-      activeAdmConfigValues = prevAdmConfigValues!;
+      activeAdmConfigValues = {
+        tablesPrefix: prevAdmConfigValues!.tablesPrefix,
+        isFkRepeated: prevAdmConfigValues!.isFkRepeated,
+        isProvinceRepeated: prevAdmConfigValues!.isProvinceRepeated,
+        isProvinceFkRepeated: prevAdmConfigValues!.isProvinceFkRepeated,
+        hasGeojson: prevAdmConfigValues!.hasGeojson,
+        hasAdmLevel: prevAdmConfigValues!.hasAdmLevel,
+      };
       this.printAdmConfig(
         "Using existing Mada ADM Configuration",
         activeAdmConfigValues,
@@ -843,9 +860,103 @@ export class CliIndexCommand extends Command<void, void, CliConfig> {
         },
       };
     console.log(
-      colors.cyan("\nCurrent job context"),
+      colors.cyan("\n📑 Current job context:\n"),
       JSON.stringify(jobContext, null, 2),
     );
+
+    const initialAdmLevelIndex = ADM_LEVEL_INDEX_BY_CODE.get(
+      jobContext.currentAdmLevel,
+    )!;
+
+    for (
+      let i = initialAdmLevelIndex;
+      i < ADM_LEVEL_CODES_INDEXED.length;
+      i++
+    ) {
+      const admLevelCode = ADM_LEVEL_CODES_INDEXED[i];
+
+      let inputReadableStream: ReadableStream<AdmValues>;
+      if (await mediator.isJobEnded) {
+        inputReadableStream = new ReadableStream({
+          start(controller) {
+            controller.close();
+          },
+        });
+      } else {
+        const inputFilePath = path.join(
+          Deno.cwd(),
+          ADM_SEEDING_INPUTS_DIR,
+          ADM_SEEDING_INPUT_FILENAMES_BY_CODE.get(admLevelCode)!,
+        );
+        const lastPersistedMessage = await mediator.persistedLastMessage;
+        if (lastPersistedMessage) {
+          console.log(
+            `\n${
+              colors.yellow(
+                `Skipping messages from the input file until the following message is found:`,
+              )
+            }`,
+            JSON.stringify(lastPersistedMessage, null, 2),
+          );
+        }
+        let shouldSkipMessage = !lastPersistedMessage;
+        inputReadableStream = (await Deno.open(inputFilePath))
+          .readable
+          .pipeThrough(new TextDecoderStream())
+          .pipeThrough(new TextLineStream())
+          .pipeThrough(
+            new TransformStream<string, AdmValues>({
+              transform(chunk, controller) {
+                const admValues = JSON.parse(chunk.trim()) as AdmValues;
+                if (lastPersistedMessage && shouldSkipMessage) {
+                  if (compareAdmValues(admValues, lastPersistedMessage)) {
+                    shouldSkipMessage = false;
+                    console.log(
+                      colors.green(
+                        `\nResuming from the following message:`,
+                      ),
+                      JSON.stringify(admValues, null, 2),
+                    );
+                  }
+                  return;
+                }
+                controller.enqueue(admValues);
+              },
+            }),
+          );
+      }
+
+      jobContext.currentAdmLevel = admLevelCode;
+
+      const disableRedisUrlSearch = `disable-redis=${args.disableRedis}`;
+      const processingWorkerURL = new URL(
+        "./workers/index.command.processing.worker.ts",
+        import.meta.url,
+      );
+      processingWorkerURL.search = disableRedisUrlSearch;
+      const processingWorkers = [...Array(args.processingWorkersCount)].map(
+        () =>
+          new Worker(
+            processingWorkerURL,
+            { type: "module" },
+          ),
+      );
+      const insertWorkerURL = new URL(
+        "./workers/index.command.insert.worker.ts",
+        import.meta.url,
+      );
+      insertWorkerURL.search = disableRedisUrlSearch;
+      const insertWorker = new Worker(
+        insertWorkerURL,
+        { type: "module" },
+      );
+      const workers: WorkerPool = {
+        processing: processingWorkers,
+        insert: insertWorker,
+      };
+
+      await mediator.queue(jobContext, inputReadableStream, workers);
+    }
   }
 
   /**

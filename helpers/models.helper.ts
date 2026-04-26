@@ -346,7 +346,7 @@ export function isFokontanyValues(
 /**
  * Generates a unique deterministic string representation for administrative values.
  *
- * For levels above province/region, it includes parent names to ensure uniqueness.
+ * For levels below province/region, it includes parent names to ensure uniqueness.
  *
  * @param values - The administrative values or record to encode.
  * @returns A unique string identifying the administrative unit.
@@ -357,7 +357,7 @@ export function getAdmValuesEncodedString(
   if (isProvinceValues(values)) return (values as ProvinceRecord).province;
   else if (isRegionValues(values)) return (values as RegionRecord).region;
 
-  // For higher levels, we use parent names to create a unique ID
+  // For lower levels, we use parent names to create a unique ID
   let encodedString = (values as RegionRecord).region;
   if (isDistrictValues(values)) {
     encodedString += `_${(values as DistrictRecord).district}`;

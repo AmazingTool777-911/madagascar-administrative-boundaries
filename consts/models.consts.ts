@@ -96,6 +96,11 @@ export const ADM_LEVEL_ENTRIES_COUNT_BY_CODE: Map<AdmLevelCode, number> =
 export const ADM_SEEDING_INPUTS_GENERATED_DIR = "data/inputs/.generated";
 
 /**
+ * The directory where the ADM seeding inputs files are officially stored in and pulled from.
+ */
+export const ADM_SEEDING_INPUTS_DIR = "data/inputs";
+
+/**
  * Maps each administrative level code to its corresponding seeding input NDJSON filename.
  */
 export const ADM_SEEDING_INPUT_FILENAMES_BY_CODE: Map<AdmLevelCode, string> =
