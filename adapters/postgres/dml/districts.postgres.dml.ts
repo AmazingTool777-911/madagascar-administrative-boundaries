@@ -1,7 +1,17 @@
 import { ADM_LEVEL_TITLE_BY_CODE, AdmLevelCode } from "@scope/consts/models";
+import { mapDistrictSnakeToCamel } from "@scope/helpers/models";
 import { BaseAdmPostgresTableDML } from "./adm-table.postgres.dml.ts";
-import type { DistrictTableDML, DMLCreateManyResult } from "@scope/types/db";
-import type { DistrictRecord, MadaAdmConfigValues } from "@scope/types/models";
+import type {
+  DistrictAttributes,
+  DistrictTableDML,
+  DMLCreateManyResult,
+} from "@scope/types/db";
+import type {
+  District,
+  DistrictRecord,
+  DistrictSnakeCased,
+  MadaAdmConfigValues,
+} from "@scope/types/models";
 import type { PostgresDbConnection } from "../postgres-db.connection.ts";
 
 /**
@@ -15,6 +25,23 @@ export class DistrictsPostgresDML extends BaseAdmPostgresTableDML
     schema: string = "public",
   ) {
     super(config, db, schema);
+  }
+
+  async getByAttributes(
+    attributes: DistrictAttributes,
+  ): Promise<District | null> {
+    const tableName = this.getTableName(
+      ADM_LEVEL_TITLE_BY_CODE.get(AdmLevelCode.DISTRICT)! + "s",
+    );
+    const query =
+      `SELECT * FROM ${tableName} WHERE district = $1 AND region = $2`;
+    const result = await this.db.client.queryObject<DistrictSnakeCased>(query, [
+      attributes.district,
+      attributes.region,
+    ]);
+
+    if (result.rows.length === 0) return null;
+    return mapDistrictSnakeToCamel(result.rows[0]);
   }
 
   /**

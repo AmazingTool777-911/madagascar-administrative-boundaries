@@ -1,10 +1,16 @@
 import { ADM_LEVEL_TITLE_BY_CODE, AdmLevelCode } from "@scope/consts/models";
+import { mapProvinceSnakeToCamel } from "@scope/helpers/models";
 import { BaseAdmPostgresTableDML } from "./adm-table.postgres.dml.ts";
-import type { DMLCreateManyResult, ProvinceTableDML } from "@scope/types/db";
+import type {
+  DMLCreateManyResult,
+  ProvinceAttributes,
+  ProvinceTableDML,
+} from "@scope/types/db";
 import type {
   MadaAdmConfigValues,
   Province,
   ProvinceRecord,
+  ProvinceSnakedCased,
 } from "@scope/types/models";
 import type { PostgresDbConnection } from "../postgres-db.connection.ts";
 
@@ -26,8 +32,27 @@ export class ProvincesPostgresDML extends BaseAdmPostgresTableDML
       ADM_LEVEL_TITLE_BY_CODE.get(AdmLevelCode.PROVINCE)! + "s",
     );
     const query = `SELECT * FROM ${tableName} WHERE province = ANY($1)`;
-    const result = await this.db.client.queryObject<Province>(query, [names]);
-    return result.rows;
+    const result = await this.db.client.queryObject<ProvinceSnakedCased>(
+      query,
+      [names],
+    );
+    return result.rows.map(mapProvinceSnakeToCamel);
+  }
+
+  async getByAttributes(
+    attributes: ProvinceAttributes,
+  ): Promise<Province | null> {
+    const tableName = this.getTableName(
+      ADM_LEVEL_TITLE_BY_CODE.get(AdmLevelCode.PROVINCE)! + "s",
+    );
+    const query = `SELECT * FROM ${tableName} WHERE province = $1`;
+    const result = await this.db.client.queryObject<ProvinceSnakedCased>(
+      query,
+      [attributes.province],
+    );
+
+    if (result.rows.length === 0) return null;
+    return mapProvinceSnakeToCamel(result.rows[0]);
   }
 
   /**

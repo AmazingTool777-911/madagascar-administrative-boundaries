@@ -1,7 +1,17 @@
 import { ADM_LEVEL_TITLE_BY_CODE, AdmLevelCode } from "@scope/consts/models";
+import { mapRegionSnakeToCamel } from "@scope/helpers/models";
 import { BaseAdmPostgresTableDML } from "./adm-table.postgres.dml.ts";
-import type { DMLCreateManyResult, RegionTableDML } from "@scope/types/db";
-import type { MadaAdmConfigValues, RegionRecord } from "@scope/types/models";
+import type {
+  DMLCreateManyResult,
+  RegionAttributes,
+  RegionTableDML,
+} from "@scope/types/db";
+import type {
+  MadaAdmConfigValues,
+  Region,
+  RegionRecord,
+  RegionSnakeCased,
+} from "@scope/types/models";
 import type { PostgresDbConnection } from "../postgres-db.connection.ts";
 
 /**
@@ -15,6 +25,19 @@ export class RegionsPostgresDML extends BaseAdmPostgresTableDML
     schema: string = "public",
   ) {
     super(config, db, schema);
+  }
+
+  async getByAttributes(attributes: RegionAttributes): Promise<Region | null> {
+    const tableName = this.getTableName(
+      ADM_LEVEL_TITLE_BY_CODE.get(AdmLevelCode.REGION)! + "s",
+    );
+    const query = `SELECT * FROM ${tableName} WHERE region = $1`;
+    const result = await this.db.client.queryObject<RegionSnakeCased>(query, [
+      attributes.region,
+    ]);
+
+    if (result.rows.length === 0) return null;
+    return mapRegionSnakeToCamel(result.rows[0]);
   }
 
   /**

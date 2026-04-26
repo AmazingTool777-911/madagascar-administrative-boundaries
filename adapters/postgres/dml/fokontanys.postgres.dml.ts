@@ -1,7 +1,17 @@
 import { ADM_LEVEL_TITLE_BY_CODE, AdmLevelCode } from "@scope/consts/models";
+import { mapFokontanySnakeToCamel } from "@scope/helpers/models";
 import { BaseAdmPostgresTableDML } from "./adm-table.postgres.dml.ts";
-import type { DMLCreateManyResult, FokontanyTableDML } from "@scope/types/db";
-import type { FokontanyRecord, MadaAdmConfigValues } from "@scope/types/models";
+import type {
+  DMLCreateManyResult,
+  FokontanyAttributes,
+  FokontanyTableDML,
+} from "@scope/types/db";
+import type {
+  Fokontany,
+  FokontanyRecord,
+  FokontanySnakeCased,
+  MadaAdmConfigValues,
+} from "@scope/types/models";
 import type { PostgresDbConnection } from "../postgres-db.connection.ts";
 
 /**
@@ -15,6 +25,28 @@ export class FokontanysPostgresDML extends BaseAdmPostgresTableDML
     schema: string = "public",
   ) {
     super(config, db, schema);
+  }
+
+  async getByAttributes(
+    attributes: FokontanyAttributes,
+  ): Promise<Fokontany | null> {
+    const tableName = this.getTableName(
+      ADM_LEVEL_TITLE_BY_CODE.get(AdmLevelCode.FOKONTANY)! + "s",
+    );
+    const query =
+      `SELECT * FROM ${tableName} WHERE fokontany = $1 AND commune = $2 AND district = $3 AND region = $4`;
+    const result = await this.db.client.queryObject<FokontanySnakeCased>(
+      query,
+      [
+        attributes.fokontany,
+        attributes.commune,
+        attributes.district,
+        attributes.region,
+      ],
+    );
+
+    if (result.rows.length === 0) return null;
+    return mapFokontanySnakeToCamel(result.rows[0]);
   }
 
   /**

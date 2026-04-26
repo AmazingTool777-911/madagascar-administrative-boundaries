@@ -2,13 +2,17 @@ import type { Transaction } from "@db/postgres";
 import type { DbType } from "@scope/consts/db";
 import type { MaybePromise } from "./utils.d.ts";
 import type {
+  Commune,
   CommuneRecord,
+  District,
   DistrictRecord,
+  Fokontany,
   FokontanyRecord,
   MadaAdmConfig,
   MadaAdmConfigValues,
   Province,
   ProvinceRecord,
+  Region,
   RegionRecord,
 } from "./models.d.ts";
 
@@ -138,9 +142,53 @@ export interface BaseAdmTableDML {
 }
 
 /**
+ * Attributes used to uniquely identify a province.
+ */
+export type ProvinceAttributes = { province: string };
+
+/**
+ * Attributes used to uniquely identify a region.
+ */
+export type RegionAttributes = { region: string };
+
+/**
+ * Attributes used to uniquely identify a district.
+ */
+export type DistrictAttributes = { district: string; region: string };
+
+/**
+ * Attributes used to uniquely identify a commune.
+ */
+export type CommuneAttributes = {
+  commune: string;
+  district: string;
+  region: string;
+};
+
+/**
+ * Attributes used to uniquely identify a fokontany.
+ */
+export type FokontanyAttributes = {
+  fokontany: string;
+  commune: string;
+  district: string;
+  region: string;
+};
+
+/**
  * Data Manipulation Layer interface for the provinces table.
  */
 export interface ProvinceTableDML extends BaseAdmTableDML {
+  /**
+   * Retrieves a province by its name.
+   *
+   * @param attributes - The province name attributes.
+   * @returns The matching province entity, or null if not found.
+   */
+  getByAttributes(
+    attributes: ProvinceAttributes,
+  ): MaybePromise<Province | null>;
+
   getManyByNames(names: string[]): MaybePromise<Province[]>;
 
   createMany(values: ProvinceRecord[]): MaybePromise<DMLCreateManyResult>;
@@ -150,6 +198,14 @@ export interface ProvinceTableDML extends BaseAdmTableDML {
  * Data Manipulation Layer interface for the regions table.
  */
 export interface RegionTableDML extends BaseAdmTableDML {
+  /**
+   * Retrieves a region by its unique attributes.
+   *
+   * @param attributes - The region identifying attributes.
+   * @returns The matching region entity, or null if not found.
+   */
+  getByAttributes(attributes: RegionAttributes): MaybePromise<Region | null>;
+
   createMany(values: RegionRecord[]): MaybePromise<DMLCreateManyResult>;
 }
 
@@ -157,6 +213,16 @@ export interface RegionTableDML extends BaseAdmTableDML {
  * Data Manipulation Layer interface for the districts table.
  */
 export interface DistrictTableDML extends BaseAdmTableDML {
+  /**
+   * Retrieves a district by its unique attributes.
+   *
+   * @param attributes - The district identifying attributes.
+   * @returns The matching district entity, or null if not found.
+   */
+  getByAttributes(
+    attributes: DistrictAttributes,
+  ): MaybePromise<District | null>;
+
   createMany(values: DistrictRecord[]): MaybePromise<DMLCreateManyResult>;
 }
 
@@ -164,6 +230,14 @@ export interface DistrictTableDML extends BaseAdmTableDML {
  * Data Manipulation Layer interface for the communes table.
  */
 export interface CommuneTableDML extends BaseAdmTableDML {
+  /**
+   * Retrieves a commune by its unique attributes.
+   *
+   * @param attributes - The commune identifying attributes.
+   * @returns The matching commune entity, or null if not found.
+   */
+  getByAttributes(attributes: CommuneAttributes): MaybePromise<Commune | null>;
+
   createMany(values: CommuneRecord[]): MaybePromise<DMLCreateManyResult>;
 }
 
@@ -171,5 +245,15 @@ export interface CommuneTableDML extends BaseAdmTableDML {
  * Data Manipulation Layer interface for the fokontanys table.
  */
 export interface FokontanyTableDML extends BaseAdmTableDML {
+  /**
+   * Retrieves a fokontany by its unique attributes.
+   *
+   * @param attributes - The fokontany identifying attributes.
+   * @returns The matching fokontany entity, or null if not found.
+   */
+  getByAttributes(
+    attributes: FokontanyAttributes,
+  ): MaybePromise<Fokontany | null>;
+
   createMany(values: FokontanyRecord[]): MaybePromise<DMLCreateManyResult>;
 }

@@ -1,7 +1,17 @@
 import { ADM_LEVEL_TITLE_BY_CODE, AdmLevelCode } from "@scope/consts/models";
+import { mapCommuneSnakeToCamel } from "@scope/helpers/models";
 import { BaseAdmPostgresTableDML } from "./adm-table.postgres.dml.ts";
-import type { CommuneTableDML, DMLCreateManyResult } from "@scope/types/db";
-import type { CommuneRecord, MadaAdmConfigValues } from "@scope/types/models";
+import type {
+  CommuneAttributes,
+  CommuneTableDML,
+  DMLCreateManyResult,
+} from "@scope/types/db";
+import type {
+  Commune,
+  CommuneRecord,
+  CommuneSnakeCased,
+  MadaAdmConfigValues,
+} from "@scope/types/models";
 import type { PostgresDbConnection } from "../postgres-db.connection.ts";
 
 /**
@@ -15,6 +25,24 @@ export class CommunesPostgresDML extends BaseAdmPostgresTableDML
     schema: string = "public",
   ) {
     super(config, db, schema);
+  }
+
+  async getByAttributes(
+    attributes: CommuneAttributes,
+  ): Promise<Commune | null> {
+    const tableName = this.getTableName(
+      ADM_LEVEL_TITLE_BY_CODE.get(AdmLevelCode.COMMUNE)! + "s",
+    );
+    const query =
+      `SELECT * FROM ${tableName} WHERE commune = $1 AND district = $2 AND region = $3`;
+    const result = await this.db.client.queryObject<CommuneSnakeCased>(query, [
+      attributes.commune,
+      attributes.district,
+      attributes.region,
+    ]);
+
+    if (result.rows.length === 0) return null;
+    return mapCommuneSnakeToCamel(result.rows[0]);
   }
 
   /**
