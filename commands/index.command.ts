@@ -156,7 +156,7 @@ export class CliIndexCommand extends Command<void, void, CliConfig> {
       .globalOption("--db-type <type:string>", DB_TYPE_DESCRIPTION, {
         default: DbType.SQLite,
       })
-      .globalOption("--debug <debug:boolean>", DEBUG_DESCRIPTION, {
+      .globalOption("--cli-debug [debug:boolean]", DEBUG_DESCRIPTION, {
         default: false,
       })
       .globalOption("--pg.schema <schema:string>", PG_SCHEMA_DESCRIPTION, {
@@ -210,7 +210,7 @@ export class CliIndexCommand extends Command<void, void, CliConfig> {
       )
       // ── Global env variables ────────────────────────────────────────────
       .globalEnv("DB_TYPE=<type:string>", DB_TYPE_DESCRIPTION)
-      .globalEnv("DEBUG=<debug:boolean>", DEBUG_DESCRIPTION)
+      .globalEnv("CLI_DEBUG=<debug:boolean>", DEBUG_DESCRIPTION)
       .globalEnv("PG_URL=<url:string>", PG_URL_DESCRIPTION)
       .globalEnv("PG_HOST=<host:string>", PG_HOST_DESCRIPTION)
       .globalEnv("PG_PORT=<port:number>", PG_PORT_DESCRIPTION)
@@ -242,7 +242,7 @@ export class CliIndexCommand extends Command<void, void, CliConfig> {
         };
         await this.handleGlobalAction({
           dbType: args.dbType as unknown as DbType,
-          debug: !!args.debug,
+          debug: !!args.cliDebug,
           pg,
         });
       })
