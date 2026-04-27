@@ -1,13 +1,10 @@
 import { ADM_LEVEL_TITLE_BY_CODE, AdmLevelCode } from "@scope/consts/models";
 import { mapCommuneSnakeToCamel } from "@scope/helpers/models";
 import { BaseAdmPostgresTableDML } from "./adm-table.postgres.dml.ts";
-import type {
-  CommuneAttributes,
-  CommuneTableDML,
-  DMLCreateManyResult,
-} from "@scope/types/db";
+import type { CommuneTableDML, DMLCreateManyResult } from "@scope/types/db";
 import type {
   Commune,
+  CommuneAttributes,
   CommuneRecord,
   CommuneSnakeCased,
   MadaAdmConfigValues,

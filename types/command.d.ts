@@ -1,3 +1,4 @@
+import type { DbType } from "@scope/consts/db";
 import type { AdmLevelCode } from "@scope/consts/models";
 import type { DbConnectionParams } from "./db.d.ts";
 import type { MadaAdmConfigValues } from "./models.d.ts";
@@ -18,4 +19,6 @@ export interface SeedAdmJobContext {
   jobTimestamp: number;
   /** Extra options from the CLI for DDLs */
   ddlExtraOptions: DbDDLExtraOptionsCliConfig;
+  /** The type of the database to be connected to */
+  dbType: DbType;
 }

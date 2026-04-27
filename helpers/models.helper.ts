@@ -2,14 +2,17 @@ import type {
   AdmRecord,
   AdmValues,
   Commune,
+  CommuneAttributes,
   CommuneRecord,
   CommuneSnakeCased,
   CommuneValues,
   District,
+  DistrictAttributes,
   DistrictRecord,
   DistrictSnakeCased,
   DistrictValues,
   Fokontany,
+  FokontanyAttributes,
   FokontanyRecord,
   FokontanySnakeCased,
   FokontanyValues,
@@ -405,4 +408,12 @@ export function compareAdmValues(
   } else {
     return admValues1.province === admValues2.province;
   }
+}
+
+export function encodeDistrictAttributes(attr: DistrictAttributes) {
+  return `district:${attr.district}-region:${attr.region}`;
+}
+
+export function encodeCommuneAttributes(attr: CommuneAttributes) {
+  return `commune:${attr.commune}-district:${attr.district}-region:${attr.region}`;
 }

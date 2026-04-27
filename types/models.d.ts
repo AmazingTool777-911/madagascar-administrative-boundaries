@@ -240,3 +240,27 @@ export type AdmValuesDiscriminated =
     admLevelCode: AdmLevelCode.FOKONTANY;
     values: FokontanyRecord;
   };
+
+/**
+ * Attributes used to uniquely identify a district.
+ */
+export type DistrictAttributes = { district: string; region: string };
+
+/**
+ * Attributes used to uniquely identify a commune.
+ */
+export type CommuneAttributes = {
+  commune: string;
+  district: string;
+  region: string;
+};
+
+/**
+ * Attributes used to uniquely identify a fokontany.
+ */
+export type FokontanyAttributes = {
+  fokontany: string;
+  commune: string;
+  district: string;
+  region: string;
+};

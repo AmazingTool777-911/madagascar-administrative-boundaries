@@ -1,17 +1,7 @@
 import { ADM_LEVEL_TITLE_BY_CODE, AdmLevelCode } from "@scope/consts/models";
-import { mapFokontanySnakeToCamel } from "@scope/helpers/models";
 import { BaseAdmPostgresTableDML } from "./adm-table.postgres.dml.ts";
-import type {
-  DMLCreateManyResult,
-  FokontanyAttributes,
-  FokontanyTableDML,
-} from "@scope/types/db";
-import type {
-  Fokontany,
-  FokontanyRecord,
-  FokontanySnakeCased,
-  MadaAdmConfigValues,
-} from "@scope/types/models";
+import type { DMLCreateManyResult, FokontanyTableDML } from "@scope/types/db";
+import type { FokontanyRecord, MadaAdmConfigValues } from "@scope/types/models";
 import type { PostgresDbConnection } from "../postgres-db.connection.ts";
 
 /**
@@ -25,46 +15,6 @@ export class FokontanysPostgresDML extends BaseAdmPostgresTableDML
     schema: string = "public",
   ) {
     super(config, db, schema);
-  }
-
-  async getManyByAttributes(
-    attributes: FokontanyAttributes[],
-  ): Promise<Fokontany[]> {
-    const tableName = this.getTableName(
-      ADM_LEVEL_TITLE_BY_CODE.get(AdmLevelCode.FOKONTANY)! + "s",
-    );
-
-    const columns = [
-      `${tableName}.id`,
-      `${tableName}.fokontany`,
-      `${tableName}.commune`,
-      `${tableName}.district`,
-      `${tableName}.region`,
-      `${tableName}.commune_id`,
-      `${tableName}.created_at`,
-      `${tableName}.updated_at`,
-    ];
-
-    if (this.config.isProvinceRepeated) columns.push(`${tableName}.province`);
-    if (this.config.isFkRepeated || this.config.isProvinceFkRepeated) {
-      columns.push(`${tableName}.province_id`);
-    }
-    if (this.config.isFkRepeated) {
-      columns.push(`${tableName}.region_id`);
-      columns.push(`${tableName}.district_id`);
-    }
-    if (this.config.hasAdmLevel) columns.push(`${tableName}.adm_level`);
-    if (this.config.hasGeojson) {
-      columns.push(`ST_AsGeoJSON(${tableName}.geojson) as geojson`);
-    }
-
-    return await this._getManyByAttributes<Fokontany, FokontanySnakeCased>(
-      tableName,
-      columns,
-      attributes,
-      mapFokontanySnakeToCamel,
-      "fokontany",
-    );
   }
 
   /**

@@ -3,10 +3,11 @@ import type { DbType } from "@scope/consts/db";
 import type { MaybePromise } from "./utils.d.ts";
 import type {
   Commune,
+  CommuneAttributes,
   CommuneRecord,
   District,
+  DistrictAttributes,
   DistrictRecord,
-  Fokontany,
   FokontanyRecord,
   MadaAdmConfig,
   MadaAdmConfigValues,
@@ -15,6 +16,22 @@ import type {
   Region,
   RegionRecord,
 } from "./models.d.ts";
+
+export type {
+  Commune,
+  CommuneAttributes,
+  CommuneRecord,
+  District,
+  DistrictAttributes,
+  DistrictRecord,
+  FokontanyRecord,
+  MadaAdmConfig,
+  MadaAdmConfigValues,
+  Province,
+  ProvinceRecord,
+  Region,
+  RegionRecord,
+};
 
 /**
  * Represents the transaction context for a specific database type.
@@ -152,30 +169,6 @@ export type ProvinceAttributes = { province: string };
 export type RegionAttributes = { region: string };
 
 /**
- * Attributes used to uniquely identify a district.
- */
-export type DistrictAttributes = { district: string; region: string };
-
-/**
- * Attributes used to uniquely identify a commune.
- */
-export type CommuneAttributes = {
-  commune: string;
-  district: string;
-  region: string;
-};
-
-/**
- * Attributes used to uniquely identify a fokontany.
- */
-export type FokontanyAttributes = {
-  fokontany: string;
-  commune: string;
-  district: string;
-  region: string;
-};
-
-/**
  * Data Manipulation Layer interface for the provinces table.
  */
 export interface ProvinceTableDML extends BaseAdmTableDML {
@@ -243,15 +236,5 @@ export interface CommuneTableDML extends BaseAdmTableDML {
  * Data Manipulation Layer interface for the fokontanys table.
  */
 export interface FokontanyTableDML extends BaseAdmTableDML {
-  /**
-   * Retrieves multiple fokontanys by their unique attributes.
-   *
-   * @param attributes - The list of fokontany identifying attributes.
-   * @returns An array of matching fokontany entities.
-   */
-  getManyByAttributes(
-    attributes: FokontanyAttributes[],
-  ): MaybePromise<Fokontany[]>;
-
   createMany(values: FokontanyRecord[]): MaybePromise<DMLCreateManyResult>;
 }
