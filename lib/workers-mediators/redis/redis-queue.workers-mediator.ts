@@ -789,7 +789,14 @@ export class RedisQueueWorkersMediator<
 
           if (!groupInfo) return 0;
           const readIdx = groupInfo.indexOf("entries-read");
-          return readIdx !== -1 ? Number(groupInfo[readIdx + 1]) : 0;
+          const pendingIdx = groupInfo.indexOf("pending");
+          const entriesRead = readIdx !== -1
+            ? Number(groupInfo[readIdx + 1])
+            : 0;
+          const pending = pendingIdx !== -1
+            ? Number(groupInfo[pendingIdx + 1])
+            : 0;
+          return Math.max(0, entriesRead - pending);
         } catch {
           return 0;
         }

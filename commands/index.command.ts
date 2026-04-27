@@ -1017,10 +1017,10 @@ export class CliIndexCommand extends Command<void, void, CliConfig> {
                     `Skipping messages from the input file until the following message is found:`,
                   )
                 }`,
-                JSON.stringify(lastPersistedMessage, null, 2),
+                JSON.stringify(lastPersistedMessage).slice(0, 255),
               );
             }
-            let shouldSkipMessage = !lastPersistedMessage;
+            let shouldSkipMessage = !!lastPersistedMessage;
             inputReadableStream = (await Deno.open(inputFilePath))
               .readable
               .pipeThrough(new TextDecoderStream())
@@ -1032,12 +1032,6 @@ export class CliIndexCommand extends Command<void, void, CliConfig> {
                     if (lastPersistedMessage && shouldSkipMessage) {
                       if (compareAdmValues(admValues, lastPersistedMessage)) {
                         shouldSkipMessage = false;
-                        console.log(
-                          colors.green(
-                            `\nResuming from the following message:`,
-                          ),
-                          JSON.stringify(admValues, null, 2),
-                        );
                       }
                       return;
                     }
