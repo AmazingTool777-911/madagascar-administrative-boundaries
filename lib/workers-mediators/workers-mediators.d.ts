@@ -122,6 +122,11 @@ export interface QueueWorkersMediator<
    * Checks if the job has already ended in a previous session.
    */
   get isJobEnded(): MaybePromise<boolean>;
+
+  /**
+   * Retrieves the count of messages that have been pulled (dequeued) so far.
+   */
+  get pulledMessagesCount(): MaybePromise<{ processed: number; inserted: number }>;
 }
 
 export interface QueueWorkerLifecycle<

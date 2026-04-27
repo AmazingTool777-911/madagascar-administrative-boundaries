@@ -23,6 +23,7 @@ import type {
   RegionRecord,
 } from "@scope/types/models";
 import { colors } from "@cliffy/ansi/colors";
+import { ansi } from "@cliffy/ansi";
 import {
   injectCommunesDML,
   injectDistrictsDML,
@@ -104,11 +105,21 @@ executor.run({
         name = m.province;
       }
 
-      console.log(
-        colors.magenta(
-          `   [Processing worker #${workerMetadata.index}] processing ${levelTitle}: ${name}${retryLog}`,
-        ),
+      const logMessage = colors.magenta(
+        `   [Processing worker #${workerMetadata.index}] processing ${levelTitle}: ${name}${retryLog}`,
       );
+
+      if (context.progressBarsLinesCount > 0) {
+        console.log(
+          ansi.cursorUp(context.progressBarsLinesCount) +
+            "\x1b[1L" + // Raw ANSI sequence to insert a line
+            ansi.cursorLeft +
+            logMessage +
+            ansi.cursorDown(context.progressBarsLinesCount),
+        );
+      } else {
+        console.log(logMessage);
+      }
     });
 
     switch (context.currentAdmLevel) {

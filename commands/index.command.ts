@@ -2,6 +2,7 @@ import * as path from "node:path";
 import { Confirm, Input, prompt } from "@cliffy/prompt";
 import { Command } from "@cliffy/command";
 import { colors } from "@cliffy/ansi/colors";
+import { ansi } from "@cliffy/ansi";
 import { Table } from "@cliffy/table";
 import { injectMadaAdmConfigDDL } from "@scope/db/ddl";
 import { injectMadaAdmConfigDML, injectProvincesDML } from "@scope/db/dml";
@@ -112,6 +113,8 @@ import {
   isProvinceValues,
   isRegionValues,
 } from "@scope/helpers/models";
+
+const PROGRESS_BARS_LINES_COUNT = 5;
 
 /**
  * The root CLI command for the administrative data pipeline.
@@ -885,6 +888,7 @@ export class CliIndexCommand extends Command<void, void, CliConfig> {
             pgSchema: args.pg.schema,
           },
           dbType: args.dbType,
+          progressBarsLinesCount: PROGRESS_BARS_LINES_COUNT,
         };
 
       const initialAdmLevelIndex = ADM_LEVEL_INDEX_BY_CODE.get(
@@ -892,6 +896,72 @@ export class CliIndexCommand extends Command<void, void, CliConfig> {
       )!;
 
       const startTime = Date.now();
+
+      let processingCounter = 0;
+      let insertCounter = 0;
+      let totalCountForLevel = 0;
+      let currentLevelTitle = "";
+      let isFirstProgressBarRender = true;
+
+      const renderProgressBars = () => {
+        try {
+          const { columns } = Deno.consoleSize();
+          const barWidth = Math.max(10, columns - 50);
+
+          if (!isFirstProgressBarRender) {
+            Deno.stdout.writeSync(
+              new TextEncoder().encode(
+                ansi.cursorUp(PROGRESS_BARS_LINES_COUNT).eraseDown().toString(),
+              ),
+            );
+          }
+          isFirstProgressBarRender = false;
+
+          const renderBar = (
+            count: number,
+            total: number,
+            label: string,
+            colorFn: (s: string) => string,
+          ) => {
+            const percentage = total > 0
+              ? Math.floor((count / total) * 100)
+              : 0;
+            const filledWidth = Math.floor((percentage / 100) * barWidth);
+            const bar = colorFn("█".repeat(filledWidth)) +
+              colors.gray("░".repeat(barWidth - filledWidth));
+
+            console.log(
+              `${count.toLocaleString()} ${currentLevelTitle}s ${label} / ${total.toLocaleString()} (${percentage}%)`,
+            );
+            console.log(`[${bar}]`);
+          };
+
+          console.log(""); // Empty line at top
+          renderBar(
+            processingCounter,
+            totalCountForLevel,
+            "processed",
+            colors.magenta,
+          );
+          renderBar(
+            insertCounter,
+            totalCountForLevel,
+            "inserted",
+            colors.blue,
+          );
+        } catch (_e) {
+          // Ignore errors if terminal is not available or too small
+        }
+      };
+
+      let resizeTimeout: number | undefined;
+      const onResize = () => {
+        clearTimeout(resizeTimeout);
+        resizeTimeout = setTimeout(() => {
+          renderProgressBars();
+        }, 100);
+      };
+      Deno.addSignalListener("SIGWINCH", onResize);
 
       try {
         for (
@@ -905,6 +975,12 @@ export class CliIndexCommand extends Command<void, void, CliConfig> {
           const admDataTotalCount = ADM_LEVEL_ENTRIES_COUNT_BY_CODE.get(
             admLevelCode,
           )!;
+          totalCountForLevel = admDataTotalCount;
+          currentLevelTitle = levelTitle;
+          processingCounter = 0;
+          insertCounter = 0;
+          isFirstProgressBarRender = true;
+
           console.log(
             colors.rgb8(
               `\nADM level: ${levelTitle} (${admDataTotalCount} entries)\n`,
@@ -1002,6 +1078,8 @@ export class CliIndexCommand extends Command<void, void, CliConfig> {
             insert: jobContext,
           };
 
+          renderProgressBars();
+
           await mediator.queue(mediatorContext, inputReadableStream, workers, {
             debug: args.debug,
             batchSize: args.queueBatchSize,
@@ -1009,14 +1087,30 @@ export class CliIndexCommand extends Command<void, void, CliConfig> {
             onProcessingFinished: (payloads: AdmRecord[]) => {
               for (const payload of payloads) {
                 const name = this.getAdmNameWithContext(payload);
-                console.log(`✅ Processed ${levelTitle}: ${name}`);
+                console.log(
+                  ansi.cursorUp(PROGRESS_BARS_LINES_COUNT) +
+                    "\x1b[1L" +
+                    ansi.cursorLeft +
+                    `✅ Processed ${levelTitle}: ${name}` +
+                    ansi.cursorDown(PROGRESS_BARS_LINES_COUNT),
+                );
               }
+              processingCounter += payloads.length;
+              renderProgressBars();
             },
             onInsertFinished: (payloads: AdmRecord[]) => {
               for (const payload of payloads) {
                 const name = this.getAdmNameWithContext(payload);
-                console.log(`💾 Inserted ${levelTitle}: ${name}`);
+                console.log(
+                  ansi.cursorUp(PROGRESS_BARS_LINES_COUNT) +
+                    "\x1b[1L" +
+                    ansi.cursorLeft +
+                    `💾 Inserted ${levelTitle}: ${name}` +
+                    ansi.cursorDown(PROGRESS_BARS_LINES_COUNT),
+                );
               }
+              insertCounter += payloads.length;
+              renderProgressBars();
             },
           });
 
@@ -1046,6 +1140,7 @@ export class CliIndexCommand extends Command<void, void, CliConfig> {
         }
 
         // Final Cleanup
+        Deno.removeSignalListener("SIGWINCH", onResize);
         await mediator.clearPersisted();
 
         console.log(

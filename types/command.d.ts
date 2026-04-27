@@ -21,4 +21,6 @@ export interface SeedAdmJobContext {
   ddlExtraOptions: DbDDLExtraOptionsCliConfig;
   /** The type of the database to be connected to */
   dbType: DbType;
+  /** The number of lines occupied by the progress bars in the terminal. */
+  progressBarsLinesCount: number;
 }
