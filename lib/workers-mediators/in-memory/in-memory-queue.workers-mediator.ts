@@ -254,6 +254,7 @@ export class InMemoryQueueWorkersMediator<
     };
 
   #isJobEnded = false;
+  #pulledMessagesCount = { processed: 0, inserted: 0 };
 
   /**
    * Initializes a new instance of the InMemoryQueueWorkersMediator.
@@ -319,7 +320,11 @@ export class InMemoryQueueWorkersMediator<
     );
 
     processingJobs.forEach((job) => {
-      job.onJobCompleted = (event) => onProcessingFinished?.(event);
+      job.onJobCompleted = (event) => {
+        this.#pulledMessagesCount.processed +=
+          (event as unknown as TProcessingFinishedPayload[]).length;
+        onProcessingFinished?.(event);
+      };
     });
 
     const messagesReadable = (() => {
@@ -405,7 +410,11 @@ export class InMemoryQueueWorkersMediator<
         hwm: this.#options.insertHwm,
         maxRetries,
       });
-      insertJob.onJobCompleted = (event) => onInsertFinished?.(event);
+      insertJob.onJobCompleted = (event) => {
+        this.#pulledMessagesCount.inserted +=
+          (event as unknown as TInsertFinishedPayload[]).length;
+        onInsertFinished?.(event);
+      };
 
       const gathererReadable = new ReadableStream<TProcessingFinishedPayload[]>(
         {
@@ -485,6 +494,13 @@ export class InMemoryQueueWorkersMediator<
    */
   get isJobEnded(): boolean {
     return this.#isJobEnded;
+  }
+
+  /**
+   * Retrieves the count of messages that have been pulled (dequeued) so far.
+   */
+  get pulledMessagesCount(): { processed: number; inserted: number } {
+    return this.#pulledMessagesCount;
   }
 }
 

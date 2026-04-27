@@ -767,6 +767,48 @@ export class RedisQueueWorkersMediator<
       return raw === JSON.stringify(JOB_ENDED_VALUE);
     })();
   }
+
+  /**
+   * Retrieves the count of messages that have been pulled (dequeued) so far.
+   */
+  get pulledMessagesCount(): Promise<{ processed: number; inserted: number }> {
+    return (async () => {
+      const getEntriesRead = async (stream: string, group: string) => {
+        try {
+          const groups = (await this.#client.sendCommand([
+            "XINFO",
+            "GROUPS",
+            stream,
+            // deno-lint-ignore no-explicit-any
+          ])) as any[][];
+
+          const groupInfo = groups.find((g) => {
+            const nameIdx = g.indexOf("name");
+            return g[nameIdx + 1] === group;
+          });
+
+          if (!groupInfo) return 0;
+          const readIdx = groupInfo.indexOf("entries-read");
+          return readIdx !== -1 ? Number(groupInfo[readIdx + 1]) : 0;
+        } catch {
+          return 0;
+        }
+      };
+
+      const [processed, inserted] = await Promise.all([
+        getEntriesRead(
+          this.#options.processingStreamKey,
+          this.#options.processingConsumerGroupName,
+        ),
+        getEntriesRead(
+          this.#options.insertStreamKey,
+          this.#options.insertConsumerGroupName,
+        ),
+      ]);
+
+      return { processed, inserted };
+    })();
+  }
 }
 
 /**

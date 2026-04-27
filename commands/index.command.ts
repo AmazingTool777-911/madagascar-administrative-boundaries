@@ -977,8 +977,9 @@ export class CliIndexCommand extends Command<void, void, CliConfig> {
           )!;
           totalCountForLevel = admDataTotalCount;
           currentLevelTitle = levelTitle;
-          processingCounter = 0;
-          insertCounter = 0;
+          const pulledCounts = await mediator.pulledMessagesCount;
+          processingCounter = pulledCounts.processed;
+          insertCounter = pulledCounts.inserted;
           isFirstProgressBarRender = true;
 
           console.log(
@@ -1145,7 +1146,7 @@ export class CliIndexCommand extends Command<void, void, CliConfig> {
 
         console.log(
           colors.green(
-            "\n🏁 Mada ADM data seeding process completed successfully.",
+            "🏁 Mada ADM data seeding process completed successfully.",
           ),
         );
       } catch (error) {

@@ -68,11 +68,15 @@ const executor: QueueWorkerExecutor<SeedAdmJobContext, AdmValues, AdmRecord> =
 
 executor.run({
   async init(context, { workerMetadata }) {
-    console.log("processing worker", context);
     db = injectDbConnection(context.dbType);
     await db.connect(context.dbConnectionParams);
 
-    console.log(`   [Processing worker #${workerMetadata.index}] Init`);
+    console.log(
+      ansi.cursorUp(context.progressBarsLinesCount) + "\x1b[1L" +
+        ansi.cursorLeft +
+        colors.magenta(`   [Processing worker #${workerMetadata.index}] Init`) +
+        ansi.cursorDown(context.progressBarsLinesCount),
+    );
 
     const args = [
       context.config,
@@ -296,8 +300,15 @@ executor.run({
         break;
     }
   },
-  async teardown(_, { workerMetadata }) {
-    console.log(`   [Processing worker #${workerMetadata.index}] Teardown`);
+  async teardown(context, { workerMetadata }) {
+    console.log(
+      ansi.cursorUp(context.progressBarsLinesCount) + "\x1b[1L" +
+        ansi.cursorLeft +
+        colors.magenta(
+          `   [Processing worker #${workerMetadata.index}] Teardown`,
+        ) +
+        ansi.cursorDown(context.progressBarsLinesCount),
+    );
     await db.close();
   },
 });
