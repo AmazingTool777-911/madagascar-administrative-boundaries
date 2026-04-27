@@ -923,8 +923,9 @@ export class CliIndexCommand extends Command<void, void, CliConfig> {
             label: string,
             colorFn: (s: string) => string,
           ) => {
+            const actualCount = Math.min(count, total); // To account for overflows from DLQs
             const percentage = total > 0
-              ? Math.floor((count / total) * 100)
+              ? Math.floor((actualCount / total) * 100)
               : 0;
             const filledWidth = Math.floor((percentage / 100) * barWidth);
             const bar = colorFn("█".repeat(filledWidth)) +
