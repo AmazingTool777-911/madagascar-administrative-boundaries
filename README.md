@@ -19,18 +19,22 @@ This repository serves as a centralized hub for administrative data and the logi
 
 The project is currently in active development. The following components are available:
 
-- **Extraction Pipeline**: The [extract-adm-inputs.script.ts](file:///home/tolotra/it/projects/mada-adm/scripts/extract-adm-inputs/extract-adm-inputs.script.ts) is fully functional, capable of extracting administrative seeding inputs from GeoJSON sources while handling deduplication and schema-aware processing.
-- **Generated Inputs**: The extracted and ready-to-seed data is available in the [data/inputs/](file:///home/tolotra/it/projects/mada-adm/data/inputs/) directory.
-- **NDJSON Source Data**: Pre-processed administrative features are stored in the [data/ndjson/](file:///home/tolotra/it/projects/mada-adm/data/ndjson/) directory for high-performance streaming.
+- **Seeding Pipeline (Main Command)**: The core CLI command for seeding administrative data into a database is functional. It features a resumable, fault-tolerant architecture with real-time terminal progress visualization.
+  - **Supported Adapters**: PostgreSQL (Active).
+  - **Pending Integration**: SQLite, MySQL, and MongoDB.
+- **Extraction Pipeline**: The [extract-adm-inputs.script.ts](file:///home/tolotra/it/projects/mada-adm/scripts/extract-adm-inputs/extract-adm-inputs.script.ts) is fully functional, capable of generating seeding inputs from GeoJSON sources while handling deduplication and schema-aware processing.
+- **Data Inputs**: Pre-extracted and optimized data ready for seeding is available in the [data/inputs/](file:///home/tolotra/it/projects/mada-adm/data/inputs/) directory.
 
 ### Coming Soon
-- **Seeding Command**: A dedicated CLI command to automate the insertion of extracted data into PostgreSQL/PostGIS.
+- **Administrative Management Commands**: Subcommands for updating specific administrative fields, managing project configuration, and clearing the database.
+- **Database Adapters**: Native support for SQLite, MySQL, and MongoDB.
 - **Data Catalog**: A comprehensive, public-facing catalog of administrative metadata.
 
 ## Tech Stack
 - **Runtime**: [Deno](https://deno.land/)
-- **Database**: PostgreSQL with PostGIS extensions
-- **Job Orchestration**: Redis (for fault-tolerant extraction and processing)
+- **Database**: PostgreSQL (PostGIS) — *SQLite, MySQL, MongoDB support coming soon*
+- **Job Orchestration**: Redis / In-Memory (for fault-tolerant processing)
+- **UI**: CLI with interactive progress tracking and resumable job state
 
 ---
 
