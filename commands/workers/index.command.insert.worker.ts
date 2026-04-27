@@ -62,11 +62,11 @@ const executor: QueueWorkerExecutor<SeedAdmJobContext, AdmRecord, AdmRecord> =
     >();
 
 executor.run({
-  async init(context, { workerMetadata }) {
+  async init(context) {
     db = injectDbConnection(context.dbType);
     await db.connect(context.dbConnectionParams);
 
-    console.log(`   [Insert worker #${workerMetadata.index}] Init`);
+    console.log(`   [Insert worker] Init`);
 
     const args = [
       context.config,
@@ -80,7 +80,7 @@ executor.run({
     communesDML = injectCommunesDML(...args);
     fokontanysDML = injectFokontanysDML(...args);
   },
-  async execute(context, messages, { workerMetadata, retryCount }) {
+  async execute(context, messages, { retryCount }) {
     const levelTitle = ADM_LEVEL_TITLE_BY_CODE.get(context.currentAdmLevel) ??
       "unknown";
     const retryLog = retryCount > 0 ? ` (retry #${retryCount})` : "";
@@ -102,7 +102,7 @@ executor.run({
 
       console.log(
         colors.blue(
-          `   [Insert worker #${workerMetadata.index}] inserting ${levelTitle}: ${name}${retryLog}`,
+          `   [Insert worker] inserting ${levelTitle}: ${name}${retryLog}`,
         ),
       );
     });
@@ -112,7 +112,7 @@ executor.run({
         const records = messages.map((m) => {
           if (!isFokontanyValues(m)) {
             throw new Error(
-              `[Insert worker #${workerMetadata.index}] Expected FokontanyRecord for level ${context.currentAdmLevel}, but received: ${
+              `[Insert worker] Expected FokontanyRecord for level ${context.currentAdmLevel}, but received: ${
                 JSON.stringify(m)
               }`,
             );
@@ -126,7 +126,7 @@ executor.run({
         const records = messages.map((m) => {
           if (!isCommuneValues(m)) {
             throw new Error(
-              `[Insert worker #${workerMetadata.index}] Expected CommuneRecord for level ${context.currentAdmLevel}, but received: ${
+              `[Insert worker] Expected CommuneRecord for level ${context.currentAdmLevel}, but received: ${
                 JSON.stringify(m)
               }`,
             );
@@ -140,7 +140,7 @@ executor.run({
         const records = messages.map((m) => {
           if (!isDistrictValues(m)) {
             throw new Error(
-              `[Insert worker #${workerMetadata.index}] Expected DistrictRecord for level ${context.currentAdmLevel}, but received: ${
+              `[Insert worker] Expected DistrictRecord for level ${context.currentAdmLevel}, but received: ${
                 JSON.stringify(m)
               }`,
             );
@@ -154,7 +154,7 @@ executor.run({
         const records = messages.map((m) => {
           if (!isRegionValues(m)) {
             throw new Error(
-              `[Insert worker #${workerMetadata.index}] Expected RegionRecord for level ${context.currentAdmLevel}, but received: ${
+              `[Insert worker] Expected RegionRecord for level ${context.currentAdmLevel}, but received: ${
                 JSON.stringify(m)
               }`,
             );
@@ -168,7 +168,7 @@ executor.run({
         const records = messages.map((m) => {
           if (!isProvinceValues(m)) {
             throw new Error(
-              `[Insert worker #${workerMetadata.index}] Expected ProvinceRecord for level ${context.currentAdmLevel}, but received: ${
+              `[Insert worker] Expected ProvinceRecord for level ${context.currentAdmLevel}, but received: ${
                 JSON.stringify(m)
               }`,
             );
@@ -182,8 +182,8 @@ executor.run({
         break;
     }
   },
-  async teardown(_, { workerMetadata }) {
-    console.log(`   [Insert worker #${workerMetadata.index}] Teardown`);
+  async teardown() {
+    console.log(`   [Insert worker] Teardown`);
     await db.close();
   },
 });

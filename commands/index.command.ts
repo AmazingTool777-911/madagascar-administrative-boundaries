@@ -54,7 +54,6 @@ import type {
 import type {
   AdmRecord,
   AdmValues,
-  AdmValuesDiscriminated,
   MadaAdmConfigValues,
 } from "@scope/types/models";
 import { DbConnection, TableDDL } from "@scope/types/db";
@@ -105,7 +104,14 @@ import {
   AdmLevelCode,
 } from "@scope/consts/models";
 import { TextLineStream } from "@std/streams";
-import { compareAdmValues } from "@scope/helpers/models";
+import {
+  compareAdmValues,
+  isCommuneValues,
+  isDistrictValues,
+  isFokontanyValues,
+  isProvinceValues,
+  isRegionValues,
+} from "@scope/helpers/models";
 
 /**
  * The root CLI command for the administrative data pipeline.
@@ -118,6 +124,21 @@ export class CliIndexCommand extends Command<void, void, CliConfig> {
    * The database connection instance based on the database type and the database connection params.
    */
   #db!: DbConnection;
+
+  private getAdmNameWithContext(m: AdmValues | AdmRecord): string {
+    if (isFokontanyValues(m)) {
+      return `${m.fokontany} (${m.commune}, ${m.district}, ${m.region}, ${m.province})`;
+    } else if (isCommuneValues(m)) {
+      return `${m.commune} (${m.district}, ${m.region}, ${m.province})`;
+    } else if (isDistrictValues(m)) {
+      return `${m.district} (${m.region}, ${m.province})`;
+    } else if (isRegionValues(m)) {
+      return `${m.region} (${m.province})`;
+    } else if (isProvinceValues(m)) {
+      return m.province;
+    }
+    return "unknown";
+  }
 
   /**
    * Initializes the root CLI command with global options and environment
@@ -463,7 +484,7 @@ export class CliIndexCommand extends Command<void, void, CliConfig> {
         AdmValues,
         AdmRecord,
         SeedAdmJobContext,
-        AdmValuesDiscriminated
+        AdmRecord
       >;
 
       if (!disableRedis) {
@@ -498,7 +519,7 @@ export class CliIndexCommand extends Command<void, void, CliConfig> {
           AdmValues,
           AdmRecord,
           SeedAdmJobContext,
-          AdmValuesDiscriminated
+          AdmRecord
         >(
           redis.client,
           redisConfig.url || {
@@ -529,7 +550,7 @@ export class CliIndexCommand extends Command<void, void, CliConfig> {
         );
 
         console.log(
-          colors.green.bold(`✅ Redis Queue Workers Mediator initialized.\n`),
+          colors.green.bold(`✅ Redis Queue Workers Mediator initialized.`),
         );
       } else {
         console.log(
@@ -541,7 +562,7 @@ export class CliIndexCommand extends Command<void, void, CliConfig> {
           AdmValues,
           AdmRecord,
           SeedAdmJobContext,
-          AdmValuesDiscriminated
+          AdmRecord
         >({
           processingHwm: args.inMemoryProcessingHwm,
           insertHwm: args.inMemoryInsertHwm,
@@ -985,9 +1006,21 @@ export class CliIndexCommand extends Command<void, void, CliConfig> {
             debug: args.debug,
             batchSize: args.queueBatchSize,
             maxRetries: args.queueMaxRetries,
+            onProcessingFinished: (payloads: AdmRecord[]) => {
+              for (const payload of payloads) {
+                const name = this.getAdmNameWithContext(payload);
+                console.log(`✅ Processed ${levelTitle}: ${name}`);
+              }
+            },
+            onInsertFinished: (payloads: AdmRecord[]) => {
+              for (const payload of payloads) {
+                const name = this.getAdmNameWithContext(payload);
+                console.log(`💾 Inserted ${levelTitle}: ${name}`);
+              }
+            },
           });
 
-          console.log(`🧹 Deleting duplicates for ${levelTitle}...`);
+          console.log(`\n🧹 Deleting duplicates for ${levelTitle}...\n`);
           const dmlArgs = [activeAdmConfigValues, args.dbType, this.#db, {
             pgSchema: args.pg.schema,
           }] as const;
@@ -1002,7 +1035,9 @@ export class CliIndexCommand extends Command<void, void, CliConfig> {
             : injectFokontanysDML(...dmlArgs);
 
           await tableDML.deleteDuplicates();
-          console.log(colors.green(`✅ Duplicates removed for ${levelTitle}.`));
+          console.log(
+            colors.green(`✅ Duplicates removed for ${levelTitle}.\n`),
+          );
 
           // Cleanup for this level
           for (const w of processingWorkers) w.terminate();
@@ -1019,21 +1054,21 @@ export class CliIndexCommand extends Command<void, void, CliConfig> {
           ),
         );
       } catch (error) {
-        console.error(`\n❌ Fatal Error: ${(error as Error).message}`);
+        console.error(`❌ Fatal Error: ${(error as Error).message}`);
       } finally {
         const totalDurationMs = Date.now() - startTime;
         const totalDurationSeconds = (totalDurationMs / 1000).toFixed(2);
-        console.log(`⏱️  Total duration: ${totalDurationSeconds}s`);
+        console.log(`\n⏱️  Total duration: ${totalDurationSeconds}s\n`);
       }
     } catch (error) {
-      console.error(`\n❌ Fatal Error: ${(error as Error).message}`);
+      console.error(`❌ Fatal Error: ${(error as Error).message}`);
     } finally {
       if (redis) {
-        console.log("🔌 Closing Redis connection...");
+        console.log("🔌 Closing Redis connection...\n");
         redis.close();
       }
       await this.#db.close();
-      console.log(`🔌 Closing DB connection to ${args.dbType}...`);
+      console.log(`🔌 Closing database connection...`);
     }
   }
 
