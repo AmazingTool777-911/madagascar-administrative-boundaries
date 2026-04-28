@@ -49,8 +49,8 @@ import { DbType } from "@scope/consts/db";
 import type {
   CliConfig,
   GlobalCliConfig,
+  IndexActionCliConfig,
   PostgresDbConnectionCliConfig,
-  RedisDbConnectionCliConfig,
 } from "@scope/types/cli";
 import type {
   AdmRecord,
@@ -190,7 +190,7 @@ export class CliIndexCommand extends Command<void, void, CliConfig> {
           default: "postgres",
         },
       )
-      .globalOption("--pg.ssl <ssl:boolean>", PG_SSL_DESCRIPTION, {
+      .globalOption("--pg.ssl [ssl:boolean]", PG_SSL_DESCRIPTION, {
         default: false,
         depends: ["--pg.user"],
       })
@@ -242,7 +242,7 @@ export class CliIndexCommand extends Command<void, void, CliConfig> {
         };
         await this.handleGlobalAction({
           dbType: args.dbType as unknown as DbType,
-          debug: !!args.cliDebug,
+          cliDebug: !!args.cliDebug,
           pg,
         });
       })
@@ -379,7 +379,48 @@ export class CliIndexCommand extends Command<void, void, CliConfig> {
         PROCESSING_WORKERS_COUNT_DESCRIPTION,
       )
       .action(async (args) => {
-        await this.handleIndexAction(args as unknown as CliConfig);
+        const indexArgs: IndexActionCliConfig = {
+          dbType: args.dbType as DbType,
+          cliDebug: args.cliDebug,
+          pg: {
+            url: args.pg?.url ?? args.pgUrl,
+            host: args.pg?.host ?? args.pgHost,
+            port: args.pg?.port ?? args.pgPort,
+            user: args.pg?.user ?? args.pgUser,
+            password: args.pg?.password ?? args.pgPassword,
+            database: args.pg?.database ?? args.pgDatabase,
+            schema: args.pg?.schema ?? args.pgSchema,
+            ssl: args.pg?.ssl ?? args.pgSsl,
+            caCertFile: args.pg?.caCertFile ?? args.pgCaCertFile,
+            caCertPath: args.pg?.caCertPath ?? args.pgCaCertPath,
+          },
+          redis: {
+            url: args.redis?.url ?? args.redisUrl,
+            host: args.redis?.host ?? args.redisHost,
+            port: args.redis?.port ?? args.redisPort,
+            user: args.redis?.user ?? args.redisUsername,
+            password: args.redis?.password ?? args.redisPassword,
+            db: args.redis?.db ?? args.redisDb,
+            ssl: args.redis?.ssl ?? args.redisSsl,
+            certFile: args.redis?.certFile ?? args.redisCertFile,
+            certPath: args.redis?.certPath ?? args.redisCertPath,
+            keyFile: args.redis?.keyFile ?? args.redisKeyFile,
+            keyPath: args.redis?.keyPath ?? args.redisKeyPath,
+            caCertFile: args.redis?.caCertFile ?? args.redisCaCertFile,
+            caCertPath: args.redis?.caCertPath ?? args.redisCaCertPath,
+          },
+          disableRedis: !!args.disableRedis,
+          inMemoryInsertHwm: args.inMemoryInsertHwm as number,
+          inMemoryProcessingHwm: args.inMemoryProcessingHwm as number,
+          workerHealthcheckInterval: args.workerHealthcheckInterval as number,
+          workerPendingMinDurationThreshold: args
+            .workerPendingMinDurationThreshold as number,
+          xreadBlockDuration: args.xreadBlockDuration as number,
+          processingWorkersCount: args.processingWorkersCount as number,
+          queueBatchSize: args.queueBatchSize as number,
+          queueMaxRetries: args.queueMaxRetries as number,
+        };
+        await this.handleIndexAction(indexArgs);
       });
   }
 
@@ -435,7 +476,7 @@ export class CliIndexCommand extends Command<void, void, CliConfig> {
    *
    * @param args - The resolved CLI and environment configurations.
    */
-  private async handleIndexAction(args: CliConfig) {
+  private async handleIndexAction(args: IndexActionCliConfig) {
     let redis: RedisConnection | null = null;
 
     try {
@@ -464,23 +505,8 @@ export class CliIndexCommand extends Command<void, void, CliConfig> {
         }
       }
 
-      const redisConfig: RedisDbConnectionCliConfig = {
-        url: args.redis?.url ?? args.redisUrl,
-        host: args.redis.host ?? args.redisHost,
-        port: args.redis.port ?? args.redisPort,
-        user: args.redis?.user ?? args.redisUsername,
-        password: args.redis?.password ?? args.redisPassword,
-        db: args.redis?.db ?? args.redisDb,
-        ssl: args.redis.ssl ?? args.redisSsl,
-        certFile: args.redis?.certFile ?? args.redisCertFile,
-        certPath: args.redis?.certPath ?? args.redisCertPath,
-        keyFile: args.redis?.keyFile ?? args.redisKeyFile,
-        keyPath: args.redis?.keyPath ?? args.redisKeyPath,
-        caCertFile: args.redis?.caCertFile ?? args.redisCaCertFile,
-        caCertPath: args.redis?.caCertPath ?? args.redisCaCertPath,
-      };
-      const disableRedis =
-        (args.disableRedis ?? args.disableRedisEnv) as boolean;
+      const redisConfig = args.redis;
+      const disableRedis = args.disableRedis;
 
       let mediator: QueueWorkersMediator<
         SeedAdmJobContext,
@@ -548,7 +574,7 @@ export class CliIndexCommand extends Command<void, void, CliConfig> {
             healthcheckInterval: args.workerHealthcheckInterval,
             pendingMinDurationThreshold: args.workerPendingMinDurationThreshold,
             xreadBlockDuration: args.xreadBlockDuration,
-            debug: args.debug,
+            debug: args.cliDebug,
           },
         );
 
@@ -1077,7 +1103,7 @@ export class CliIndexCommand extends Command<void, void, CliConfig> {
           renderProgressBars();
 
           await mediator.queue(mediatorContext, inputReadableStream, workers, {
-            debug: args.debug,
+            debug: args.cliDebug,
             batchSize: args.queueBatchSize,
             maxRetries: args.queueMaxRetries,
             onProcessingFinished: (payloads: AdmRecord[]) => {
