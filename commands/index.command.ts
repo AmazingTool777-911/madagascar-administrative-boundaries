@@ -1,4 +1,5 @@
 import * as path from "node:path";
+import { DateUtils } from "@scope/utils";
 import { Confirm, Input, prompt } from "@cliffy/prompt";
 import { Command } from "@cliffy/command";
 import { colors } from "@cliffy/ansi/colors";
@@ -1174,8 +1175,7 @@ export class CliIndexCommand extends Command<void, void, CliConfig> {
         console.error(`❌ Fatal Error: ${(error as Error).message}`);
       } finally {
         const totalDurationMs = Date.now() - startTime;
-        const totalDurationSeconds = (totalDurationMs / 1000).toFixed(2);
-        console.log(`\n⏱️  Total duration: ${totalDurationSeconds}s\n`);
+        console.log(`\n⏱️  Total duration: ${DateUtils.formatDuration(totalDurationMs)}\n`);
       }
     } catch (error) {
       console.error(`❌ Fatal Error: ${(error as Error).message}`);
