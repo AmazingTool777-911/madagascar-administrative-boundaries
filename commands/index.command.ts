@@ -48,7 +48,6 @@ import {
 } from "@scope/consts/cli";
 import { DbType } from "@scope/consts/db";
 import type {
-  CliConfig,
   GlobalCliConfig,
   IndexActionCliConfig,
   PostgresDbConnectionCliConfig,
@@ -123,7 +122,7 @@ const PROGRESS_BARS_LINES_COUNT = 5;
  * merging CLI flags with environment variables, and initializing
  * the appropriate database adapter.
  */
-export class CliIndexCommand extends Command<void, void, CliConfig> {
+export class CliIndexCommand extends Command<GlobalCliConfig, void> {
   /**
    * The database connection instance based on the database type and the database connection params.
    */
@@ -160,6 +159,7 @@ export class CliIndexCommand extends Command<void, void, CliConfig> {
       .globalOption("--cli-debug [debug:boolean]", DEBUG_DESCRIPTION, {
         default: false,
       })
+      .group("PostgreSQL configuration")
       .globalOption("--pg.schema <schema:string>", PG_SCHEMA_DESCRIPTION, {
         default: "public",
       })
@@ -206,6 +206,7 @@ export class CliIndexCommand extends Command<void, void, CliConfig> {
         "--pg.ca-cert-path <path:string>",
         PG_CA_CERT_PATH_DESCRIPTION,
         {
+          conflicts: ["--pg.ca-cert-file"],
           depends: ["--pg.ssl"],
         },
       )
@@ -248,6 +249,7 @@ export class CliIndexCommand extends Command<void, void, CliConfig> {
         });
       })
       // ── Command-scoped Redis options ────────────────────────────────────
+      .group("Redis configuration")
       .option(
         "--disable-redis [disabled:boolean]",
         DISABLE_REDIS_DESCRIPTION,
@@ -272,20 +274,39 @@ export class CliIndexCommand extends Command<void, void, CliConfig> {
       .option(
         "--redis.cert-file <filename:string>",
         REDIS_CERT_FILE_DESCRIPTION,
+        {
+          depends: ["redis.ssl"],
+        },
       )
-      .option("--redis.cert-path <path:string>", REDIS_CERT_PATH_DESCRIPTION)
+      .option("--redis.cert-path <path:string>", REDIS_CERT_PATH_DESCRIPTION, {
+        conflicts: ["redis.cert-file"],
+        depends: ["redis.ssl"],
+      })
       .option(
         "--redis.key-file <filename:string>",
         REDIS_KEY_FILE_DESCRIPTION,
+        {
+          depends: ["redis.ssl"],
+        },
       )
-      .option("--redis.key-path <path:string>", REDIS_KEY_PATH_DESCRIPTION)
+      .option("--redis.key-path <path:string>", REDIS_KEY_PATH_DESCRIPTION, {
+        conflicts: ["redis.key-file"],
+        depends: ["redis.ssl"],
+      })
       .option(
         "--redis.ca-cert-file <filename:string>",
         REDIS_CA_CERT_FILE_DESCRIPTION,
+        {
+          depends: ["redis.ssl"],
+        },
       )
       .option(
         "--redis.ca-cert-path <path:string>",
         REDIS_CA_CERT_PATH_DESCRIPTION,
+        {
+          conflicts: ["redis.ca-cert-file"],
+          depends: ["redis.ssl"],
+        },
       )
       // ── Command-scoped Redis env variables ──────────────────────────────
       .env("DISABLE_REDIS=<disabled:boolean>", DISABLE_REDIS_DESCRIPTION)
@@ -309,6 +330,7 @@ export class CliIndexCommand extends Command<void, void, CliConfig> {
         REDIS_CA_CERT_PATH_DESCRIPTION,
       )
       // ── Command-scoped mediator/worker options ──────────────────────────
+      .group("Mediator and worker configuration")
       .option(
         "--queue-batch-size <size:number>",
         QUEUE_BATCH_SIZE_DESCRIPTION,
@@ -1175,7 +1197,11 @@ export class CliIndexCommand extends Command<void, void, CliConfig> {
         console.error(`❌ Fatal Error: ${(error as Error).message}`);
       } finally {
         const totalDurationMs = Date.now() - startTime;
-        console.log(`\n⏱️  Total duration: ${DateUtils.formatDuration(totalDurationMs)}\n`);
+        console.log(
+          `\n⏱️  Total duration: ${
+            DateUtils.formatDuration(totalDurationMs)
+          }\n`,
+        );
       }
     } catch (error) {
       console.error(`❌ Fatal Error: ${(error as Error).message}`);
