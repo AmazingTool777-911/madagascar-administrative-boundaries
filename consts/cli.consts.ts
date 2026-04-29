@@ -160,3 +160,10 @@ export const UPDATE_FIELD_COMMAND_VALUE_PATH_OPTION_DESCRIPTION =
 export const CLI_LARGE_CONTENT_ARGS_DIR = "commands/.args";
 
 export const CLI_VALUE_ARG_FILE = "value.txt";
+
+// Set config command
+
+export const SET_CONFIG_COMMAND_NAME = "set-config";
+
+export const SET_CONFIG_COMMAND_DESCRIPTION =
+  "Interactively sets or updates the Mada ADM configuration stored in the database.";
