@@ -77,6 +77,41 @@ export abstract class BaseAdmPostgresTableDML {
     return result.rows.map(mapper);
   }
 
+  protected async _updateGeojsonByIdentifiers(
+    tableName: string,
+    identifiers: Record<string, string>,
+    geojson: string,
+    lowercaseAttribute?: string,
+    transactionContext?: DbTransactionContext,
+  ): Promise<DMLUpdateResult> {
+    const client = DbHelper.ensureIsPostgresDbTransactionCtx(transactionContext)
+      ? transactionContext.tx
+      : this.db.client;
+
+    const attributes = Object.keys(identifiers);
+    const sql = `
+      UPDATE ${tableName}
+      SET 
+        geojson = ST_GeomFromGeoJSON($1),
+        updated_at = NOW()
+      WHERE ${
+      attributes.map((attr, i) => {
+        const isLower = attr === lowercaseAttribute;
+        const lhs = isLower ? `LOWER(${attr})` : attr;
+        const rhs = isLower ? `LOWER($${i + 2})` : `$${i + 2}`;
+        return `${lhs} = ${rhs}`;
+      }).join(" AND ")
+    }
+    `;
+
+    const result = await client.queryObject(sql, [
+      geojson,
+      ...Object.values(identifiers),
+    ]);
+
+    return { affectedRows: result.rowCount ?? 0 };
+  }
+
   /**
    * Internal helper to execute a batch insertion within a transaction.
    *

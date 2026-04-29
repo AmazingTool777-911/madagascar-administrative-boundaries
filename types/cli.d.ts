@@ -192,7 +192,9 @@ export type DbDDLExtraOptionsCliConfig = {
 };
 
 export type UpdateFieldCliConfig = {
-  value: string;
+  value?: string;
+  valueFile?: string;
+  valuePath?: string;
   province?: string;
   region?: string;
   district?: {

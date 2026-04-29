@@ -185,6 +185,27 @@ export class CommunesPostgresDML extends BaseAdmPostgresTableDML
     );
     await this._deleteDuplicates(tableName, ["commune", "district", "region"]);
   }
+
+  async updateGeojsonByAttributes(
+    attributes: CommuneAttributes,
+    geojson: string,
+    transactionContext?: DbTransactionContext,
+  ): Promise<DMLUpdateResult> {
+    const tableName = this.getTableName(
+      ADM_LEVEL_TITLE_BY_CODE.get(AdmLevelCode.COMMUNE)! + "s",
+    );
+    return await this._updateGeojsonByIdentifiers(
+      tableName,
+      {
+        commune: attributes.commune,
+        district: attributes.district,
+        region: attributes.region,
+      },
+      geojson,
+      "commune",
+      transactionContext,
+    );
+  }
 }
 
 let _instance: CommunesPostgresDML | null = null;
