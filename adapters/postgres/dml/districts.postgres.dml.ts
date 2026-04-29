@@ -109,15 +109,20 @@ export class DistrictsPostgresDML extends BaseAdmPostgresTableDML
    */
   async updateFieldByIds(
     ids: EntityId[],
+    fieldCode:
+      | AdmLevelCode.DISTRICT
+      | AdmLevelCode.REGION
+      | AdmLevelCode.PROVINCE,
     value: string,
     transactionContext?: DbTransactionContext,
   ): Promise<void> {
     const tableName = this.getTableName(
       ADM_LEVEL_TITLE_BY_CODE.get(AdmLevelCode.DISTRICT)! + "s",
     );
+    const column = ADM_LEVEL_TITLE_BY_CODE.get(fieldCode)!;
     await this._updateFieldByIds(
       tableName,
-      "district",
+      column,
       value,
       ids,
       transactionContext,

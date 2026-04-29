@@ -95,15 +95,22 @@ export class FokontanysPostgresDML extends BaseAdmPostgresTableDML
    */
   async updateFieldByIds(
     ids: EntityId[],
+    fieldCode:
+      | AdmLevelCode.FOKONTANY
+      | AdmLevelCode.COMMUNE
+      | AdmLevelCode.DISTRICT
+      | AdmLevelCode.REGION
+      | AdmLevelCode.PROVINCE,
     value: string,
     transactionContext?: DbTransactionContext,
   ): Promise<void> {
     const tableName = this.getTableName(
       ADM_LEVEL_TITLE_BY_CODE.get(AdmLevelCode.FOKONTANY)! + "s",
     );
+    const column = ADM_LEVEL_TITLE_BY_CODE.get(fieldCode)!;
     await this._updateFieldByIds(
       tableName,
-      "fokontany",
+      column,
       value,
       ids,
       transactionContext,

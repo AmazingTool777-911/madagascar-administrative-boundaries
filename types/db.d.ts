@@ -1,5 +1,6 @@
 import type { Transaction } from "@db/postgres";
 import type { DbType } from "@scope/consts/db";
+import type { AdmLevelCode } from "@scope/consts/models";
 import type { MaybePromise } from "./utils.d.ts";
 import type {
   Commune,
@@ -250,6 +251,7 @@ export interface RegionTableDML extends BaseAdmTableDML {
    */
   updateFieldByIds(
     ids: EntityId[],
+    fieldCode: AdmLevelCode.REGION | AdmLevelCode.PROVINCE,
     value: string,
     transactionContext?: DbTransactionContext,
   ): MaybePromise<void>;
@@ -303,6 +305,10 @@ export interface DistrictTableDML extends BaseAdmTableDML {
    */
   updateFieldByIds(
     ids: EntityId[],
+    fieldCode:
+      | AdmLevelCode.DISTRICT
+      | AdmLevelCode.REGION
+      | AdmLevelCode.PROVINCE,
     value: string,
     transactionContext?: DbTransactionContext,
   ): MaybePromise<void>;
@@ -356,6 +362,11 @@ export interface CommuneTableDML extends BaseAdmTableDML {
    */
   updateFieldByIds(
     ids: EntityId[],
+    fieldCode:
+      | AdmLevelCode.COMMUNE
+      | AdmLevelCode.DISTRICT
+      | AdmLevelCode.REGION
+      | AdmLevelCode.PROVINCE,
     value: string,
     transactionContext?: DbTransactionContext,
   ): MaybePromise<void>;
@@ -398,6 +409,12 @@ export interface FokontanyTableDML extends BaseAdmTableDML {
    */
   updateFieldByIds(
     ids: EntityId[],
+    fieldCode:
+      | AdmLevelCode.FOKONTANY
+      | AdmLevelCode.COMMUNE
+      | AdmLevelCode.DISTRICT
+      | AdmLevelCode.REGION
+      | AdmLevelCode.PROVINCE,
     value: string,
     transactionContext?: DbTransactionContext,
   ): MaybePromise<void>;
