@@ -12,7 +12,6 @@ import type {
   DistrictSnakeCased,
   DistrictValues,
   Fokontany,
-  FokontanyAttributes,
   FokontanyRecord,
   FokontanySnakeCased,
   FokontanyValues,
@@ -410,10 +409,10 @@ export function compareAdmValues(
   }
 }
 
-export function encodeDistrictAttributes(attr: DistrictAttributes) {
+export function encodeDistrictAttributes(attr: DistrictAttributes): string {
   return `district:${attr.district}-region:${attr.region}`;
 }
 
-export function encodeCommuneAttributes(attr: CommuneAttributes) {
+export function encodeCommuneAttributes(attr: CommuneAttributes): string {
   return `commune:${attr.commune}-district:${attr.district}-region:${attr.region}`;
 }

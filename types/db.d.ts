@@ -8,6 +8,9 @@ import type {
   District,
   DistrictAttributes,
   DistrictRecord,
+  EntityId,
+  Fokontany,
+  FokontanyAttributes,
   FokontanyRecord,
   MadaAdmConfig,
   MadaAdmConfigValues,
@@ -24,6 +27,9 @@ export type {
   District,
   DistrictAttributes,
   DistrictRecord,
+  EntityId,
+  Fokontany,
+  FokontanyAttributes,
   FokontanyRecord,
   MadaAdmConfig,
   MadaAdmConfigValues,
@@ -178,7 +184,22 @@ export interface ProvinceTableDML extends BaseAdmTableDML {
    * @param names - The province names to retrieve.
    * @returns An array of matching province entities.
    */
-  getManyByNames(names: string[]): MaybePromise<Province[]>;
+  getManyByNames(
+    names: string[],
+    transactionContext?: DbTransactionContext,
+  ): MaybePromise<Province[]>;
+
+  /**
+   * Updates the province name of the record identified by the given attributes.
+   *
+   * @param attributes - The unique identifying attributes of the province.
+   * @param value - The new province name value to assign.
+   */
+  updateFieldByAttributes(
+    attributes: ProvinceAttributes,
+    value: string,
+    transactionContext?: DbTransactionContext,
+  ): MaybePromise<void>;
 
   createMany(values: ProvinceRecord[]): MaybePromise<DMLCreateManyResult>;
 }
@@ -193,7 +214,45 @@ export interface RegionTableDML extends BaseAdmTableDML {
    * @param names - The region names to retrieve.
    * @returns An array of matching region entities.
    */
-  getManyByNames(names: string[]): MaybePromise<Region[]>;
+  getManyByNames(
+    names: string[],
+    transactionContext?: DbTransactionContext,
+  ): MaybePromise<Region[]>;
+
+  /**
+   * Retrieves multiple regions whose nearest parent province ID is among the provided set.
+   *
+   * @param provinceIds - The province IDs to filter by.
+   * @returns An array of matching region entities.
+   */
+  getManyByProvinceIds(
+    provinceIds: EntityId[],
+    transactionContext?: DbTransactionContext,
+  ): MaybePromise<Region[]>;
+
+  /**
+   * Updates the region name of the record identified by the given attributes.
+   *
+   * @param attributes - The unique identifying attributes of the region.
+   * @param value - The new region name value to assign.
+   */
+  updateFieldByAttributes(
+    attributes: RegionAttributes,
+    value: string,
+    transactionContext?: DbTransactionContext,
+  ): MaybePromise<void>;
+
+  /**
+   * Updates the region name of all region records whose IDs belong to the provided set.
+   *
+   * @param ids - The region IDs to target.
+   * @param value - The new region name value to assign.
+   */
+  updateFieldByIds(
+    ids: EntityId[],
+    value: string,
+    transactionContext?: DbTransactionContext,
+  ): MaybePromise<void>;
 
   createMany(values: RegionRecord[]): MaybePromise<DMLCreateManyResult>;
 }
@@ -210,7 +269,43 @@ export interface DistrictTableDML extends BaseAdmTableDML {
    */
   getManyByAttributes(
     attributes: DistrictAttributes[],
+    transactionContext?: DbTransactionContext,
   ): MaybePromise<District[]>;
+
+  /**
+   * Retrieves multiple districts whose nearest parent region ID is among the provided set.
+   *
+   * @param regionIds - The region IDs to filter by.
+   * @returns An array of matching district entities.
+   */
+  getManyByRegionIds(
+    regionIds: EntityId[],
+    transactionContext?: DbTransactionContext,
+  ): MaybePromise<District[]>;
+
+  /**
+   * Updates the district name of the record identified by the given attributes.
+   *
+   * @param attributes - The unique identifying attributes of the district.
+   * @param value - The new district name value to assign.
+   */
+  updateFieldByAttributes(
+    attributes: DistrictAttributes,
+    value: string,
+    transactionContext?: DbTransactionContext,
+  ): MaybePromise<void>;
+
+  /**
+   * Updates the district name of all district records whose IDs belong to the provided set.
+   *
+   * @param ids - The district IDs to target.
+   * @param value - The new district name value to assign.
+   */
+  updateFieldByIds(
+    ids: EntityId[],
+    value: string,
+    transactionContext?: DbTransactionContext,
+  ): MaybePromise<void>;
 
   createMany(values: DistrictRecord[]): MaybePromise<DMLCreateManyResult>;
 }
@@ -227,7 +322,43 @@ export interface CommuneTableDML extends BaseAdmTableDML {
    */
   getManyByAttributes(
     attributes: CommuneAttributes[],
+    transactionContext?: DbTransactionContext,
   ): MaybePromise<Commune[]>;
+
+  /**
+   * Retrieves multiple communes whose nearest parent district ID is among the provided set.
+   *
+   * @param districtIds - The district IDs to filter by.
+   * @returns An array of matching commune entities.
+   */
+  getManyByDistrictIds(
+    districtIds: EntityId[],
+    transactionContext?: DbTransactionContext,
+  ): MaybePromise<Commune[]>;
+
+  /**
+   * Updates the commune name of the record identified by the given attributes.
+   *
+   * @param attributes - The unique identifying attributes of the commune.
+   * @param value - The new commune name value to assign.
+   */
+  updateFieldByAttributes(
+    attributes: CommuneAttributes,
+    value: string,
+    transactionContext?: DbTransactionContext,
+  ): MaybePromise<void>;
+
+  /**
+   * Updates the commune name of all commune records whose IDs belong to the provided set.
+   *
+   * @param ids - The commune IDs to target.
+   * @param value - The new commune name value to assign.
+   */
+  updateFieldByIds(
+    ids: EntityId[],
+    value: string,
+    transactionContext?: DbTransactionContext,
+  ): MaybePromise<void>;
 
   createMany(values: CommuneRecord[]): MaybePromise<DMLCreateManyResult>;
 }
@@ -236,5 +367,40 @@ export interface CommuneTableDML extends BaseAdmTableDML {
  * Data Manipulation Layer interface for the fokontanys table.
  */
 export interface FokontanyTableDML extends BaseAdmTableDML {
+  /**
+   * Retrieves multiple fokontanys whose nearest parent commune ID is among the provided set.
+   *
+   * @param communeIds - The commune IDs to filter by.
+   * @returns An array of matching fokontany entities.
+   */
+  getManyByCommuneIds(
+    communeIds: EntityId[],
+    transactionContext?: DbTransactionContext,
+  ): MaybePromise<Fokontany[]>;
+
+  /**
+   * Updates the fokontany name of the record identified by the given attributes.
+   *
+   * @param attributes - The unique identifying attributes of the fokontany.
+   * @param value - The new fokontany name value to assign.
+   */
+  updateFieldByAttributes(
+    attributes: FokontanyAttributes,
+    value: string,
+    transactionContext?: DbTransactionContext,
+  ): MaybePromise<void>;
+
+  /**
+   * Updates the fokontany name of all fokontany records whose IDs belong to the provided set.
+   *
+   * @param ids - The fokontany IDs to target.
+   * @param value - The new fokontany name value to assign.
+   */
+  updateFieldByIds(
+    ids: EntityId[],
+    value: string,
+    transactionContext?: DbTransactionContext,
+  ): MaybePromise<void>;
+
   createMany(values: FokontanyRecord[]): MaybePromise<DMLCreateManyResult>;
 }

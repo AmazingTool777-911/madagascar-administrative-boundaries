@@ -190,3 +190,53 @@ export type DbDDLExtraOptionsCliConfig = {
   /** The PostgreSQL schema to use for the table. */
   pgSchema: string;
 };
+
+export type UpdateFieldCliConfig = {
+  value: string;
+  province?: string;
+  region?: string;
+  district?: {
+    value?: string;
+    region?: string;
+  };
+  commune?: {
+    value?: string;
+    district?: string;
+    region?: string;
+  };
+  fokontany?: {
+    value?: string;
+    commune?: string;
+    district?: string;
+    region?: string;
+  };
+};
+
+export type UpdateFieldIdentifiersCliConfig = Pick<
+  UpdateFieldCliConfig,
+  "province" | "region" | "district" | "commune" | "fokontany"
+>;
+
+/**
+ * @deprecated Use UpdateFieldCliConfig instead.
+ */
+export type UpdateFieldCliConfigV1 = {
+  value: string;
+  province?: string;
+  region?: string;
+  district?: {
+    value: string;
+    region: string;
+  };
+  commune?: {
+    value: string;
+    district: string;
+    region: string;
+  };
+  fokontany?: {
+    value: string;
+    commune: string;
+    district: string;
+    region: string;
+  };
+};
