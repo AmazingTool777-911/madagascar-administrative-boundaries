@@ -206,6 +206,28 @@ export class FokontanysPostgresDML extends BaseAdmPostgresTableDML
       "region",
     ]);
   }
+
+  async updateGeojsonByAttributes(
+    attributes: FokontanyAttributes,
+    geojson: string,
+    transactionContext?: DbTransactionContext,
+  ): Promise<DMLUpdateResult> {
+    const tableName = this.getTableName(
+      ADM_LEVEL_TITLE_BY_CODE.get(AdmLevelCode.FOKONTANY)! + "s",
+    );
+    return await this._updateGeojsonByIdentifiers(
+      tableName,
+      {
+        fokontany: attributes.fokontany,
+        commune: attributes.commune,
+        district: attributes.district,
+        region: attributes.region,
+      },
+      geojson,
+      "fokontany",
+      transactionContext,
+    );
+  }
 }
 
 let _instance: FokontanysPostgresDML | null = null;

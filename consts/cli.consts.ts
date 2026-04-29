@@ -150,3 +150,13 @@ export const UPDATE_FIELD_COMMAND_OPTIONS_DESCRIPTIONS = {
 
 export const UPDATE_FIELD_COMMAND_VALUE_OPTION_DESCRIPTION =
   "The value to set for the field.";
+
+export const UPDATE_FIELD_COMMAND_VALUE_FILE_OPTION_DESCRIPTION =
+  "Filename under commands/.args to read the value from. Useful for large content like GeoJSON.";
+
+export const UPDATE_FIELD_COMMAND_VALUE_PATH_OPTION_DESCRIPTION =
+  "Full path to the file to read the value from.";
+
+export const CLI_LARGE_CONTENT_ARGS_DIR = "commands/.args";
+
+export const CLI_VALUE_ARG_FILE = "value.txt";

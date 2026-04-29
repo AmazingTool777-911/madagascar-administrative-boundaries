@@ -123,6 +123,23 @@ export class ProvincesPostgresDML extends BaseAdmPostgresTableDML
     );
     await this._deleteDuplicates(tableName, ["province"]);
   }
+
+  async updateGeojsonByName(
+    name: string,
+    geojson: string,
+    transactionContext?: DbTransactionContext,
+  ): Promise<DMLUpdateResult> {
+    const tableName = this.getTableName(
+      ADM_LEVEL_TITLE_BY_CODE.get(AdmLevelCode.PROVINCE)! + "s",
+    );
+    return await this._updateGeojsonByIdentifiers(
+      tableName,
+      { province: name },
+      geojson,
+      "province",
+      transactionContext,
+    );
+  }
 }
 
 let _instance: ProvincesPostgresDML | null = null;

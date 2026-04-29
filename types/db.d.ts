@@ -202,6 +202,18 @@ export interface ProvinceTableDML extends BaseAdmTableDML {
   ): MaybePromise<DMLUpdateResult>;
 
   createMany(values: ProvinceRecord[]): MaybePromise<DMLCreateManyResult>;
+
+  /**
+   * Updates the geojson field of a province record by its name.
+   *
+   * @param name - The name of the province.
+   * @param geojson - The GeoJSON string value to assign.
+   */
+  updateGeojsonByName(
+    name: string,
+    geojson: string,
+    transactionContext?: DbTransactionContext,
+  ): MaybePromise<DMLUpdateResult>;
 }
 
 /**
@@ -244,6 +256,18 @@ export interface RegionTableDML extends BaseAdmTableDML {
   ): MaybePromise<DMLUpdateResult>;
 
   createMany(values: RegionRecord[]): MaybePromise<DMLCreateManyResult>;
+
+  /**
+   * Updates the geojson field of a region record by its name.
+   *
+   * @param name - The name of the region.
+   * @param geojson - The GeoJSON string value to assign.
+   */
+  updateGeojsonByName(
+    name: string,
+    geojson: string,
+    transactionContext?: DbTransactionContext,
+  ): MaybePromise<DMLUpdateResult>;
 }
 
 /**
@@ -289,6 +313,18 @@ export interface DistrictTableDML extends BaseAdmTableDML {
   ): MaybePromise<DMLUpdateResult>;
 
   createMany(values: DistrictRecord[]): MaybePromise<DMLCreateManyResult>;
+
+  /**
+   * Updates the geojson field of a district record by its identifying attributes.
+   *
+   * @param attributes - The identifying attributes for the district.
+   * @param geojson - The GeoJSON string value to assign.
+   */
+  updateGeojsonByAttributes(
+    attributes: DistrictAttributes,
+    geojson: string,
+    transactionContext?: DbTransactionContext,
+  ): MaybePromise<DMLUpdateResult>;
 }
 
 /**
@@ -335,6 +371,18 @@ export interface CommuneTableDML extends BaseAdmTableDML {
   ): MaybePromise<DMLUpdateResult>;
 
   createMany(values: CommuneRecord[]): MaybePromise<DMLCreateManyResult>;
+
+  /**
+   * Updates the geojson field of a commune record by its identifying attributes.
+   *
+   * @param attributes - The identifying attributes for the commune.
+   * @param geojson - The GeoJSON string value to assign.
+   */
+  updateGeojsonByAttributes(
+    attributes: CommuneAttributes,
+    geojson: string,
+    transactionContext?: DbTransactionContext,
+  ): MaybePromise<DMLUpdateResult>;
 }
 
 /**
@@ -382,4 +430,16 @@ export interface FokontanyTableDML extends BaseAdmTableDML {
   ): MaybePromise<DMLUpdateResult>;
 
   createMany(values: FokontanyRecord[]): MaybePromise<DMLCreateManyResult>;
+
+  /**
+   * Updates the geojson field of a fokontany record by its identifying attributes.
+   *
+   * @param attributes - The identifying attributes for the fokontany.
+   * @param geojson - The GeoJSON string value to assign.
+   */
+  updateGeojsonByAttributes(
+    attributes: FokontanyAttributes,
+    geojson: string,
+    transactionContext?: DbTransactionContext,
+  ): MaybePromise<DMLUpdateResult>;
 }
