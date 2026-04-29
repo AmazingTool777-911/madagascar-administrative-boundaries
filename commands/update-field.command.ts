@@ -1,5 +1,6 @@
-import type { EntityId } from "@scope/types/db";
 import { Command, EnumType } from "@cliffy/command";
+import { colors } from "@cliffy/ansi/colors";
+import type { EntityId } from "@scope/types/db";
 import {
   UPDATE_FIELD_COMMAND_ARGUMENTS_DESCRIPTIONS,
   UPDATE_FIELD_COMMAND_DESCRIPTION,
@@ -12,8 +13,10 @@ import type {
   UpdateFieldIdentifiersCliConfig,
 } from "@scope/types/cli";
 import {
+  ADM_LEVEL_CODE_BY_TITLE,
   ADM_LEVEL_CODES_INDEXED,
   ADM_LEVEL_INDEX_BY_CODE,
+  ADM_LEVEL_TITLE_BY_CODE,
   AdmLevelCode,
 } from "@scope/consts/models";
 import {
@@ -25,6 +28,7 @@ import {
   injectProvincesDML,
   injectRegionsDML,
 } from "@scope/db";
+import { AdmEntity } from "@scope/types/models";
 
 type AdmLevelIdentifiers = {
   admLevel: AdmLevelCode.PROVINCE;
@@ -49,15 +53,7 @@ type AdmLevelIdentifiers = {
   region: string;
 };
 
-const admLevelType = new EnumType(
-  [
-    AdmLevelCode.PROVINCE,
-    AdmLevelCode.REGION,
-    AdmLevelCode.DISTRICT,
-    AdmLevelCode.COMMUNE,
-    AdmLevelCode.FOKONTANY,
-  ] as const,
-);
+const admLevelType = new EnumType(Array.from(ADM_LEVEL_CODE_BY_TITLE.keys()));
 
 const fieldType = new EnumType(
   [
@@ -75,6 +71,8 @@ export class CliUpdateFieldCommand extends Command<
     this
       .name(UPDATE_FIELD_COMMAND_NAME)
       .description(UPDATE_FIELD_COMMAND_DESCRIPTION)
+      .type("admLevel", admLevelType)
+      .type("field", fieldType)
       .arguments("<adm-level:admLevel> <field:field>", [
         UPDATE_FIELD_COMMAND_ARGUMENTS_DESCRIPTIONS.ADM_LEVEL,
         UPDATE_FIELD_COMMAND_ARGUMENTS_DESCRIPTIONS.FIELD,
@@ -151,26 +149,36 @@ export class CliUpdateFieldCommand extends Command<
           depends: ["fokontany.value"],
         },
       )
-      .action(async (options, admLevel, field) => {
-        const identifiers = this.enforceAdmLevelIdentifiers(admLevel, {
-          province: options.province,
-          region: options.region,
-          district: options.district,
-          commune: options.commune,
-          fokontany: options.fokontany,
-        });
-        if (field === "geojson") {
-          await this.handleUpdateAdmLevelGeojsonField(
-            options,
-            identifiers,
-            options.value,
+      .action(async (options, admLevelTitle, field) => {
+        try {
+          const admLevel = ADM_LEVEL_CODE_BY_TITLE.get(admLevelTitle)!;
+          const identifiers = this.enforceAdmLevelIdentifiers(admLevel, {
+            province: options.province,
+            region: options.region,
+            district: options.district,
+            commune: options.commune,
+            fokontany: options.fokontany,
+          });
+          if (field === "geojson") {
+            await this.handleUpdateAdmLevelGeojsonField(
+              options,
+              identifiers,
+              options.value,
+            );
+          } else {
+            await this.handleUpdateAdmLevelField(
+              options,
+              identifiers,
+              options.value,
+            );
+          }
+        } catch (error) {
+          console.error(
+            `\n${colors.red("❌ Error:")} ${
+              error instanceof Error ? error.message : String(error)
+            }`,
           );
-        } else {
-          await this.handleUpdateAdmLevelField(
-            options,
-            identifiers,
-            options.value,
-          );
+          Deno.exit(1);
         }
       });
   }
@@ -182,7 +190,10 @@ export class CliUpdateFieldCommand extends Command<
     switch (admLevel) {
       case AdmLevelCode.PROVINCE: {
         if (!identifiers.province) {
-          throw new Error("Province is required");
+          console.error(
+            `\n${colors.red("❌ Error:")} ${"Province is required"}`,
+          );
+          Deno.exit(1);
         }
         return {
           admLevel: AdmLevelCode.PROVINCE,
@@ -191,13 +202,19 @@ export class CliUpdateFieldCommand extends Command<
       }
       case AdmLevelCode.REGION: {
         if (!identifiers.region) {
-          throw new Error("Region is required");
+          console.error(`\n${colors.red("❌ Error:")} ${"Region is required"}`);
+          Deno.exit(1);
         }
         return { admLevel: AdmLevelCode.REGION, region: identifiers.region };
       }
       case AdmLevelCode.DISTRICT: {
         if (!identifiers.district?.value || !identifiers.district?.region) {
-          throw new Error("District and region are required");
+          console.error(
+            `\n${
+              colors.red("❌ Error:")
+            } ${"District and region are required"}`,
+          );
+          Deno.exit(1);
         }
         return {
           admLevel: AdmLevelCode.DISTRICT,
@@ -210,7 +227,12 @@ export class CliUpdateFieldCommand extends Command<
           !identifiers.commune?.value || !identifiers.commune?.district ||
           !identifiers.commune?.region
         ) {
-          throw new Error("Commune, district and region are required");
+          console.error(
+            `\n${
+              colors.red("❌ Error:")
+            } ${"Commune, district and region are required"}`,
+          );
+          Deno.exit(1);
         }
         return {
           admLevel: AdmLevelCode.COMMUNE,
@@ -224,9 +246,12 @@ export class CliUpdateFieldCommand extends Command<
           !identifiers.fokontany?.value || !identifiers.fokontany?.commune ||
           !identifiers.fokontany?.district || !identifiers.fokontany?.region
         ) {
-          throw new Error(
-            "Fokontany, commune, district and region are required",
+          console.error(
+            `\n${
+              colors.red("❌ Error:")
+            } ${"Fokontany, commune, district and region are required"}`,
           );
+          Deno.exit(1);
         }
         return {
           admLevel: AdmLevelCode.FOKONTANY,
@@ -237,7 +262,12 @@ export class CliUpdateFieldCommand extends Command<
         };
       }
       default: {
-        throw new Error(`Invalid adm level: ${admLevel satisfies never}`);
+        console.error(
+          `\n${
+            colors.red("❌ Error:")
+          } Invalid adm level: ${admLevel satisfies never}`,
+        );
+        Deno.exit(1);
       }
     }
   }
@@ -255,9 +285,12 @@ export class CliUpdateFieldCommand extends Command<
 
     const config = await madaAdmConfigDML.get();
     if (!config) {
-      throw new Error(
-        "Mada ADM configuration not found. Run index command first.",
+      console.error(
+        `\n${
+          colors.red("❌ Error:")
+        } ${"Mada ADM configuration not found. Run index command first."}`,
       );
+      Deno.exit(1);
     }
 
     const provincesDML = injectProvincesDML(config, options.dbType, db, {
@@ -277,12 +310,14 @@ export class CliUpdateFieldCommand extends Command<
     });
 
     const targetLevel = identifiers.admLevel;
+    const targetLevelTitle = ADM_LEVEL_TITLE_BY_CODE.get(targetLevel)!;
     const startIdx = ADM_LEVEL_INDEX_BY_CODE.get(targetLevel)!;
     let parentIds: EntityId[] = [];
 
     await db.transaction(async (txCtx) => {
       for (let i = startIdx; i < ADM_LEVEL_CODES_INDEXED.length; i++) {
         const currentLevel = ADM_LEVEL_CODES_INDEXED[i];
+        const currentLevelTitle = ADM_LEVEL_TITLE_BY_CODE.get(currentLevel)!;
 
         if (
           targetLevel === AdmLevelCode.PROVINCE &&
@@ -295,6 +330,18 @@ export class CliUpdateFieldCommand extends Command<
         let entities: { id: EntityId }[] = [];
 
         if (i === startIdx) {
+          console.log(
+            `Fetching ${targetLevelTitle} data with identifiers:`,
+          );
+          console.log(JSON.stringify(
+            {
+              ...identifiers,
+              admLevel: targetLevelTitle,
+            },
+            null,
+            2,
+          ));
+
           switch (identifiers.admLevel) {
             case AdmLevelCode.PROVINCE:
               entities = await provincesDML.getManyByNames([
@@ -324,7 +371,18 @@ export class CliUpdateFieldCommand extends Command<
           }
 
           if (entities.length === 0) {
-            throw new Error(`${currentLevel} not found`);
+            console.log(
+              colors.red(
+                `${targetLevelTitle} ❌ not found with given identifiers.`,
+              ),
+            );
+            Deno.exit(1);
+          } else {
+            console.log(
+              colors.green(
+                `🔍 ${targetLevelTitle} ✅ data found.`,
+              ),
+            );
           }
         } else {
           switch (currentLevel) {
@@ -361,25 +419,47 @@ export class CliUpdateFieldCommand extends Command<
 
         const currentIds = entities.map((e) => e.id);
 
+        console.log();
         switch (currentLevel) {
-          case AdmLevelCode.PROVINCE:
-            await provincesDML.updateFieldByIds(
+          case AdmLevelCode.PROVINCE: {
+            console.log(
+              `⚙️ Updating ${currentLevelTitle} records (target field: ${targetLevelTitle})...`,
+            );
+            const result = await provincesDML.updateFieldByIds(
               currentIds,
               targetLevel as AdmLevelCode.PROVINCE,
               value,
               txCtx,
             );
+            console.log(
+              colors.green(
+                `📊 Updated ${result.affectedRows} ${currentLevelTitle} records.`,
+              ),
+            );
             break;
-          case AdmLevelCode.REGION:
-            await regionsDML.updateFieldByIds(
+          }
+          case AdmLevelCode.REGION: {
+            console.log(
+              `Updating ${currentLevelTitle} records (target field: ${targetLevelTitle})...`,
+            );
+            const result = await regionsDML.updateFieldByIds(
               currentIds,
               targetLevel as AdmLevelCode.REGION | AdmLevelCode.PROVINCE,
               value,
               txCtx,
             );
+            console.log(
+              colors.green(
+                `Updated ${result.affectedRows} ${currentLevelTitle} records.`,
+              ),
+            );
             break;
-          case AdmLevelCode.DISTRICT:
-            await districtsDML.updateFieldByIds(
+          }
+          case AdmLevelCode.DISTRICT: {
+            console.log(
+              `Updating ${currentLevelTitle} records (target field: ${targetLevelTitle})...`,
+            );
+            const result = await districtsDML.updateFieldByIds(
               currentIds,
               targetLevel as
                 | AdmLevelCode.DISTRICT
@@ -388,9 +468,18 @@ export class CliUpdateFieldCommand extends Command<
               value,
               txCtx,
             );
+            console.log(
+              colors.green(
+                `Updated ${result.affectedRows} ${currentLevelTitle} records.`,
+              ),
+            );
             break;
-          case AdmLevelCode.COMMUNE:
-            await communesDML.updateFieldByIds(
+          }
+          case AdmLevelCode.COMMUNE: {
+            console.log(
+              `Updating ${currentLevelTitle} records (target field: ${targetLevelTitle})...`,
+            );
+            const result = await communesDML.updateFieldByIds(
               currentIds,
               targetLevel as
                 | AdmLevelCode.COMMUNE
@@ -400,9 +489,18 @@ export class CliUpdateFieldCommand extends Command<
               value,
               txCtx,
             );
+            console.log(
+              colors.green(
+                `Updated ${result.affectedRows} ${currentLevelTitle} records.`,
+              ),
+            );
             break;
-          case AdmLevelCode.FOKONTANY:
-            await fokontanysDML.updateFieldByIds(
+          }
+          case AdmLevelCode.FOKONTANY: {
+            console.log(
+              `Updating ${currentLevelTitle} records (target field: ${targetLevelTitle})...`,
+            );
+            const result = await fokontanysDML.updateFieldByIds(
               currentIds,
               targetLevel as
                 | AdmLevelCode.FOKONTANY
@@ -413,7 +511,13 @@ export class CliUpdateFieldCommand extends Command<
               value,
               txCtx,
             );
+            console.log(
+              colors.green(
+                `Updated ${result.affectedRows} ${currentLevelTitle} records.`,
+              ),
+            );
             break;
+          }
         }
 
         parentIds = currentIds;
@@ -421,10 +525,63 @@ export class CliUpdateFieldCommand extends Command<
     });
 
     console.log(
-      `Successfully updated ${identifiers.admLevel} field with identifiers: ${
-        JSON.stringify(identifiers)
-      } to ${value}.`,
+      colors.bold.green(
+        `\n✅ Successfully updated ${targetLevelTitle} field.`,
+      ),
     );
+
+    const updatedIdentifiers = { ...identifiers };
+    if (updatedIdentifiers.admLevel === AdmLevelCode.PROVINCE) {
+      updatedIdentifiers.province = value;
+    } else if (updatedIdentifiers.admLevel === AdmLevelCode.REGION) {
+      updatedIdentifiers.region = value;
+    } else if (updatedIdentifiers.admLevel === AdmLevelCode.DISTRICT) {
+      updatedIdentifiers.district = value;
+    } else if (updatedIdentifiers.admLevel === AdmLevelCode.COMMUNE) {
+      updatedIdentifiers.commune = value;
+    } else if (updatedIdentifiers.admLevel === AdmLevelCode.FOKONTANY) {
+      updatedIdentifiers.fokontany = value;
+    }
+
+    let finalEntities: AdmEntity[] = [];
+    switch (updatedIdentifiers.admLevel) {
+      case AdmLevelCode.PROVINCE:
+        finalEntities = await provincesDML.getManyByNames([
+          updatedIdentifiers.province,
+        ]);
+        break;
+      case AdmLevelCode.REGION:
+        finalEntities = await regionsDML.getManyByNames([
+          updatedIdentifiers.region,
+        ]);
+        break;
+      case AdmLevelCode.DISTRICT:
+        finalEntities = await districtsDML.getManyByAttributes([
+          updatedIdentifiers,
+        ]);
+        break;
+      case AdmLevelCode.COMMUNE:
+        finalEntities = await communesDML.getManyByAttributes([
+          updatedIdentifiers,
+        ]);
+        break;
+      case AdmLevelCode.FOKONTANY:
+        finalEntities = await fokontanysDML.getManyByAttributes([
+          updatedIdentifiers,
+        ]);
+        break;
+    }
+
+    if (finalEntities.length > 0) {
+      console.log(
+        colors.cyan(
+          `\n📋 Current state of the targeted ${targetLevelTitle} data:`,
+        ),
+      );
+      const updatedEntity = { ...finalEntities[0] };
+      "geojson" in updatedEntity && delete updatedEntity["geojson"];
+      console.log(JSON.stringify(updatedEntity, null, 2));
+    }
   }
 
   private handleUpdateAdmLevelGeojsonField(
@@ -432,9 +589,12 @@ export class CliUpdateFieldCommand extends Command<
     _identifiers: AdmLevelIdentifiers,
     _value: string,
   ) {
-    throw new Error(
-      "GeoJSON updating is not yet implemented in the CLI or database adapters.",
+    console.error(
+      `\n${
+        colors.red("❌ Error:")
+      } ${"GeoJSON updating is not yet implemented in the CLI or database adapters."}`,
     );
+    Deno.exit(1);
   }
 }
 
