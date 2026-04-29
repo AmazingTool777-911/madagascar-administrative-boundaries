@@ -1,6 +1,9 @@
 {
   "tasks": {
     "cli": "deno -E --env -N -R -W commands/index.ts",
+    "cli:set-config": "deno -E --env -N -R -W commands/index.ts set-config",
+    "cli:update-field": "deno -E --env -N -R -W commands/index.ts update-field",
+    "cli:clear": "deno -E --env -N -R -W commands/index.ts clear",
     "dev": "deno run --watch main.ts",
     "extract-adm-inputs": "deno run --allow-env --allow-net --allow-read --allow-write --env scripts/extract-adm-inputs/extract-adm-inputs.script.ts",
     "test": "deno test -R -E --env"

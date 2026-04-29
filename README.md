@@ -11,6 +11,16 @@ bridges the gap between raw spatial data sources and structured relational
 databases, providing tools for extraction, cleaning, and eventually, automated
 seeding.
 
+## Table of Contents
+
+- [Overview](#overview)
+- [Project Structure & Content](#project-structure--content)
+- [CLI Commands & Usage](#cli-commands--usage)
+  - [Global Options & Environment Variables](#global-options--environment-variables)
+  - [Commands](#commands)
+- [Current Status](#current-status)
+- [Tech Stack](#tech-stack)
+
 ## Project Structure & Content
 
 This repository serves as a centralized hub for administrative data and the
@@ -24,16 +34,101 @@ logic required to process it:
 - **Data Catalogs**: Structured references for administrative metadata
   (currently in development).
 
+## CLI Commands & Usage
+
+The project utilizes a command-line interface to orchestrate the pipeline. Below is an overview of the available commands, along with their global and scoped configurations.
+
+### Global Options & Environment Variables
+
+These options can be provided either as CLI flags or environment variables. If both are provided, the CLI flags take precedence. They apply globally across all commands. All options are optional.
+
+| CLI Flag | Environment Variable | Description |
+| :--- | :--- | :--- |
+| `--db-type` | `DB_TYPE` | The database type to connect to (`sqlite`, `mysql`, `postgres`, `mongodb`). (default: sqlite) |
+| `--cli-debug` | `CLI_DEBUG` | Enable debug logging across the pipeline. |
+| `--pg.schema` | `PG_SCHEMA` | The PostgreSQL schema to use. (default: public) |
+| `--pg.url` | `PG_URL` | The URL to connect to the PostgreSQL database. |
+| `--pg.host` | `PG_HOST` | Hostname or IP address of the PostgreSQL server. (default: localhost) |
+| `--pg.port` | `PG_PORT` | Port number of the PostgreSQL server. (default: 5432) |
+| `--pg.user` | `PG_USER` | Username for authenticating with the PostgreSQL server. (default: postgres) |
+| `--pg.password` | `PG_PASSWORD` | Password for authenticating with the PostgreSQL server. |
+| `--pg.database` | `PG_DATABASE` | Name of the database to be used. (default: postgres) |
+| `--pg.ssl` | `PG_SSL` | Whether to use SSL for the connection. |
+| `--pg.ca-cert-file` | `PG_CA_CERT_FILE` | Filename of the CA cert under `db/.ca-certificates/`. |
+| `--pg.ca-cert-path` | `PG_CA_CERT_PATH` | Full path to the CA cert file. |
+
+### Commands
+
+#### 1. `mada-adm` (Index / Main Command)
+
+**Local Execution:** `deno task cli`
+
+The core CLI command for seeding administrative data into the database. It features a resumable, fault-tolerant architecture with real-time terminal progress visualization.
+
+**Command-Scoped Options / Env Variables**
+These options control the job orchestration (Redis or In-Memory queues) specifically for the seeding pipeline. All options are optional.
+
+| CLI Flag | Environment Variable | Description |
+| :--- | :--- | :--- |
+| `--disable-redis` | `DISABLE_REDIS` | Disable Redis connection. Uses the in-memory queue instead. |
+| `--redis.url` | `REDIS_URL` | Full Redis connection URL. |
+| `--redis.host` | `REDIS_HOST` | Hostname or IP address of the Redis server. (default: localhost) |
+| `--redis.port` | `REDIS_PORT` | TCP port the Redis server listens on. (default: 6379) |
+| `--redis.user` | `REDIS_USERNAME` | Username for Redis authentication. |
+| `--redis.password` | `REDIS_PASSWORD` | Password for Redis authentication. |
+| `--redis.db` | `REDIS_DB` | Database index. |
+| `--redis.ssl` | `REDIS_SSL` | Enable TLS/SSL for the connection. |
+| `--redis.cert-file` | `REDIS_CERT_FILE` | Filename of the client cert under `redis/.ca-certificates/`. |
+| `--redis.cert-path` | `REDIS_CERT_PATH` | Full path to the client certificate file. |
+| `--redis.key-file` | `REDIS_KEY_FILE` | Filename of the client key under `redis/.ca-certificates/`. |
+| `--redis.key-path` | `REDIS_KEY_PATH` | Full path to the client key file. |
+| `--redis.ca-cert-file`| `REDIS_CA_CERT_FILE` | Filename of the CA cert under `redis/.ca-certificates/`. |
+| `--redis.ca-cert-path`| `REDIS_CA_CERT_PATH` | Full path to the CA cert file for Redis. |
+| `--queue-batch-size` | `QUEUE_BATCH_SIZE` | Batch size for processing messages concurrently. |
+| `--queue-max-retries` | `QUEUE_MAX_RETRIES` | Maximum number of retries per batch in case of an error. |
+| `--in-memory-processing-hwm` | `IN_MEMORY_PROCESSING_HWM` | High water mark for in-memory processing workers. |
+| `--in-memory-insert-hwm` | `IN_MEMORY_INSERT_HWM` | High water mark for the in-memory insert worker. |
+| `--worker-healthcheck-interval`| `WORKER_HEALTHCHECK_INTERVAL`| Interval for worker healthcheck in milliseconds. |
+| `--worker-pending-min-duration-threshold` | `WORKER_PENDING_MIN_DURATION_THRESHOLD` | Threshold for claiming pending messages in milliseconds. |
+| `--xread-block-duration` | `XREAD_BLOCK_DURATION` | Duration in milliseconds for XREAD BLOCK calls in Redis. |
+| `--processing-workers-count`| `PROCESSING_WORKERS_COUNT` | Number of concurrent processing workers to spawn. |
+
+#### 2. `set-config`
+
+**Local Execution:** `deno task cli:set-config`
+
+Interactively sets or updates the Mada ADM configuration stored in the database.
+
+**💡 Why use `set-config`?**
+This command is extremely useful for keeping different environments isolated. By changing the configuration (e.g. setting unique table prefixes), you can prevent different sets of tables or configurations from overriding each other. This allows you to work safely in the same database while running automated tests, performing experimentations, or maintaining separate project schemas without destructive interference.
+
+#### 3. `clear`
+
+**Local Execution:** `deno task cli:clear`
+
+Drops all ADM tables and the configuration table from the database, effectively resetting the project state.
+
+#### 4. `update-field`
+
+**Local Execution:** `deno task cli:update-field`
+
+Updates a specific field (like names or spatial GeoJSON boundaries) of an existing ADM record in the database.
+
+**Arguments:**
+- `<adm-level>`: The ADM level of the record (e.g. `province`, `region`, `district`, `commune`, `fokontany`).
+- `<field>`: The field to update (`value` or `geojson`).
+
+**Command-Scoped Options:**
+- `--value <value>`: The literal value to set for the field.
+- **When updating the `geojson` geometry feature**, it is mandatory to provide the value in a file because the content is usually too large for the terminal to handle directly. By default, it will look for a file at `commands/.args/value.txt`. You can also specify alternatives using:
+  - `--value-file <filename>`: Filename under `commands/.args` to read the value from.
+  - `--value-path <path>`: Full path to the file to read the value from.
+- **Identification Options**: Depending on the ADM level, you must provide the necessary identifiers (e.g., `--province`, `--district.value`, `--district.region`, etc.) to correctly locate the administrative boundary.
+
 ## Current Status
 
-The project is currently in active development. The following components are
-available:
+The project is currently in active development. The following extraction features are available alongside the CLI:
 
-- **Seeding Pipeline (Main Command)**: The core CLI command for seeding
-  administrative data into a database is functional. It features a resumable,
-  fault-tolerant architecture with real-time terminal progress visualization.
-  - **Supported Adapters**: PostgreSQL (Active).
-  - **Pending Integration**: SQLite, MySQL, and MongoDB.
 - **Extraction Pipeline**: The
   [extract-adm-inputs.script.ts](file:///home/tolotra/it/projects/mada-adm/scripts/extract-adm-inputs/extract-adm-inputs.script.ts)
   is fully functional, capable of generating seeding inputs from GeoJSON sources
@@ -45,10 +140,7 @@ available:
 
 ### Coming Soon
 
-- **Administrative Management Commands**: Subcommands for updating specific
-  administrative fields, managing project configuration, and clearing the
-  database.
-- **Database Adapters**: Native support for SQLite, MySQL, and MongoDB.
+- **Database Adapters**: Native support for SQLite, MySQL, and MongoDB within the seeding pipeline (currently only PostgreSQL is fully integrated).
 - **Data Catalog**: A comprehensive, public-facing catalog of administrative
   metadata.
 
