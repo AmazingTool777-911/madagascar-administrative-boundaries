@@ -1,3 +1,4 @@
+import type { EntityId } from "@scope/types/db";
 import { Command, EnumType } from "@cliffy/command";
 import {
   UPDATE_FIELD_COMMAND_ARGUMENTS_DESCRIPTIONS,
@@ -10,7 +11,11 @@ import type {
   GlobalCliConfig,
   UpdateFieldIdentifiersCliConfig,
 } from "@scope/types/cli";
-import { AdmLevelCode } from "@scope/consts/models";
+import {
+  ADM_LEVEL_CODES_INDEXED,
+  ADM_LEVEL_INDEX_BY_CODE,
+  AdmLevelCode,
+} from "@scope/consts/models";
 import {
   injectCommunesDML,
   injectDbConnection,
@@ -56,11 +61,7 @@ const admLevelType = new EnumType(
 
 const fieldType = new EnumType(
   [
-    AdmLevelCode.PROVINCE,
-    AdmLevelCode.REGION,
-    AdmLevelCode.DISTRICT,
-    AdmLevelCode.COMMUNE,
-    AdmLevelCode.FOKONTANY,
+    "value",
     "geojson",
   ] as const,
 );
@@ -247,8 +248,9 @@ export class CliUpdateFieldCommand extends Command<
     value: string,
   ) {
     const db = injectDbConnection(options.dbType);
+    const pgSchema = options.pg?.schema;
     const madaAdmConfigDML = injectMadaAdmConfigDML(options.dbType, db, {
-      pgSchema: options.pg?.schema,
+      pgSchema,
     });
 
     const config = await madaAdmConfigDML.get();
@@ -258,43 +260,165 @@ export class CliUpdateFieldCommand extends Command<
       );
     }
 
-    switch (identifiers.admLevel) {
-      case AdmLevelCode.PROVINCE: {
-        const dml = injectProvincesDML(config, options.dbType, db, {
-          pgSchema: options.pg?.schema,
-        });
-        await dml.updateFieldByAttributes(identifiers, value);
-        break;
+    const provincesDML = injectProvincesDML(config, options.dbType, db, {
+      pgSchema,
+    });
+    const regionsDML = injectRegionsDML(config, options.dbType, db, {
+      pgSchema,
+    });
+    const districtsDML = injectDistrictsDML(config, options.dbType, db, {
+      pgSchema,
+    });
+    const communesDML = injectCommunesDML(config, options.dbType, db, {
+      pgSchema,
+    });
+    const fokontanysDML = injectFokontanysDML(config, options.dbType, db, {
+      pgSchema,
+    });
+
+    const targetLevel = identifiers.admLevel;
+    const startIdx = ADM_LEVEL_INDEX_BY_CODE.get(targetLevel)!;
+    let parentIds: EntityId[] = [];
+
+    await db.transaction(async (txCtx) => {
+      for (let i = startIdx; i < ADM_LEVEL_CODES_INDEXED.length; i++) {
+        const currentLevel = ADM_LEVEL_CODES_INDEXED[i];
+
+        if (
+          targetLevel === AdmLevelCode.PROVINCE &&
+          i > ADM_LEVEL_INDEX_BY_CODE.get(AdmLevelCode.REGION)! &&
+          !config.isProvinceRepeated
+        ) {
+          break;
+        }
+
+        let entities: { id: EntityId }[] = [];
+
+        if (i === startIdx) {
+          switch (identifiers.admLevel) {
+            case AdmLevelCode.PROVINCE:
+              entities = await provincesDML.getManyByNames([
+                identifiers.province,
+              ], txCtx);
+              break;
+            case AdmLevelCode.REGION:
+              entities = await regionsDML.getManyByNames([
+                identifiers.region,
+              ], txCtx);
+              break;
+            case AdmLevelCode.DISTRICT:
+              entities = await districtsDML.getManyByAttributes([
+                identifiers,
+              ], txCtx);
+              break;
+            case AdmLevelCode.COMMUNE:
+              entities = await communesDML.getManyByAttributes([
+                identifiers,
+              ], txCtx);
+              break;
+            case AdmLevelCode.FOKONTANY:
+              entities = await fokontanysDML.getManyByAttributes([
+                identifiers,
+              ], txCtx);
+              break;
+          }
+
+          if (entities.length === 0) {
+            throw new Error(`${currentLevel} not found`);
+          }
+        } else {
+          switch (currentLevel) {
+            case AdmLevelCode.REGION:
+              entities = await regionsDML.getManyByProvinceIds(
+                parentIds,
+                txCtx,
+              );
+              break;
+            case AdmLevelCode.DISTRICT:
+              entities = await districtsDML.getManyByRegionIds(
+                parentIds,
+                txCtx,
+              );
+              break;
+            case AdmLevelCode.COMMUNE:
+              entities = await communesDML.getManyByDistrictIds(
+                parentIds,
+                txCtx,
+              );
+              break;
+            case AdmLevelCode.FOKONTANY:
+              entities = await fokontanysDML.getManyByCommuneIds(
+                parentIds,
+                txCtx,
+              );
+              break;
+          }
+
+          if (entities.length === 0) {
+            break;
+          }
+        }
+
+        const currentIds = entities.map((e) => e.id);
+
+        switch (currentLevel) {
+          case AdmLevelCode.PROVINCE:
+            await provincesDML.updateFieldByIds(
+              currentIds,
+              targetLevel as AdmLevelCode.PROVINCE,
+              value,
+              txCtx,
+            );
+            break;
+          case AdmLevelCode.REGION:
+            await regionsDML.updateFieldByIds(
+              currentIds,
+              targetLevel as AdmLevelCode.REGION | AdmLevelCode.PROVINCE,
+              value,
+              txCtx,
+            );
+            break;
+          case AdmLevelCode.DISTRICT:
+            await districtsDML.updateFieldByIds(
+              currentIds,
+              targetLevel as
+                | AdmLevelCode.DISTRICT
+                | AdmLevelCode.REGION
+                | AdmLevelCode.PROVINCE,
+              value,
+              txCtx,
+            );
+            break;
+          case AdmLevelCode.COMMUNE:
+            await communesDML.updateFieldByIds(
+              currentIds,
+              targetLevel as
+                | AdmLevelCode.COMMUNE
+                | AdmLevelCode.DISTRICT
+                | AdmLevelCode.REGION
+                | AdmLevelCode.PROVINCE,
+              value,
+              txCtx,
+            );
+            break;
+          case AdmLevelCode.FOKONTANY:
+            await fokontanysDML.updateFieldByIds(
+              currentIds,
+              targetLevel as
+                | AdmLevelCode.FOKONTANY
+                | AdmLevelCode.COMMUNE
+                | AdmLevelCode.DISTRICT
+                | AdmLevelCode.REGION
+                | AdmLevelCode.PROVINCE,
+              value,
+              txCtx,
+            );
+            break;
+        }
+
+        parentIds = currentIds;
       }
-      case AdmLevelCode.REGION: {
-        const dml = injectRegionsDML(config, options.dbType, db, {
-          pgSchema: options.pg?.schema,
-        });
-        await dml.updateFieldByAttributes(identifiers, value);
-        break;
-      }
-      case AdmLevelCode.DISTRICT: {
-        const dml = injectDistrictsDML(config, options.dbType, db, {
-          pgSchema: options.pg?.schema,
-        });
-        await dml.updateFieldByAttributes(identifiers, value);
-        break;
-      }
-      case AdmLevelCode.COMMUNE: {
-        const dml = injectCommunesDML(config, options.dbType, db, {
-          pgSchema: options.pg?.schema,
-        });
-        await dml.updateFieldByAttributes(identifiers, value);
-        break;
-      }
-      case AdmLevelCode.FOKONTANY: {
-        const dml = injectFokontanysDML(config, options.dbType, db, {
-          pgSchema: options.pg?.schema,
-        });
-        await dml.updateFieldByAttributes(identifiers, value);
-        break;
-      }
-    }
+    });
 
     console.log(
       `Successfully updated ${identifiers.admLevel} field with identifiers: ${

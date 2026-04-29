@@ -7,7 +7,6 @@ import type {
   DMLCreateManyResult,
   EntityId,
 } from "@scope/types/db";
-import { DbHelper } from "@scope/helpers";
 import type {
   Commune,
   CommuneAttributes,
@@ -69,38 +68,6 @@ export class CommunesPostgresDML extends BaseAdmPostgresTableDML
       mapCommuneSnakeToCamel,
       transactionContext,
     );
-  }
-
-  /**
-   * Updates the commune name of the record identified by the given attributes.
-   *
-   * @param attributes - The unique identifying attributes of the commune.
-   * @param value - The new commune name value to assign.
-   */
-  async updateFieldByAttributes(
-    attributes: CommuneAttributes,
-    value: string,
-    transactionContext?: DbTransactionContext,
-  ): Promise<void> {
-    const tableName = this.getTableName(
-      ADM_LEVEL_TITLE_BY_CODE.get(AdmLevelCode.COMMUNE)! + "s",
-    );
-    const client = DbHelper.ensureIsPostgresDbTransactionCtx(transactionContext)
-      ? transactionContext.tx
-      : this.db.client;
-    const sql = `
-      UPDATE ${tableName}
-      SET commune = $1
-      WHERE LOWER(commune) = LOWER($2)
-        AND LOWER(district) = LOWER($3)
-        AND LOWER(region) = LOWER($4);
-    `;
-    await client.queryObject(sql, [
-      value,
-      attributes.commune,
-      attributes.district,
-      attributes.region,
-    ]);
   }
 
   /**

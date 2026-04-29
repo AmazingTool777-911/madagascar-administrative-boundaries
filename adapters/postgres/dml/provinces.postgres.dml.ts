@@ -4,7 +4,7 @@ import { BaseAdmPostgresTableDML } from "./adm-table.postgres.dml.ts";
 import type {
   DbTransactionContext,
   DMLCreateManyResult,
-  ProvinceAttributes,
+  EntityId,
   ProvinceTableDML,
 } from "@scope/types/db";
 import { DbHelper } from "@scope/helpers";
@@ -48,36 +48,37 @@ export class ProvincesPostgresDML extends BaseAdmPostgresTableDML
   }
 
   /**
-   * Updates the province name of the record identified by the given attributes.
+   * Inserts multiple province records into the database in a single transaction.
    *
-   * @param attributes - The unique identifying attributes of the province.
+   * @param values - An array of province values to insert.
+   * @returns A result object containing the count of inserted rows.
+   */
+
+  /**
+   * Updates the province name of all province records whose IDs belong to the provided set.
+   *
+   * @param ids - The province IDs to target.
    * @param value - The new province name value to assign.
    */
-  async updateFieldByAttributes(
-    attributes: ProvinceAttributes,
+  async updateFieldByIds(
+    ids: EntityId[],
+    fieldCode: AdmLevelCode.PROVINCE,
     value: string,
     transactionContext?: DbTransactionContext,
   ): Promise<void> {
     const tableName = this.getTableName(
       ADM_LEVEL_TITLE_BY_CODE.get(AdmLevelCode.PROVINCE)! + "s",
     );
-    const client = DbHelper.ensureIsPostgresDbTransactionCtx(transactionContext)
-      ? transactionContext.tx
-      : this.db.client;
-    const sql = `
-      UPDATE ${tableName}
-      SET province = $1
-      WHERE LOWER(province) = LOWER($2);
-    `;
-    await client.queryObject(sql, [value, attributes.province]);
+    const column = ADM_LEVEL_TITLE_BY_CODE.get(fieldCode)!;
+    await this._updateFieldByIds(
+      tableName,
+      column,
+      value,
+      ids,
+      transactionContext,
+    );
   }
 
-  /**
-   * Inserts multiple province records into the database in a single transaction.
-   *
-   * @param values - An array of province values to insert.
-   * @returns A result object containing the count of inserted rows.
-   */
   async createMany(values: ProvinceRecord[]): Promise<DMLCreateManyResult> {
     const tableName = this.getTableName(
       ADM_LEVEL_TITLE_BY_CODE.get(AdmLevelCode.PROVINCE)! + "s",

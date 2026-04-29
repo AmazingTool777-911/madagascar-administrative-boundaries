@@ -166,16 +166,6 @@ export interface BaseAdmTableDML {
 }
 
 /**
- * Attributes used to uniquely identify a province.
- */
-export type ProvinceAttributes = { province: string };
-
-/**
- * Attributes used to uniquely identify a region.
- */
-export type RegionAttributes = { region: string };
-
-/**
  * Data Manipulation Layer interface for the provinces table.
  */
 export interface ProvinceTableDML extends BaseAdmTableDML {
@@ -191,13 +181,14 @@ export interface ProvinceTableDML extends BaseAdmTableDML {
   ): MaybePromise<Province[]>;
 
   /**
-   * Updates the province name of the record identified by the given attributes.
+   * Updates the province name of all province records whose IDs belong to the provided set.
    *
-   * @param attributes - The unique identifying attributes of the province.
+   * @param ids - The province IDs to target.
    * @param value - The new province name value to assign.
    */
-  updateFieldByAttributes(
-    attributes: ProvinceAttributes,
+  updateFieldByIds(
+    ids: EntityId[],
+    fieldCode: AdmLevelCode.PROVINCE,
     value: string,
     transactionContext?: DbTransactionContext,
   ): MaybePromise<void>;
@@ -230,18 +221,6 @@ export interface RegionTableDML extends BaseAdmTableDML {
     provinceIds: EntityId[],
     transactionContext?: DbTransactionContext,
   ): MaybePromise<Region[]>;
-
-  /**
-   * Updates the region name of the record identified by the given attributes.
-   *
-   * @param attributes - The unique identifying attributes of the region.
-   * @param value - The new region name value to assign.
-   */
-  updateFieldByAttributes(
-    attributes: RegionAttributes,
-    value: string,
-    transactionContext?: DbTransactionContext,
-  ): MaybePromise<void>;
 
   /**
    * Updates the region name of all region records whose IDs belong to the provided set.
@@ -284,18 +263,6 @@ export interface DistrictTableDML extends BaseAdmTableDML {
     regionIds: EntityId[],
     transactionContext?: DbTransactionContext,
   ): MaybePromise<District[]>;
-
-  /**
-   * Updates the district name of the record identified by the given attributes.
-   *
-   * @param attributes - The unique identifying attributes of the district.
-   * @param value - The new district name value to assign.
-   */
-  updateFieldByAttributes(
-    attributes: DistrictAttributes,
-    value: string,
-    transactionContext?: DbTransactionContext,
-  ): MaybePromise<void>;
 
   /**
    * Updates the district name of all district records whose IDs belong to the provided set.
@@ -343,18 +310,6 @@ export interface CommuneTableDML extends BaseAdmTableDML {
   ): MaybePromise<Commune[]>;
 
   /**
-   * Updates the commune name of the record identified by the given attributes.
-   *
-   * @param attributes - The unique identifying attributes of the commune.
-   * @param value - The new commune name value to assign.
-   */
-  updateFieldByAttributes(
-    attributes: CommuneAttributes,
-    value: string,
-    transactionContext?: DbTransactionContext,
-  ): MaybePromise<void>;
-
-  /**
    * Updates the commune name of all commune records whose IDs belong to the provided set.
    *
    * @param ids - The commune IDs to target.
@@ -379,6 +334,17 @@ export interface CommuneTableDML extends BaseAdmTableDML {
  */
 export interface FokontanyTableDML extends BaseAdmTableDML {
   /**
+   * Retrieves multiple fokontanys by their unique attributes.
+   *
+   * @param attributes - The list of fokontany identifying attributes.
+   * @returns An array of matching fokontany entities.
+   */
+  getManyByAttributes(
+    attributes: FokontanyAttributes[],
+    transactionContext?: DbTransactionContext,
+  ): MaybePromise<Fokontany[]>;
+
+  /**
    * Retrieves multiple fokontanys whose nearest parent commune ID is among the provided set.
    *
    * @param communeIds - The commune IDs to filter by.
@@ -388,18 +354,6 @@ export interface FokontanyTableDML extends BaseAdmTableDML {
     communeIds: EntityId[],
     transactionContext?: DbTransactionContext,
   ): MaybePromise<Fokontany[]>;
-
-  /**
-   * Updates the fokontany name of the record identified by the given attributes.
-   *
-   * @param attributes - The unique identifying attributes of the fokontany.
-   * @param value - The new fokontany name value to assign.
-   */
-  updateFieldByAttributes(
-    attributes: FokontanyAttributes,
-    value: string,
-    transactionContext?: DbTransactionContext,
-  ): MaybePromise<void>;
 
   /**
    * Updates the fokontany name of all fokontany records whose IDs belong to the provided set.

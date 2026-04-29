@@ -8,7 +8,6 @@ import type {
   FokontanyAttributes,
   FokontanyTableDML,
 } from "@scope/types/db";
-import { DbHelper } from "@scope/helpers";
 import type {
   Fokontany,
   FokontanyRecord,
@@ -28,6 +27,24 @@ export class FokontanysPostgresDML extends BaseAdmPostgresTableDML
     schema: string = "public",
   ) {
     super(config, db, schema);
+  }
+
+  async getManyByAttributes(
+    attributes: FokontanyAttributes[],
+    transactionContext?: DbTransactionContext,
+  ): Promise<Fokontany[]> {
+    const tableName = this.getTableName(
+      ADM_LEVEL_TITLE_BY_CODE.get(AdmLevelCode.FOKONTANY)! + "s",
+    );
+
+    return await this._getManyByAttributes<Fokontany, FokontanySnakeCased>(
+      tableName,
+      [`${tableName}.*`],
+      attributes,
+      mapFokontanySnakeToCamel,
+      "fokontany",
+      transactionContext,
+    );
   }
 
   /**
@@ -51,40 +68,6 @@ export class FokontanysPostgresDML extends BaseAdmPostgresTableDML
       mapFokontanySnakeToCamel,
       transactionContext,
     );
-  }
-
-  /**
-   * Updates the fokontany name of the record identified by the given attributes.
-   *
-   * @param attributes - The unique identifying attributes of the fokontany.
-   * @param value - The new fokontany name value to assign.
-   */
-  async updateFieldByAttributes(
-    attributes: FokontanyAttributes,
-    value: string,
-    transactionContext?: DbTransactionContext,
-  ): Promise<void> {
-    const tableName = this.getTableName(
-      ADM_LEVEL_TITLE_BY_CODE.get(AdmLevelCode.FOKONTANY)! + "s",
-    );
-    const client = DbHelper.ensureIsPostgresDbTransactionCtx(transactionContext)
-      ? transactionContext.tx
-      : this.db.client;
-    const sql = `
-      UPDATE ${tableName}
-      SET fokontany = $1
-      WHERE LOWER(fokontany) = LOWER($2)
-        AND LOWER(commune) = LOWER($3)
-        AND LOWER(district) = LOWER($4)
-        AND LOWER(region) = LOWER($5);
-    `;
-    await client.queryObject(sql, [
-      value,
-      attributes.fokontany,
-      attributes.commune,
-      attributes.district,
-      attributes.region,
-    ]);
   }
 
   /**

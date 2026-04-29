@@ -5,7 +5,6 @@ import type {
   DbTransactionContext,
   DMLCreateManyResult,
   EntityId,
-  RegionAttributes,
   RegionTableDML,
 } from "@scope/types/db";
 import { DbHelper } from "@scope/helpers";
@@ -68,31 +67,6 @@ export class RegionsPostgresDML extends BaseAdmPostgresTableDML
       mapRegionSnakeToCamel,
       transactionContext,
     );
-  }
-
-  /**
-   * Updates the region name of the record identified by the given attributes.
-   *
-   * @param attributes - The unique identifying attributes of the region.
-   * @param value - The new region name value to assign.
-   */
-  async updateFieldByAttributes(
-    attributes: RegionAttributes,
-    value: string,
-    transactionContext?: DbTransactionContext,
-  ): Promise<void> {
-    const tableName = this.getTableName(
-      ADM_LEVEL_TITLE_BY_CODE.get(AdmLevelCode.REGION)! + "s",
-    );
-    const client = DbHelper.ensureIsPostgresDbTransactionCtx(transactionContext)
-      ? transactionContext.tx
-      : this.db.client;
-    const sql = `
-      UPDATE ${tableName}
-      SET region = $1
-      WHERE LOWER(region) = LOWER($2);
-    `;
-    await client.queryObject(sql, [value, attributes.region]);
   }
 
   /**
