@@ -1,7 +1,20 @@
 import { ADM_LEVEL_TITLE_BY_CODE, AdmLevelCode } from "@scope/consts/models";
+import { mapFokontanySnakeToCamel } from "@scope/helpers/models";
 import { BaseAdmPostgresTableDML } from "./adm-table.postgres.dml.ts";
-import type { DMLCreateManyResult, FokontanyTableDML } from "@scope/types/db";
-import type { FokontanyRecord, MadaAdmConfigValues } from "@scope/types/models";
+import type {
+  DbTransactionContext,
+  DMLCreateManyResult,
+  DMLUpdateResult,
+  EntityId,
+  FokontanyAttributes,
+  FokontanyTableDML,
+} from "@scope/types/db";
+import type {
+  Fokontany,
+  FokontanyRecord,
+  FokontanySnakeCased,
+  MadaAdmConfigValues,
+} from "@scope/types/models";
 import type { PostgresDbConnection } from "../postgres-db.connection.ts";
 
 /**
@@ -15,6 +28,77 @@ export class FokontanysPostgresDML extends BaseAdmPostgresTableDML
     schema: string = "public",
   ) {
     super(config, db, schema);
+  }
+
+  async getManyByAttributes(
+    attributes: FokontanyAttributes[],
+    transactionContext?: DbTransactionContext,
+  ): Promise<Fokontany[]> {
+    const tableName = this.getTableName(
+      ADM_LEVEL_TITLE_BY_CODE.get(AdmLevelCode.FOKONTANY)! + "s",
+    );
+
+    return await this._getManyByAttributes<Fokontany, FokontanySnakeCased>(
+      tableName,
+      [`${tableName}.*`],
+      attributes,
+      mapFokontanySnakeToCamel,
+      "fokontany",
+      transactionContext,
+    );
+  }
+
+  /**
+   * Retrieves multiple fokontanys whose nearest parent commune ID is among the provided set.
+   *
+   * @param communeIds - The commune IDs to filter by.
+   * @returns An array of matching fokontany entities.
+   */
+  async getManyByCommuneIds(
+    communeIds: EntityId[],
+    transactionContext?: DbTransactionContext,
+  ): Promise<Fokontany[]> {
+    const tableName = this.getTableName(
+      ADM_LEVEL_TITLE_BY_CODE.get(AdmLevelCode.FOKONTANY)! + "s",
+    );
+    return await this._getManyByParentId<Fokontany, FokontanySnakeCased>(
+      tableName,
+      [`${tableName}.*`],
+      "commune_id",
+      communeIds,
+      mapFokontanySnakeToCamel,
+      transactionContext,
+    );
+  }
+
+  /**
+   * Updates the fokontany name of all fokontany records whose IDs belong to the provided set.
+   *
+   * @param ids - The fokontany IDs to target.
+   * @param value - The new fokontany name value to assign.
+   */
+  async updateFieldByIds(
+    ids: EntityId[],
+    fieldCode:
+      | AdmLevelCode.FOKONTANY
+      | AdmLevelCode.COMMUNE
+      | AdmLevelCode.DISTRICT
+      | AdmLevelCode.REGION
+      | AdmLevelCode.PROVINCE,
+    value: string,
+    transactionContext?: DbTransactionContext,
+  ): Promise<DMLUpdateResult> {
+    const tableName = this.getTableName(
+      ADM_LEVEL_TITLE_BY_CODE.get(AdmLevelCode.FOKONTANY)! + "s",
+    );
+    const column = ADM_LEVEL_TITLE_BY_CODE.get(fieldCode)!;
+    return await this._updateFieldByIds(
+      tableName,
+      column,
+      value,
+      ids,
+      transactionContext,
+    );
   }
 
   /**

@@ -81,7 +81,7 @@ export type CliConfig = {
   /** The target database type. */
   dbType: DbType;
   /** Whether to enable debug logging across the pipeline. */
-  debug: boolean;
+  cliDebug: boolean;
   /** Configuration specific to PostgreSQL. */
   pg: PostgresDbConnectionCliConfig;
   /** Whether to skip the Redis connection. Defaults to false. */
@@ -127,8 +127,6 @@ export type CliConfig = {
   pgCaCertFile?: string;
   /** Environment variable mapped for --pg.ca-cert-path. */
   pgCaCertPath?: string;
-  /** Environment variable mapped for --disable-redis. */
-  disableRedisEnv?: boolean;
   /** Environment variable mapped for --redis.url. */
   redisUrl?: string;
   /** Environment variable mapped for --redis.host. */
@@ -161,7 +159,7 @@ export type CliConfig = {
  * Subset of CliConfig representing the globally resolved configuration,
  * available to all commands including subcommands.
  */
-export type GlobalCliConfig = Pick<CliConfig, "dbType" | "pg" | "debug">;
+export type GlobalCliConfig = Pick<CliConfig, "dbType" | "pg" | "cliDebug">;
 
 /**
  * A comprehensive configuration object encompassing all possible connection values
@@ -169,10 +167,76 @@ export type GlobalCliConfig = Pick<CliConfig, "dbType" | "pg" | "debug">;
  */
 export type DbConnectionCliConfig = Pick<CliConfig, "dbType" | "pg">;
 
+export type IndexActionCliConfig =
+  & GlobalCliConfig
+  & Pick<
+    CliConfig,
+    | "redis"
+    | "disableRedis"
+    | "inMemoryInsertHwm"
+    | "inMemoryProcessingHwm"
+    | "workerHealthcheckInterval"
+    | "xreadBlockDuration"
+    | "workerPendingMinDurationThreshold"
+    | "processingWorkersCount"
+    | "queueBatchSize"
+    | "queueMaxRetries"
+  >;
+
 /**
  * Extra options passed to database DDL injectors.
  */
-export interface DbDDLExtraOptionsCliConfig {
+export type DbDDLExtraOptionsCliConfig = {
   /** The PostgreSQL schema to use for the table. */
   pgSchema: string;
-}
+};
+
+export type UpdateFieldCliConfig = {
+  value: string;
+  province?: string;
+  region?: string;
+  district?: {
+    value?: string;
+    region?: string;
+  };
+  commune?: {
+    value?: string;
+    district?: string;
+    region?: string;
+  };
+  fokontany?: {
+    value?: string;
+    commune?: string;
+    district?: string;
+    region?: string;
+  };
+};
+
+export type UpdateFieldIdentifiersCliConfig = Pick<
+  UpdateFieldCliConfig,
+  "province" | "region" | "district" | "commune" | "fokontany"
+>;
+
+/**
+ * @deprecated Use UpdateFieldCliConfig instead.
+ */
+export type UpdateFieldCliConfigV1 = {
+  value: string;
+  province?: string;
+  region?: string;
+  district?: {
+    value: string;
+    region: string;
+  };
+  commune?: {
+    value: string;
+    district: string;
+    region: string;
+  };
+  fokontany?: {
+    value: string;
+    commune: string;
+    district: string;
+    region: string;
+  };
+};

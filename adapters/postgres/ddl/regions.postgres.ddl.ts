@@ -1,3 +1,4 @@
+import { DbHelper } from "@scope/helpers";
 import { ADM_LEVEL_TITLE_BY_CODE, AdmLevelCode } from "@scope/consts/models";
 import { BaseAdmTableDDL } from "@scope/db";
 import type { MadaAdmConfigValues } from "@scope/types/models";
@@ -45,7 +46,7 @@ export class RegionsPostgresDDL extends BaseAdmTableDDL {
         CONSTRAINT fk_region_province FOREIGN KEY (province_id) REFERENCES ${this.schema}.${provincesTable}(id) ON DELETE CASCADE
       );
     `;
-    const client = this.ensureIsPostgresDbTransactionCtx(transactionContext)
+    const client = DbHelper.ensureIsPostgresDbTransactionCtx(transactionContext)
       ? (transactionContext?.tx ?? this.db.client)
       : this.db.client;
     await client.queryObject(query);
@@ -61,7 +62,7 @@ export class RegionsPostgresDDL extends BaseAdmTableDDL {
 
   async drop(transactionContext?: DbTransactionContext): Promise<void> {
     const query = `DROP TABLE IF EXISTS ${this.schema}.${this.tableName};`;
-    const client = this.ensureIsPostgresDbTransactionCtx(transactionContext)
+    const client = DbHelper.ensureIsPostgresDbTransactionCtx(transactionContext)
       ? (transactionContext?.tx ?? this.db.client)
       : this.db.client;
     await client.queryObject(query);
@@ -80,7 +81,7 @@ export class RegionsPostgresDDL extends BaseAdmTableDDL {
          AND    tablename  = '${this.tableName}'
       );
     `;
-    const client = this.ensureIsPostgresDbTransactionCtx(transactionContext)
+    const client = DbHelper.ensureIsPostgresDbTransactionCtx(transactionContext)
       ? (transactionContext?.tx ?? this.db.client)
       : this.db.client;
     const result = await client.queryObject<{ exists: boolean }>(query);

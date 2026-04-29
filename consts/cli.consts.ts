@@ -3,7 +3,7 @@ import { DbType } from "./db.consts.ts";
 /**
  * Contains the name, version and description of the CLI.
  */
-export const CLI_NAME: string = "madm";
+export const CLI_NAME: string = "mada-adm";
 
 /**
  * The version of the CLI.
@@ -121,3 +121,32 @@ export const XREAD_BLOCK_DURATION_DESCRIPTION: string =
 
 export const PROCESSING_WORKERS_COUNT_DESCRIPTION: string =
   "Number of concurrent processing workers to spawn per ADM level.";
+
+// Update field command
+
+export const UPDATE_FIELD_COMMAND_NAME = "update-field";
+
+export const UPDATE_FIELD_COMMAND_DESCRIPTION =
+  "Updates the field of an ADM record in the database.";
+
+export const UPDATE_FIELD_COMMAND_ARGUMENTS_DESCRIPTIONS = {
+  ADM_LEVEL: "The ADM level of the record.",
+  FIELD: "The field to update.",
+};
+
+export const UPDATE_FIELD_COMMAND_OPTIONS_DESCRIPTIONS = {
+  PROVINCE: "The name of the province.",
+  REGION: "The name of the region.",
+  DISTRICT: "The name of the district.",
+  DISTRICT_REGION: "The name of the region of the district.",
+  COMMUNE: "The name of the commune.",
+  COMMUNE_DISTRICT: "The name of the district of the commune.",
+  COMMUNE_REGION: "The name of the region of the commune.",
+  FOKONTANY: "The name of the fokontany.",
+  FOKONTANY_COMMUNE: "The name of the commune of the fokontany.",
+  FOKONTANY_DISTRICT: "The name of the district of the fokontany.",
+  FOKONTANY_REGION: "The name of the region of the fokontany.",
+};
+
+export const UPDATE_FIELD_COMMAND_VALUE_OPTION_DESCRIPTION =
+  "The value to set for the field.";

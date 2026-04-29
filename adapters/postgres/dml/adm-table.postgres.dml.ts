@@ -2,7 +2,12 @@ import { StringUtils } from "@scope/utils";
 import type { MadaAdmConfigValues } from "@scope/types/models";
 import type { PostgresDbConnection } from "../postgres-db.connection.ts";
 import type { AdmEntity } from "@scope/types/models";
-import type { DMLCreateManyResult } from "@scope/types/db";
+import type {
+  DbTransactionContext,
+  DMLCreateManyResult,
+  DMLUpdateResult,
+} from "@scope/types/db";
+import { DbHelper } from "@scope/helpers";
 
 /**
  * Abstract base class for ADM Data Manipulation Layer (DML) implementations
@@ -36,8 +41,12 @@ export abstract class BaseAdmPostgresTableDML {
     attributesValues: Record<string, string>[],
     mapper: (record: R) => T,
     lowercaseAttribute?: string,
+    transactionContext?: DbTransactionContext,
   ): Promise<T[]> {
     if (attributesValues.length === 0) return [];
+    const client = DbHelper.ensureIsPostgresDbTransactionCtx(transactionContext)
+      ? transactionContext.tx
+      : this.db.client;
     const attributes = Object.keys(attributesValues[0]);
     const sql = `
       SELECT t.*
@@ -62,7 +71,7 @@ export abstract class BaseAdmPostgresTableDML {
     }
       ) AS t;
     `;
-    const result = await this.db.client.queryObject<R>(sql, [
+    const result = await client.queryObject<R>(sql, [
       attributesValues.map((v) => JSON.stringify(v)),
     ]);
     return result.rows.map(mapper);
@@ -141,5 +150,66 @@ export abstract class BaseAdmPostgresTableDML {
       );
     `;
     await this.db.client.queryObject(sql);
+  }
+
+  /**
+   * Fetches all rows from `tableName` whose `parentIdColumn` value appears
+   * in `parentIds`, mapping each result row with the supplied `mapper`.
+   *
+   * @param tableName - The fully qualified table name to query.
+   * @param selectedColumns - The columns to include in the SELECT list.
+   * @param parentIdColumn - The FK column name to filter on.
+   * @param parentIds - The set of parent IDs to match.
+   * @param mapper - Converts a raw snake-cased row to its camel-cased entity.
+   * @returns An array of mapped entities.
+   */
+  protected async _getManyByParentId<T, R>(
+    tableName: string,
+    selectedColumns: string[],
+    parentIdColumn: string,
+    parentIds: unknown[],
+    mapper: (record: R) => T,
+    transactionContext?: DbTransactionContext,
+  ): Promise<T[]> {
+    if (parentIds.length === 0) return [];
+    const client = DbHelper.ensureIsPostgresDbTransactionCtx(transactionContext)
+      ? transactionContext.tx
+      : this.db.client;
+    const sql = `
+      SELECT ${selectedColumns.join(", ")}
+      FROM ${tableName}
+      WHERE ${parentIdColumn} = ANY($1);
+    `;
+    const result = await client.queryObject<R>(sql, [parentIds]);
+    return result.rows.map(mapper);
+  }
+
+  /**
+   * Updates the column `column` to `value` on every row in `tableName`
+   * whose `id` appears in `ids`.
+   *
+   * @param tableName - The fully qualified table name to update.
+   * @param column - The column to set.
+   * @param value - The new value for the column.
+   * @param ids - The set of row IDs to target.
+   */
+  protected async _updateFieldByIds(
+    tableName: string,
+    column: string,
+    value: string,
+    ids: unknown[],
+    transactionContext?: DbTransactionContext,
+  ): Promise<DMLUpdateResult> {
+    if (ids.length === 0) return { affectedRows: 0 };
+    const client = DbHelper.ensureIsPostgresDbTransactionCtx(transactionContext)
+      ? transactionContext.tx
+      : this.db.client;
+    const sql = `
+      UPDATE ${tableName}
+      SET ${column} = $1
+      WHERE id = ANY($2);
+    `;
+    const result = await client.queryObject(sql, [value, ids]);
+    return { affectedRows: result.rowCount ?? 0 };
   }
 }

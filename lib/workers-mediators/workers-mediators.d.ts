@@ -126,7 +126,9 @@ export interface QueueWorkersMediator<
   /**
    * Retrieves the count of messages that have been pulled (dequeued) so far.
    */
-  get pulledMessagesCount(): MaybePromise<{ processed: number; inserted: number }>;
+  get pulledMessagesCount(): MaybePromise<
+    { processed: number; inserted: number }
+  >;
 }
 
 export interface QueueWorkerLifecycle<

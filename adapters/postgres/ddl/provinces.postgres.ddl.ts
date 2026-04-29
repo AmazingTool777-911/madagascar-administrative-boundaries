@@ -1,3 +1,4 @@
+import { DbHelper } from "@scope/helpers";
 import { ADM_LEVEL_TITLE_BY_CODE, AdmLevelCode } from "@scope/consts/models";
 import { BaseAdmTableDDL } from "@scope/db";
 import type { MadaAdmConfigValues } from "@scope/types/models";
@@ -57,7 +58,7 @@ export class ProvincesPostgresDDL extends BaseAdmTableDDL {
         updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
       );
     `;
-    const client = this.ensureIsPostgresDbTransactionCtx(transactionContext)
+    const client = DbHelper.ensureIsPostgresDbTransactionCtx(transactionContext)
       ? (transactionContext?.tx ?? this.db.client)
       : this.db.client;
     await client.queryObject(query);
@@ -76,7 +77,7 @@ export class ProvincesPostgresDDL extends BaseAdmTableDDL {
    */
   async drop(transactionContext?: DbTransactionContext): Promise<void> {
     const query = `DROP TABLE IF EXISTS ${this.schema}.${this.tableName};`;
-    const client = this.ensureIsPostgresDbTransactionCtx(transactionContext)
+    const client = DbHelper.ensureIsPostgresDbTransactionCtx(transactionContext)
       ? (transactionContext?.tx ?? this.db.client)
       : this.db.client;
     await client.queryObject(query);
@@ -95,7 +96,7 @@ export class ProvincesPostgresDDL extends BaseAdmTableDDL {
          AND    tablename  = '${this.tableName}'
       );
     `;
-    const client = this.ensureIsPostgresDbTransactionCtx(transactionContext)
+    const client = DbHelper.ensureIsPostgresDbTransactionCtx(transactionContext)
       ? (transactionContext?.tx ?? this.db.client)
       : this.db.client;
     const result = await client.queryObject<{ exists: boolean }>(query);

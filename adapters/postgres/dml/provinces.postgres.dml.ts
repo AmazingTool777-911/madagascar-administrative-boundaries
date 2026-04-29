@@ -1,7 +1,14 @@
 import { ADM_LEVEL_TITLE_BY_CODE, AdmLevelCode } from "@scope/consts/models";
 import { mapProvinceSnakeToCamel } from "@scope/helpers/models";
 import { BaseAdmPostgresTableDML } from "./adm-table.postgres.dml.ts";
-import type { DMLCreateManyResult, ProvinceTableDML } from "@scope/types/db";
+import type {
+  DbTransactionContext,
+  DMLCreateManyResult,
+  DMLUpdateResult,
+  EntityId,
+  ProvinceTableDML,
+} from "@scope/types/db";
+import { DbHelper } from "@scope/helpers";
 import type {
   MadaAdmConfigValues,
   Province,
@@ -23,12 +30,18 @@ export class ProvincesPostgresDML extends BaseAdmPostgresTableDML
     super(config, db, schema);
   }
 
-  async getManyByNames(names: string[]): Promise<Province[]> {
+  async getManyByNames(
+    names: string[],
+    transactionContext?: DbTransactionContext,
+  ): Promise<Province[]> {
     const tableName = this.getTableName(
       ADM_LEVEL_TITLE_BY_CODE.get(AdmLevelCode.PROVINCE)! + "s",
     );
+    const client = DbHelper.ensureIsPostgresDbTransactionCtx(transactionContext)
+      ? transactionContext.tx
+      : this.db.client;
     const query = `SELECT * FROM ${tableName} WHERE LOWER(province) = ANY($1)`;
-    const result = await this.db.client.queryObject<ProvinceSnakedCased>(
+    const result = await client.queryObject<ProvinceSnakedCased>(
       query,
       [names.map((n) => n.toLowerCase())],
     );
@@ -41,6 +54,32 @@ export class ProvincesPostgresDML extends BaseAdmPostgresTableDML
    * @param values - An array of province values to insert.
    * @returns A result object containing the count of inserted rows.
    */
+
+  /**
+   * Updates the province name of all province records whose IDs belong to the provided set.
+   *
+   * @param ids - The province IDs to target.
+   * @param value - The new province name value to assign.
+   */
+  async updateFieldByIds(
+    ids: EntityId[],
+    fieldCode: AdmLevelCode.PROVINCE,
+    value: string,
+    transactionContext?: DbTransactionContext,
+  ): Promise<DMLUpdateResult> {
+    const tableName = this.getTableName(
+      ADM_LEVEL_TITLE_BY_CODE.get(AdmLevelCode.PROVINCE)! + "s",
+    );
+    const column = ADM_LEVEL_TITLE_BY_CODE.get(fieldCode)!;
+    return await this._updateFieldByIds(
+      tableName,
+      column,
+      value,
+      ids,
+      transactionContext,
+    );
+  }
+
   async createMany(values: ProvinceRecord[]): Promise<DMLCreateManyResult> {
     const tableName = this.getTableName(
       ADM_LEVEL_TITLE_BY_CODE.get(AdmLevelCode.PROVINCE)! + "s",

@@ -1,7 +1,14 @@
 import { ADM_LEVEL_TITLE_BY_CODE, AdmLevelCode } from "@scope/consts/models";
 import { mapRegionSnakeToCamel } from "@scope/helpers/models";
 import { BaseAdmPostgresTableDML } from "./adm-table.postgres.dml.ts";
-import type { DMLCreateManyResult, RegionTableDML } from "@scope/types/db";
+import type {
+  DbTransactionContext,
+  DMLCreateManyResult,
+  DMLUpdateResult,
+  EntityId,
+  RegionTableDML,
+} from "@scope/types/db";
+import { DbHelper } from "@scope/helpers";
 import type {
   MadaAdmConfigValues,
   Region,
@@ -23,15 +30,69 @@ export class RegionsPostgresDML extends BaseAdmPostgresTableDML
     super(config, db, schema);
   }
 
-  async getManyByNames(names: string[]): Promise<Region[]> {
+  async getManyByNames(
+    names: string[],
+    transactionContext?: DbTransactionContext,
+  ): Promise<Region[]> {
     const tableName = this.getTableName(
       ADM_LEVEL_TITLE_BY_CODE.get(AdmLevelCode.REGION)! + "s",
     );
+    const client = DbHelper.ensureIsPostgresDbTransactionCtx(transactionContext)
+      ? transactionContext.tx
+      : this.db.client;
     const query = `SELECT * FROM ${tableName} WHERE LOWER(region) = ANY($1)`;
-    const result = await this.db.client.queryObject<RegionSnakeCased>(query, [
+    const result = await client.queryObject<RegionSnakeCased>(query, [
       names.map((n) => n.toLowerCase()),
     ]);
     return result.rows.map(mapRegionSnakeToCamel);
+  }
+
+  /**
+   * Retrieves multiple regions whose nearest parent province ID is among the provided set.
+   *
+   * @param provinceIds - The province IDs to filter by.
+   * @returns An array of matching region entities.
+   */
+  async getManyByProvinceIds(
+    provinceIds: EntityId[],
+    transactionContext?: DbTransactionContext,
+  ): Promise<Region[]> {
+    const tableName = this.getTableName(
+      ADM_LEVEL_TITLE_BY_CODE.get(AdmLevelCode.REGION)! + "s",
+    );
+    return await this._getManyByParentId<Region, RegionSnakeCased>(
+      tableName,
+      [`${tableName}.*`],
+      "province_id",
+      provinceIds,
+      mapRegionSnakeToCamel,
+      transactionContext,
+    );
+  }
+
+  /**
+   * Updates the region name of all region records whose IDs belong to the provided set.
+   *
+   * @param ids - The region IDs to target.
+   * @param value - The new region name value to assign.
+   */
+  async updateFieldByIds(
+    ids: EntityId[],
+    fieldCode: AdmLevelCode.REGION | AdmLevelCode.PROVINCE,
+    value: string,
+    transactionContext?: DbTransactionContext,
+  ): Promise<DMLUpdateResult> {
+    const tableName = this.getTableName(
+      ADM_LEVEL_TITLE_BY_CODE.get(AdmLevelCode.REGION)! + "s",
+    );
+    const column = ADM_LEVEL_TITLE_BY_CODE.get(fieldCode)!;
+    return await this._updateFieldByIds(
+      tableName,
+      column,
+      value,
+      ids,
+      transactionContext,
+    );
   }
 
   /**

@@ -1,7 +1,13 @@
 import { ADM_LEVEL_TITLE_BY_CODE, AdmLevelCode } from "@scope/consts/models";
 import { mapCommuneSnakeToCamel } from "@scope/helpers/models";
 import { BaseAdmPostgresTableDML } from "./adm-table.postgres.dml.ts";
-import type { CommuneTableDML, DMLCreateManyResult } from "@scope/types/db";
+import type {
+  CommuneTableDML,
+  DbTransactionContext,
+  DMLCreateManyResult,
+  DMLUpdateResult,
+  EntityId,
+} from "@scope/types/db";
 import type {
   Commune,
   CommuneAttributes,
@@ -26,37 +32,71 @@ export class CommunesPostgresDML extends BaseAdmPostgresTableDML
 
   async getManyByAttributes(
     attributes: CommuneAttributes[],
+    transactionContext?: DbTransactionContext,
   ): Promise<Commune[]> {
     const tableName = this.getTableName(
       ADM_LEVEL_TITLE_BY_CODE.get(AdmLevelCode.COMMUNE)! + "s",
     );
 
-    const columns = [
-      `${tableName}.id`,
-      `${tableName}.commune`,
-      `${tableName}.district`,
-      `${tableName}.region`,
-      `${tableName}.district_id`,
-      `${tableName}.created_at`,
-      `${tableName}.updated_at`,
-    ];
-
-    if (this.config.isProvinceRepeated) columns.push(`${tableName}.province`);
-    if (this.config.isFkRepeated || this.config.isProvinceFkRepeated) {
-      columns.push(`${tableName}.province_id`);
-    }
-    if (this.config.isFkRepeated) columns.push(`${tableName}.region_id`);
-    if (this.config.hasAdmLevel) columns.push(`${tableName}.adm_level`);
-    if (this.config.hasGeojson) {
-      columns.push(`ST_AsGeoJSON(${tableName}.geojson) as geojson`);
-    }
-
     return await this._getManyByAttributes<Commune, CommuneSnakeCased>(
       tableName,
-      columns,
+      [`${tableName}.*`],
       attributes,
       mapCommuneSnakeToCamel,
       "commune",
+      transactionContext,
+    );
+  }
+
+  /**
+   * Retrieves multiple communes whose nearest parent district ID is among the provided set.
+   *
+   * @param districtIds - The district IDs to filter by.
+   * @returns An array of matching commune entities.
+   */
+  async getManyByDistrictIds(
+    districtIds: EntityId[],
+    transactionContext?: DbTransactionContext,
+  ): Promise<Commune[]> {
+    const tableName = this.getTableName(
+      ADM_LEVEL_TITLE_BY_CODE.get(AdmLevelCode.COMMUNE)! + "s",
+    );
+    return await this._getManyByParentId<Commune, CommuneSnakeCased>(
+      tableName,
+      [`${tableName}.*`],
+      "district_id",
+      districtIds,
+      mapCommuneSnakeToCamel,
+      transactionContext,
+    );
+  }
+
+  /**
+   * Updates the commune name of all commune records whose IDs belong to the provided set.
+   *
+   * @param ids - The commune IDs to target.
+   * @param value - The new commune name value to assign.
+   */
+  async updateFieldByIds(
+    ids: EntityId[],
+    fieldCode:
+      | AdmLevelCode.COMMUNE
+      | AdmLevelCode.DISTRICT
+      | AdmLevelCode.REGION
+      | AdmLevelCode.PROVINCE,
+    value: string,
+    transactionContext?: DbTransactionContext,
+  ): Promise<DMLUpdateResult> {
+    const tableName = this.getTableName(
+      ADM_LEVEL_TITLE_BY_CODE.get(AdmLevelCode.COMMUNE)! + "s",
+    );
+    const column = ADM_LEVEL_TITLE_BY_CODE.get(fieldCode)!;
+    return await this._updateFieldByIds(
+      tableName,
+      column,
+      value,
+      ids,
+      transactionContext,
     );
   }
 

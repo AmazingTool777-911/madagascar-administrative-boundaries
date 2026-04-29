@@ -1,12 +1,7 @@
 import type { MaybePromise } from "@scope/types/utils";
-import type {
-  DbTransactionContext,
-  PostgresTransactionContext,
-  TableDDL,
-} from "@scope/types/db";
+import type { DbTransactionContext, TableDDL } from "@scope/types/db";
 import type { MadaAdmConfigValues } from "@scope/types/models";
 import { StringUtils } from "@scope/utils";
-import { DbType } from "@scope/consts/db";
 
 /**
  * Abstract base class for all administrative table DDL implementations.
@@ -66,27 +61,5 @@ export abstract class BaseAdmTableDDL implements TableDDL {
     return format === "snake"
       ? StringUtils.prefixWithSnakeCase(this.config.tablesPrefix, baseName)
       : StringUtils.prefixWithCamelCase(this.config.tablesPrefix, baseName);
-  }
-
-  /**
-   * Ensures the given transaction context is a PostgresTransactionContext.
-   * Throws an error if the context is present but has a different database type.
-   *
-   * @param transactionContext - The database transaction context to validate.
-   * @returns True if the transaction context is a PostgresTransactionContext.
-   * @throws Error if the transaction context exists but is not for a Postgres database.
-   */
-  protected ensureIsPostgresDbTransactionCtx(
-    transactionContext?: DbTransactionContext,
-  ): transactionContext is PostgresTransactionContext {
-    if (transactionContext) {
-      if (transactionContext.dbType !== DbType.Postgres) {
-        throw new Error(
-          `Transaction context type (${transactionContext.dbType}) does not match database type (${DbType.Postgres})`,
-        );
-      }
-      return true;
-    }
-    return false;
   }
 }
