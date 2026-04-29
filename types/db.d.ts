@@ -141,6 +141,14 @@ export interface TableDDL {
 /**
  * Result of a batch insertion operation.
  */
+/**
+ * Result of an update operation.
+ */
+export interface DMLUpdateResult {
+  /** The number of rows affected by the update. */
+  affectedRows: number;
+}
+
 export interface DMLCreateManyResult {
   /** The number of rows successfully inserted. */
   insertedCount: number;
@@ -191,7 +199,7 @@ export interface ProvinceTableDML extends BaseAdmTableDML {
     fieldCode: AdmLevelCode.PROVINCE,
     value: string,
     transactionContext?: DbTransactionContext,
-  ): MaybePromise<void>;
+  ): MaybePromise<DMLUpdateResult>;
 
   createMany(values: ProvinceRecord[]): MaybePromise<DMLCreateManyResult>;
 }
@@ -233,7 +241,7 @@ export interface RegionTableDML extends BaseAdmTableDML {
     fieldCode: AdmLevelCode.REGION | AdmLevelCode.PROVINCE,
     value: string,
     transactionContext?: DbTransactionContext,
-  ): MaybePromise<void>;
+  ): MaybePromise<DMLUpdateResult>;
 
   createMany(values: RegionRecord[]): MaybePromise<DMLCreateManyResult>;
 }
@@ -278,7 +286,7 @@ export interface DistrictTableDML extends BaseAdmTableDML {
       | AdmLevelCode.PROVINCE,
     value: string,
     transactionContext?: DbTransactionContext,
-  ): MaybePromise<void>;
+  ): MaybePromise<DMLUpdateResult>;
 
   createMany(values: DistrictRecord[]): MaybePromise<DMLCreateManyResult>;
 }
@@ -324,7 +332,7 @@ export interface CommuneTableDML extends BaseAdmTableDML {
       | AdmLevelCode.PROVINCE,
     value: string,
     transactionContext?: DbTransactionContext,
-  ): MaybePromise<void>;
+  ): MaybePromise<DMLUpdateResult>;
 
   createMany(values: CommuneRecord[]): MaybePromise<DMLCreateManyResult>;
 }
@@ -371,7 +379,7 @@ export interface FokontanyTableDML extends BaseAdmTableDML {
       | AdmLevelCode.PROVINCE,
     value: string,
     transactionContext?: DbTransactionContext,
-  ): MaybePromise<void>;
+  ): MaybePromise<DMLUpdateResult>;
 
   createMany(values: FokontanyRecord[]): MaybePromise<DMLCreateManyResult>;
 }

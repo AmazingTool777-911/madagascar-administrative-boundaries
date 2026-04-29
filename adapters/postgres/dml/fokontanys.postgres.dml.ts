@@ -4,6 +4,7 @@ import { BaseAdmPostgresTableDML } from "./adm-table.postgres.dml.ts";
 import type {
   DbTransactionContext,
   DMLCreateManyResult,
+  DMLUpdateResult,
   EntityId,
   FokontanyAttributes,
   FokontanyTableDML,
@@ -86,12 +87,12 @@ export class FokontanysPostgresDML extends BaseAdmPostgresTableDML
       | AdmLevelCode.PROVINCE,
     value: string,
     transactionContext?: DbTransactionContext,
-  ): Promise<void> {
+  ): Promise<DMLUpdateResult> {
     const tableName = this.getTableName(
       ADM_LEVEL_TITLE_BY_CODE.get(AdmLevelCode.FOKONTANY)! + "s",
     );
     const column = ADM_LEVEL_TITLE_BY_CODE.get(fieldCode)!;
-    await this._updateFieldByIds(
+    return await this._updateFieldByIds(
       tableName,
       column,
       value,

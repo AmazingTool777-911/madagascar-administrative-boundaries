@@ -4,6 +4,7 @@ import { BaseAdmPostgresTableDML } from "./adm-table.postgres.dml.ts";
 import type {
   DbTransactionContext,
   DMLCreateManyResult,
+  DMLUpdateResult,
   EntityId,
   ProvinceTableDML,
 } from "@scope/types/db";
@@ -65,12 +66,12 @@ export class ProvincesPostgresDML extends BaseAdmPostgresTableDML
     fieldCode: AdmLevelCode.PROVINCE,
     value: string,
     transactionContext?: DbTransactionContext,
-  ): Promise<void> {
+  ): Promise<DMLUpdateResult> {
     const tableName = this.getTableName(
       ADM_LEVEL_TITLE_BY_CODE.get(AdmLevelCode.PROVINCE)! + "s",
     );
     const column = ADM_LEVEL_TITLE_BY_CODE.get(fieldCode)!;
-    await this._updateFieldByIds(
+    return await this._updateFieldByIds(
       tableName,
       column,
       value,

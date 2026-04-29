@@ -5,6 +5,7 @@ import type { AdmEntity } from "@scope/types/models";
 import type {
   DbTransactionContext,
   DMLCreateManyResult,
+  DMLUpdateResult,
 } from "@scope/types/db";
 import { DbHelper } from "@scope/helpers";
 
@@ -198,8 +199,8 @@ export abstract class BaseAdmPostgresTableDML {
     value: string,
     ids: unknown[],
     transactionContext?: DbTransactionContext,
-  ): Promise<void> {
-    if (ids.length === 0) return;
+  ): Promise<DMLUpdateResult> {
+    if (ids.length === 0) return { affectedRows: 0 };
     const client = DbHelper.ensureIsPostgresDbTransactionCtx(transactionContext)
       ? transactionContext.tx
       : this.db.client;
@@ -208,6 +209,7 @@ export abstract class BaseAdmPostgresTableDML {
       SET ${column} = $1
       WHERE id = ANY($2);
     `;
-    await client.queryObject(sql, [value, ids]);
+    const result = await client.queryObject(sql, [value, ids]);
+    return { affectedRows: result.rowCount ?? 0 };
   }
 }
