@@ -71,6 +71,15 @@ The core CLI command for seeding administrative data into the database. It
 features a resumable, fault-tolerant architecture with real-time terminal
 progress visualization.
 
+> **Note:** Resumable jobs are only supported when Redis is enabled. If the job
+> is executed entirely in-memory (e.g., when Redis is disabled), the job will
+> restart from scratch every time it is interrupted.
+>
+> **Warning:** When resuming a previously interrupted job, you must ensure that
+> the input data has not been modified since the job was last interrupted.
+> Resuming with modified input data will result in an inconsistent database
+> state.
+
 **Command-Scoped Options / Env Variables** These options control the job
 orchestration (Redis or In-Memory queues) specifically for the seeding pipeline.
 All options are optional.

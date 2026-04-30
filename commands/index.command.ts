@@ -880,6 +880,11 @@ export class CliIndexCommand extends Command<GlobalCliConfig, void> {
             "\nℹ️  Found previous job context.\nYou can choose to resume with it or clear it and restart fresh.",
           ),
         );
+        console.log(
+          colors.yellow(
+            "⚠️  WARNING: If you choose to resume, ensure that the input data has not been modified since the job was last interrupted.\nResuming with modified input data will result in an inconsistent database state.",
+          ),
+        );
         const resume = await Confirm.prompt({
           message: "Would you like to resume with the previous job context?",
           default: false,
