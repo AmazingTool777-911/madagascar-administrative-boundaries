@@ -14,12 +14,64 @@ seeding.
 ## Table of Contents
 
 - [Overview](#overview)
+- [Getting Started](#getting-started)
 - [Project Structure & Content](#project-structure--content)
 - [CLI Commands & Usage](#cli-commands--usage)
   - [Global Options & Environment Variables](#global-options--environment-variables)
   - [Commands](#commands)
 - [Current Status](#current-status)
 - [Tech Stack](#tech-stack)
+
+## Getting Started
+
+Follow these steps to set up the project locally.
+
+### Prerequisites
+
+1. **Git LFS**: This project uses Git Large File Storage (LFS) to manage the `.ndjson` data files. You **must** install Git LFS before cloning the repository to ensure the data files are properly downloaded.
+   - [Install Git LFS](https://github.com/git-lfs/git-lfs?utm_source=gitlfs_site&utm_medium=installation_link&utm_campaign=gitlfs#installing)
+2. **Deno**: The project is built with Deno. You need to have it installed on your machine.
+   - [Install Deno](https://docs.deno.com/runtime/getting_started/installation/)
+
+### Installation
+
+1. **Clone the repository** (make sure Git LFS is installed first):
+   ```bash
+   git clone <repository-url>
+   cd mada-adm
+   ```
+
+2. **Install dependencies**:
+   Run the following command to install the project dependencies:
+   ```bash
+   deno install
+   ```
+
+### Testing
+
+To ensure everything is set up correctly, you can run the test suite:
+
+```bash
+deno task test
+```
+
+### Building
+
+To build the executable CLI artifacts for different platforms:
+
+```bash
+deno task build
+```
+This command compiles the project into standalone executables and places them in their respective platform-specific target directories (e.g., `bin/x86_64-pc-windows-msvc`, `bin/aarch64-apple-darwin`, `bin/x86_64-unknown-linux-gnu`, etc.).
+
+### Running CLI Tasks
+
+You can run the main CLI task using:
+
+```bash
+deno task cli
+```
+*(See the [CLI Commands & Usage](#cli-commands--usage) section below for more details.)*
 
 ## Project Structure & Content
 
