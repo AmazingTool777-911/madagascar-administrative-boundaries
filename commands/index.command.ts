@@ -654,7 +654,7 @@ export class CliIndexCommand extends Command<GlobalCliConfig, void> {
         );
         console.log(
           colors.yellow(
-            `\nWould you like to update the current Mada ADM configuration ?\nIf yes, the current database will be cleared and reset.`,
+            `\nWould you like to update the current Mada ADM configuration ?`,
           ),
         );
         shouldResetAdmConfig = await Confirm.prompt({
@@ -665,66 +665,78 @@ export class CliIndexCommand extends Command<GlobalCliConfig, void> {
       let activeAdmConfigValues!: MadaAdmConfigValues;
       if (shouldResetAdmConfig) {
         if (prevAdmConfigValues) {
-          provincesDDL = injectProvincesDDL(
-            prevAdmConfigValues,
-            args.dbType,
-            this.#db,
-            {
-              pgSchema: args.pg.schema,
-            },
+          console.log(
+            colors.yellow(
+              `\nWould you like to clear the tables of the previous configuration ?\nIf no, they will be left intact while new tables are created for the new configuration.`,
+            ),
           );
-          regionsDDL = injectRegionsDDL(
-            prevAdmConfigValues,
-            args.dbType,
-            this.#db,
-            {
-              pgSchema: args.pg.schema,
-            },
-          );
-          districtsDDL = injectDistrictsDDL(
-            prevAdmConfigValues,
-            args.dbType,
-            this.#db,
-            {
-              pgSchema: args.pg.schema,
-            },
-          );
-          communesDDL = injectCommunesDDL(
-            prevAdmConfigValues,
-            args.dbType,
-            this.#db,
-            {
-              pgSchema: args.pg.schema,
-            },
-          );
-          fokontanysDDL = injectFokontanysDDL(
-            prevAdmConfigValues,
-            args.dbType,
-            this.#db,
-            {
-              pgSchema: args.pg.schema,
-            },
-          );
-          const admTablesExist = (await Promise.all([
-            regionsDDL.exists(),
-            provincesDDL.exists(),
-            districtsDDL.exists(),
-            communesDDL.exists(),
-            fokontanysDDL.exists(),
-          ])).every((exists) => exists);
-          if (admTablesExist) {
-            const admTablesDDLs = [
-              fokontanysDDL,
-              communesDDL,
-              districtsDDL,
-              regionsDDL,
-              provincesDDL,
-            ];
-            await this.#db.transaction(async (transactionContext) => {
-              for (const admTableDDL of admTablesDDLs) {
-                await admTableDDL.drop(transactionContext);
-              }
-            });
+          const shouldClearPrevTables = await Confirm.prompt({
+            message: "Clear previous configuration tables",
+            default: true,
+          });
+
+          if (shouldClearPrevTables) {
+            provincesDDL = injectProvincesDDL(
+              prevAdmConfigValues,
+              args.dbType,
+              this.#db,
+              {
+                pgSchema: args.pg.schema,
+              },
+            );
+            regionsDDL = injectRegionsDDL(
+              prevAdmConfigValues,
+              args.dbType,
+              this.#db,
+              {
+                pgSchema: args.pg.schema,
+              },
+            );
+            districtsDDL = injectDistrictsDDL(
+              prevAdmConfigValues,
+              args.dbType,
+              this.#db,
+              {
+                pgSchema: args.pg.schema,
+              },
+            );
+            communesDDL = injectCommunesDDL(
+              prevAdmConfigValues,
+              args.dbType,
+              this.#db,
+              {
+                pgSchema: args.pg.schema,
+              },
+            );
+            fokontanysDDL = injectFokontanysDDL(
+              prevAdmConfigValues,
+              args.dbType,
+              this.#db,
+              {
+                pgSchema: args.pg.schema,
+              },
+            );
+            const admTablesExist = (await Promise.all([
+              regionsDDL.exists(),
+              provincesDDL.exists(),
+              districtsDDL.exists(),
+              communesDDL.exists(),
+              fokontanysDDL.exists(),
+            ])).every((exists) => exists);
+            if (admTablesExist) {
+              const admTablesDDLs = [
+                fokontanysDDL,
+                communesDDL,
+                districtsDDL,
+                regionsDDL,
+                provincesDDL,
+              ];
+              await this.#db.transaction(async (transactionContext) => {
+                for (const admTableDDL of admTablesDDLs) {
+                  await admTableDDL.drop(transactionContext);
+                }
+              });
+            }
           }
           resetProvincesDDL(args.dbType);
           resetRegionsDDL(args.dbType);
