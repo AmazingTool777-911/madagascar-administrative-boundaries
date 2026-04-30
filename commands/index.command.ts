@@ -1224,7 +1224,7 @@ export class CliIndexCommand extends Command<GlobalCliConfig, void> {
       console.error(`❌ Fatal Error: ${(error as Error).message}`);
     } finally {
       if (redis) {
-        console.log("🔌 Closing Redis connection...\n");
+        console.log("\n🔌 Closing Redis connection...\n");
         redis.close();
       }
       await this.#db.close();

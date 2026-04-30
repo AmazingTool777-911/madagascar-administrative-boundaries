@@ -4,7 +4,12 @@
     "cli:set-config": "deno -E --env -N -R -W commands/index.ts set-config",
     "cli:update-field": "deno -E --env -N -R -W commands/index.ts update-field",
     "cli:clear": "deno -E --env -N -R -W commands/index.ts clear",
-    "dev": "deno run --watch main.ts",
+    "build:windows:x86_64": "deno compile -E -N -R -W --target x86_64-pc-windows-msvc --output ./bin/x86_64-pc-windows-msvc/mada-adm --include commands/workers commands/index.ts",
+    "build:macos:x86_64": "deno compile -E -N -R -W --target x86_64-apple-darwin --output ./bin/x86_64-apple-darwin/mada-adm --include commands/workers commands/index.ts",
+    "build:macos:arm64": "deno compile -E -N -R -W --target aarch64-apple-darwin --output ./bin/aarch64-apple-darwin/mada-adm --include commands/workers commands/index.ts",
+    "build:linux:x86_64": "deno compile -E -N -R -W --target x86_64-unknown-linux-gnu --output ./bin/x86_64-unknown-linux-gnu/mada-adm --include commands/workers commands/index.ts",
+    "build:linux:arm64": "deno compile -E -N -R -W --target aarch64-unknown-linux-gnu --output ./bin/aarch64-unknown-linux-gnu/mada-adm --include commands/workers commands/index.ts",
+    "build": "deno task build:windows:x86_64 && deno task build:macos:x86_64 && deno task build:macos:arm64 && deno task build:linux:x86_64 && deno task build:linux:arm64",
     "extract-adm-inputs": "deno run --allow-env --allow-net --allow-read --allow-write --env scripts/extract-adm-inputs/extract-adm-inputs.script.ts",
     "test": "deno test -R -E --env"
   },
