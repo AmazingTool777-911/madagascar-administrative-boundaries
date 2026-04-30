@@ -253,7 +253,6 @@ export class InMemoryQueueWorkersMediator<
       insertHwm?: number;
     };
 
-  #isJobEnded = false;
   #pulledMessagesCount = { processed: 0, inserted: 0 };
 
   /**
@@ -320,11 +319,7 @@ export class InMemoryQueueWorkersMediator<
     );
 
     processingJobs.forEach((job) => {
-      job.onJobCompleted = (event) => {
-        this.#pulledMessagesCount.processed +=
-          (event as unknown as TProcessingFinishedPayload[]).length;
-        onProcessingFinished?.(event);
-      };
+      job.onJobCompleted = (event) => onProcessingFinished?.(event);
     });
 
     const messagesReadable = (() => {
@@ -375,15 +370,16 @@ export class InMemoryQueueWorkersMediator<
       let workerIndex = 0;
       return new WritableStream<TMessage[]>(
         {
-          async write(chunk) {
+          write: async (chunk) => {
             const job = processingJobs[workerIndex];
             const writer = job.inputWritableStream.getWriter();
             await writer.ready;
             await writer.write(chunk);
             writer.releaseLock();
             workerIndex = (workerIndex + 1) % processingJobs.length;
+            this.#pulledMessagesCount.processed += chunk.length;
           },
-          async close() {
+          close: async () => {
             for (const job of processingJobs) {
               await job.close();
             }
@@ -410,19 +406,16 @@ export class InMemoryQueueWorkersMediator<
         hwm: this.#options.insertHwm,
         maxRetries,
       });
-      insertJob.onJobCompleted = (event) => {
-        this.#pulledMessagesCount.inserted +=
-          (event as unknown as TInsertFinishedPayload[]).length;
-        onInsertFinished?.(event);
-      };
+      insertJob.onJobCompleted = (event) => onInsertFinished?.(event);
 
       const gathererReadable = new ReadableStream<TProcessingFinishedPayload[]>(
         {
-          async start(controller) {
+          start: async (controller) => {
             await Promise.all(
               processingJobs.map(async (job) => {
                 for await (const batch of job.outputReadableStream) {
                   controller.enqueue(batch);
+                  this.#pulledMessagesCount.inserted += batch.length;
                 }
               }),
             );
@@ -453,8 +446,6 @@ export class InMemoryQueueWorkersMediator<
     ].filter((t): t is Promise<void> => t !== null);
 
     await Promise.all(pendingTasks);
-
-    this.#isJobEnded = true;
   }
 
   /**
@@ -474,18 +465,24 @@ export class InMemoryQueueWorkersMediator<
   }
 
   /**
-   * Clears the queue related data. No-op for the in-memory implementation.
+   * Retrieves the count of messages that have been pulled (dequeued) so far.
+   */
+  get pulledMessagesCount(): { processed: number; inserted: number } {
+    return { ...this.#pulledMessagesCount };
+  }
+
+  /**
+   * Clears the queue related data from previous operations.
    */
   clearQueue(): void {
-    // No-op for in-memory
+    this.#pulledMessagesCount = { processed: 0, inserted: 0 };
   }
 
   /**
    * Clears the persisted data from previous operations.
-   * In-memory implementation does not currently persist data.
    */
   clearPersisted(): void {
-    // No-op
+    this.#pulledMessagesCount = { processed: 0, inserted: 0 };
   }
 
   /**
@@ -493,14 +490,7 @@ export class InMemoryQueueWorkersMediator<
    * In-memory implementation always returns false for fresh runs.
    */
   get isJobEnded(): boolean {
-    return this.#isJobEnded;
-  }
-
-  /**
-   * Retrieves the count of messages that have been pulled (dequeued) so far.
-   */
-  get pulledMessagesCount(): { processed: number; inserted: number } {
-    return this.#pulledMessagesCount;
+    return false;
   }
 }
 

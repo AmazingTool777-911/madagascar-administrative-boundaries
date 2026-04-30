@@ -169,17 +169,17 @@ export class CliIndexCommand extends Command<GlobalCliConfig, void> {
       })
       .globalOption("--pg.port <port:number>", PG_PORT_DESCRIPTION, {
         default: 5432,
-        depends: ["--pg.host"],
+        depends: ["pg.host"],
       })
       .globalOption("--pg.user <username:string>", PG_USER_DESCRIPTION, {
         default: "postgres",
-        depends: ["--pg.host"],
+        depends: ["pg.host"],
       })
       .globalOption(
         "--pg.password <password:string>",
         PG_PASSWORD_DESCRIPTION,
         {
-          depends: ["--pg.user"],
+          depends: ["pg.user"],
           default: "",
         },
       )
@@ -187,19 +187,19 @@ export class CliIndexCommand extends Command<GlobalCliConfig, void> {
         "--pg.database <database:string>",
         PG_DATABASE_DESCRIPTION,
         {
-          depends: ["--pg.user"],
+          depends: ["pg.user"],
           default: "postgres",
         },
       )
       .globalOption("--pg.ssl [ssl:boolean]", PG_SSL_DESCRIPTION, {
         default: false,
-        depends: ["--pg.user"],
+        depends: ["pg.user"],
       })
       .globalOption(
         "--pg.ca-cert-file <filename:string>",
         PG_CA_CERT_FILE_DESCRIPTION,
         {
-          depends: ["--pg.ssl"],
+          depends: ["pg.ssl"],
         },
       )
       .globalOption(
@@ -207,7 +207,7 @@ export class CliIndexCommand extends Command<GlobalCliConfig, void> {
         PG_CA_CERT_PATH_DESCRIPTION,
         {
           conflicts: ["--pg.ca-cert-file"],
-          depends: ["--pg.ssl"],
+          depends: ["pg.ssl"],
         },
       )
       // ── Global env variables ────────────────────────────────────────────
@@ -654,7 +654,7 @@ export class CliIndexCommand extends Command<GlobalCliConfig, void> {
         );
         console.log(
           colors.yellow(
-            `\nWould you like to update the current Mada ADM configuration ?\nIf yes, the current database will be cleared and reset.`,
+            `\nWould you like to update the current Mada ADM configuration ?`,
           ),
         );
         shouldResetAdmConfig = await Confirm.prompt({
@@ -665,66 +665,78 @@ export class CliIndexCommand extends Command<GlobalCliConfig, void> {
       let activeAdmConfigValues!: MadaAdmConfigValues;
       if (shouldResetAdmConfig) {
         if (prevAdmConfigValues) {
-          provincesDDL = injectProvincesDDL(
-            prevAdmConfigValues,
-            args.dbType,
-            this.#db,
-            {
-              pgSchema: args.pg.schema,
-            },
+          console.log(
+            colors.yellow(
+              `\nWould you like to clear the tables of the previous configuration ?\nIf no, they will be left intact while new tables are created for the new configuration.`,
+            ),
           );
-          regionsDDL = injectRegionsDDL(
-            prevAdmConfigValues,
-            args.dbType,
-            this.#db,
-            {
-              pgSchema: args.pg.schema,
-            },
-          );
-          districtsDDL = injectDistrictsDDL(
-            prevAdmConfigValues,
-            args.dbType,
-            this.#db,
-            {
-              pgSchema: args.pg.schema,
-            },
-          );
-          communesDDL = injectCommunesDDL(
-            prevAdmConfigValues,
-            args.dbType,
-            this.#db,
-            {
-              pgSchema: args.pg.schema,
-            },
-          );
-          fokontanysDDL = injectFokontanysDDL(
-            prevAdmConfigValues,
-            args.dbType,
-            this.#db,
-            {
-              pgSchema: args.pg.schema,
-            },
-          );
-          const admTablesExist = (await Promise.all([
-            regionsDDL.exists(),
-            provincesDDL.exists(),
-            districtsDDL.exists(),
-            communesDDL.exists(),
-            fokontanysDDL.exists(),
-          ])).every((exists) => exists);
-          if (admTablesExist) {
-            const admTablesDDLs = [
-              fokontanysDDL,
-              communesDDL,
-              districtsDDL,
-              regionsDDL,
-              provincesDDL,
-            ];
-            await this.#db.transaction(async (transactionContext) => {
-              for (const admTableDDL of admTablesDDLs) {
-                await admTableDDL.drop(transactionContext);
-              }
-            });
+          const shouldClearPrevTables = await Confirm.prompt({
+            message: "Clear previous configuration tables",
+            default: true,
+          });
+
+          if (shouldClearPrevTables) {
+            provincesDDL = injectProvincesDDL(
+              prevAdmConfigValues,
+              args.dbType,
+              this.#db,
+              {
+                pgSchema: args.pg.schema,
+              },
+            );
+            regionsDDL = injectRegionsDDL(
+              prevAdmConfigValues,
+              args.dbType,
+              this.#db,
+              {
+                pgSchema: args.pg.schema,
+              },
+            );
+            districtsDDL = injectDistrictsDDL(
+              prevAdmConfigValues,
+              args.dbType,
+              this.#db,
+              {
+                pgSchema: args.pg.schema,
+              },
+            );
+            communesDDL = injectCommunesDDL(
+              prevAdmConfigValues,
+              args.dbType,
+              this.#db,
+              {
+                pgSchema: args.pg.schema,
+              },
+            );
+            fokontanysDDL = injectFokontanysDDL(
+              prevAdmConfigValues,
+              args.dbType,
+              this.#db,
+              {
+                pgSchema: args.pg.schema,
+              },
+            );
+            const admTablesExist = (await Promise.all([
+              regionsDDL.exists(),
+              provincesDDL.exists(),
+              districtsDDL.exists(),
+              communesDDL.exists(),
+              fokontanysDDL.exists(),
+            ])).every((exists) => exists);
+            if (admTablesExist) {
+              const admTablesDDLs = [
+                fokontanysDDL,
+                communesDDL,
+                districtsDDL,
+                regionsDDL,
+                provincesDDL,
+              ];
+              await this.#db.transaction(async (transactionContext) => {
+                for (const admTableDDL of admTablesDDLs) {
+                  await admTableDDL.drop(transactionContext);
+                }
+              });
+            }
           }
           resetProvincesDDL(args.dbType);
           resetRegionsDDL(args.dbType);
@@ -866,6 +878,11 @@ export class CliIndexCommand extends Command<GlobalCliConfig, void> {
         console.log(
           colors.yellow(
             "\nℹ️  Found previous job context.\nYou can choose to resume with it or clear it and restart fresh.",
+          ),
+        );
+        console.log(
+          colors.yellow(
+            "⚠️  WARNING: If you choose to resume, ensure that the input data has not been modified since the job was last interrupted.\nResuming with modified input data will result in an inconsistent database state.",
           ),
         );
         const resume = await Confirm.prompt({
@@ -1207,7 +1224,7 @@ export class CliIndexCommand extends Command<GlobalCliConfig, void> {
       console.error(`❌ Fatal Error: ${(error as Error).message}`);
     } finally {
       if (redis) {
-        console.log("🔌 Closing Redis connection...\n");
+        console.log("\n🔌 Closing Redis connection...\n");
         redis.close();
       }
       await this.#db.close();

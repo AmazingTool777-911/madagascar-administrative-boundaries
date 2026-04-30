@@ -167,3 +167,10 @@ export const SET_CONFIG_COMMAND_NAME = "set-config";
 
 export const SET_CONFIG_COMMAND_DESCRIPTION =
   "Interactively sets or updates the Mada ADM configuration stored in the database.";
+
+// Clear command
+
+export const CLEAR_COMMAND_NAME = "clear";
+
+export const CLEAR_COMMAND_DESCRIPTION =
+  "Drops all ADM tables and the configuration table from the database.";

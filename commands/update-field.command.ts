@@ -177,7 +177,6 @@ export class CliUpdateFieldCommand extends Command<
       .action(async (options, admLevelTitle, field) => {
         try {
           const admLevel = ADM_LEVEL_CODE_BY_TITLE.get(admLevelTitle)!;
-          const value = await this.resolveValue(options);
           const identifiers = this.enforceAdmLevelIdentifiers(admLevel, {
             province: options.province,
             region: options.region,
@@ -186,6 +185,7 @@ export class CliUpdateFieldCommand extends Command<
             fokontany: options.fokontany,
           });
           if (field === "geojson") {
+            const value = await this.resolveValue(options);
             await this.handleUpdateAdmLevelGeojsonField(
               options,
               identifiers,
@@ -195,7 +195,7 @@ export class CliUpdateFieldCommand extends Command<
             await this.handleUpdateAdmLevelField(
               options,
               identifiers,
-              value,
+              options.value ?? "",
             );
           }
         } catch (error) {
