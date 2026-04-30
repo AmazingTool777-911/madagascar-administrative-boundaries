@@ -169,17 +169,17 @@ export class CliIndexCommand extends Command<GlobalCliConfig, void> {
       })
       .globalOption("--pg.port <port:number>", PG_PORT_DESCRIPTION, {
         default: 5432,
-        depends: ["--pg.host"],
+        depends: ["pg.host"],
       })
       .globalOption("--pg.user <username:string>", PG_USER_DESCRIPTION, {
         default: "postgres",
-        depends: ["--pg.host"],
+        depends: ["pg.host"],
       })
       .globalOption(
         "--pg.password <password:string>",
         PG_PASSWORD_DESCRIPTION,
         {
-          depends: ["--pg.user"],
+          depends: ["pg.user"],
           default: "",
         },
       )
@@ -187,19 +187,19 @@ export class CliIndexCommand extends Command<GlobalCliConfig, void> {
         "--pg.database <database:string>",
         PG_DATABASE_DESCRIPTION,
         {
-          depends: ["--pg.user"],
+          depends: ["pg.user"],
           default: "postgres",
         },
       )
       .globalOption("--pg.ssl [ssl:boolean]", PG_SSL_DESCRIPTION, {
         default: false,
-        depends: ["--pg.user"],
+        depends: ["pg.user"],
       })
       .globalOption(
         "--pg.ca-cert-file <filename:string>",
         PG_CA_CERT_FILE_DESCRIPTION,
         {
-          depends: ["--pg.ssl"],
+          depends: ["pg.ssl"],
         },
       )
       .globalOption(
@@ -207,7 +207,7 @@ export class CliIndexCommand extends Command<GlobalCliConfig, void> {
         PG_CA_CERT_PATH_DESCRIPTION,
         {
           conflicts: ["--pg.ca-cert-file"],
-          depends: ["--pg.ssl"],
+          depends: ["pg.ssl"],
         },
       )
       // ── Global env variables ────────────────────────────────────────────
