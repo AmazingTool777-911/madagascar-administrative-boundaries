@@ -19,3 +19,13 @@ export const DB_CA_CERTIFICATES_DIR: string = "db/.ca-certificates";
  * Redis connections.
  */
 export const REDIS_CA_CERTIFICATES_DIR: string = "redis/.ca-certificates";
+
+/**
+ * Directory under `db/` where SQLite database files are stored.
+ */
+export const SQLITE_DB_DIR: string = "db/.sqlite";
+
+/**
+ * Default file name of the SQLite database file.
+ */
+export const SQLITE_DB_DEFAULT_FILE: string = "mada-adm.db";

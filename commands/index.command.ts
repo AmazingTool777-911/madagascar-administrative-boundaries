@@ -42,15 +42,22 @@ import {
   REDIS_SSL_DESCRIPTION,
   REDIS_URL_DESCRIPTION,
   REDIS_USERNAME_DESCRIPTION,
+  SQLITE_DB_FILE_DESCRIPTION,
+  SQLITE_DB_PATH_DESCRIPTION,
   WORKER_HEALTHCHECK_INTERVAL_DESCRIPTION,
   WORKER_PENDING_MIN_DURATION_THRESHOLD_DESCRIPTION,
   XREAD_BLOCK_DURATION_DESCRIPTION,
 } from "@scope/consts/cli";
-import { DbType } from "@scope/consts/db";
+import {
+  DbType,
+  SQLITE_DB_DEFAULT_FILE,
+  SQLITE_DB_DIR,
+} from "@scope/consts/db";
 import type {
   GlobalCliConfig,
   IndexActionCliConfig,
   PostgresDbConnectionCliConfig,
+  SQLiteDbConnectionCliConfig,
 } from "@scope/types/cli";
 import type {
   AdmRecord,
@@ -210,6 +217,19 @@ export class CliIndexCommand extends Command<GlobalCliConfig, void> {
           depends: ["pg.ssl"],
         },
       )
+      .group("SQLite configuration")
+      .globalOption(
+        "--sqlite.db-path <path:string>",
+        SQLITE_DB_PATH_DESCRIPTION,
+        {
+          conflicts: ["sqlite.db-file"],
+        },
+      )
+      .globalOption(
+        "--sqlite.db-file <filename:string>",
+        SQLITE_DB_FILE_DESCRIPTION,
+        { conflicts: ["sqlite.db-path"] },
+      )
       // ── Global env variables ────────────────────────────────────────────
       .globalEnv("DB_TYPE=<type:string>", DB_TYPE_DESCRIPTION)
       .globalEnv("CLI_DEBUG=<debug:boolean>", DEBUG_DESCRIPTION)
@@ -229,6 +249,8 @@ export class CliIndexCommand extends Command<GlobalCliConfig, void> {
         "PG_CA_CERT_PATH=<path:string>",
         PG_CA_CERT_PATH_DESCRIPTION,
       )
+      .globalEnv("SQLITE_DB_FILE <filename:string>", SQLITE_DB_FILE_DESCRIPTION)
+      .globalEnv("SQLITE_DB_PATH <path:string>", SQLITE_DB_PATH_DESCRIPTION)
       .globalAction(async (args) => {
         const pg: PostgresDbConnectionCliConfig = {
           url: args.pg?.url ?? args.pgUrl,
@@ -242,10 +264,15 @@ export class CliIndexCommand extends Command<GlobalCliConfig, void> {
           caCertFile: args.pg?.caCertFile ?? args.pgCaCertFile,
           caCertPath: args.pg?.caCertPath ?? args.pgCaCertPath,
         };
+        const sqlite: SQLiteDbConnectionCliConfig = {
+          dbFile: args.sqlite?.dbFile ?? args.sqliteDbFile,
+          dbPath: args.sqlite?.dbPath ?? args.sqliteDbPath,
+        };
         await this.handleGlobalAction({
           dbType: args.dbType as unknown as DbType,
           cliDebug: !!args.cliDebug,
           pg,
+          sqlite,
         });
       })
       // ── Command-scoped Redis options ────────────────────────────────────
@@ -417,6 +444,10 @@ export class CliIndexCommand extends Command<GlobalCliConfig, void> {
             caCertFile: args.pg?.caCertFile ?? args.pgCaCertFile,
             caCertPath: args.pg?.caCertPath ?? args.pgCaCertPath,
           },
+          sqlite: {
+            dbFile: args.sqlite?.dbFile ?? args.sqliteDbFile,
+            dbPath: args.sqlite?.dbPath ?? args.sqliteDbPath,
+          },
           redis: {
             url: args.redis?.url ?? args.redisUrl,
             host: args.redis?.host ?? args.redisHost,
@@ -475,6 +506,18 @@ export class CliIndexCommand extends Command<GlobalCliConfig, void> {
         }
         break;
       }
+      case DbType.SQLite: {
+        let fullPath!: string;
+        if (args.sqlite.dbFile) {
+          fullPath = path.join(SQLITE_DB_DIR, args.sqlite.dbFile);
+        } else if (args.sqlite.dbPath) {
+          fullPath = path.resolve(args.sqlite.dbPath);
+        } else {
+          fullPath = path.join(SQLITE_DB_DIR, SQLITE_DB_DEFAULT_FILE);
+        }
+        console.log(colors.gray(`   SQLite DB File: ${fullPath}`));
+        break;
+      }
       default:
         break;
     }
@@ -486,6 +529,7 @@ export class CliIndexCommand extends Command<GlobalCliConfig, void> {
     await attemptDbConnection(db, {
       dbType: args.dbType,
       pg: args.pg,
+      sqlite: args.sqlite,
     });
     console.log(
       colors.green.bold(`✅ Database connection established successfully!\n`),

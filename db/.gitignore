@@ -1,2 +1,5 @@
 # CA certificates
 .ca-certificates/*
+
+# SQLite
+.sqlite/*

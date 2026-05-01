@@ -22,6 +22,8 @@ export const DB_TYPE_DESCRIPTION: string =
 export const DEBUG_DESCRIPTION: string =
   "Enable debug logging across the pipeline.";
 
+// ── PostgreSQL descriptions ───────────────────────────────────────────────
+
 export const PG_SCHEMA_DESCRIPTION: string =
   "The PostgreSQL schema to use (e.g. public).";
 
@@ -51,6 +53,14 @@ export const PG_CA_CERT_FILE_DESCRIPTION: string =
 
 export const PG_CA_CERT_PATH_DESCRIPTION: string =
   "Full path to the CA certificate file. Used when --pg.ca-cert-file is not set.";
+
+// ── SQLite descriptions ─────────────────────────────────────────────────────
+
+export const SQLITE_DB_FILE_DESCRIPTION: string =
+  "The file of the SQLite database within the `db/.sqlite` directory.";
+
+export const SQLITE_DB_PATH_DESCRIPTION: string =
+  "Path to the SQLite database file.";
 
 // ── Redis descriptions ─────────────────────────────────────────────────────
 

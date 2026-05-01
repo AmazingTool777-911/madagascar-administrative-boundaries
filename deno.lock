@@ -10,25 +10,37 @@
     "jsr:@cliffy/prompt@^1.0.1": "1.0.1",
     "jsr:@cliffy/table@1.0.1": "1.0.1",
     "jsr:@cliffy/table@^1.0.1": "1.0.1",
+    "jsr:@cliffy/testing@^1.0.1": "1.0.1",
     "jsr:@db/postgres@~0.19.5": "0.19.5",
+    "jsr:@db/sqlite@0.13": "0.13.0",
+    "jsr:@denosaurs/plug@1": "1.1.0",
     "jsr:@iuioiua/redis@^1.1.10": "1.1.10",
     "jsr:@std/assert@1": "1.0.19",
+    "jsr:@std/assert@^1.0.17": "1.0.19",
     "jsr:@std/assert@^1.0.19": "1.0.19",
     "jsr:@std/bytes@^1.0.5": "1.0.6",
     "jsr:@std/bytes@^1.0.6": "1.0.6",
     "jsr:@std/cli@^1.0.28": "1.0.28",
     "jsr:@std/crypto@^1.0.4": "1.0.5",
+    "jsr:@std/encoding@1": "1.0.10",
     "jsr:@std/encoding@^1.0.10": "1.0.10",
     "jsr:@std/encoding@^1.0.9": "1.0.10",
+    "jsr:@std/fmt@1": "1.0.9",
     "jsr:@std/fmt@^1.0.6": "1.0.9",
     "jsr:@std/fmt@^1.0.9": "1.0.9",
+    "jsr:@std/fs@1": "1.0.23",
+    "jsr:@std/fs@^1.0.22": "1.0.23",
     "jsr:@std/internal@^1.0.12": "1.0.12",
     "jsr:@std/io@~0.225.3": "0.225.3",
     "jsr:@std/path@*": "1.1.4",
+    "jsr:@std/path@1": "1.1.4",
+    "jsr:@std/path@1.0": "1.0.9",
     "jsr:@std/path@^1.0.8": "1.1.4",
     "jsr:@std/path@^1.1.4": "1.1.4",
+    "jsr:@std/semver@^1.0.8": "1.0.8",
     "jsr:@std/streams@*": "1.0.17",
     "jsr:@std/streams@^1.0.17": "1.0.17",
+    "jsr:@std/testing@1.0.17": "1.0.17",
     "jsr:@std/text@^1.0.17": "1.0.18"
   },
   "jsr": {
@@ -48,6 +60,7 @@
         "jsr:@cliffy/internal",
         "jsr:@cliffy/table@1.0.1",
         "jsr:@std/fmt@^1.0.9",
+        "jsr:@std/semver",
         "jsr:@std/text"
       ]
     },
@@ -59,7 +72,10 @@
       ]
     },
     "@cliffy/internal@1.0.1": {
-      "integrity": "9e2bba59ad559b790f09c57219c727a69f0179ebabc07f1bf9db25232b606760"
+      "integrity": "9e2bba59ad559b790f09c57219c727a69f0179ebabc07f1bf9db25232b606760",
+      "dependencies": [
+        "jsr:@std/fmt@^1.0.9"
+      ]
     },
     "@cliffy/keycode@1.0.1": {
       "integrity": "b01053b39bce5536e36aff9b262d84a7b289bcff03d904f3cf60f9dc1605ce9f"
@@ -83,6 +99,16 @@
         "jsr:@std/fmt@^1.0.9"
       ]
     },
+    "@cliffy/testing@1.0.1": {
+      "integrity": "9590bc3e8af0ad07c0457e13198da379e175708c5c3220fd3abaeadd029d033a",
+      "dependencies": [
+        "jsr:@cliffy/ansi@1.0.1",
+        "jsr:@cliffy/internal",
+        "jsr:@std/assert@^1.0.19",
+        "jsr:@std/fmt@^1.0.9",
+        "jsr:@std/testing"
+      ]
+    },
     "@db/postgres@0.19.5": {
       "integrity": "afdbe608bd066cda2ee5dba37c416d332098b9238c51aec223331108e281954c",
       "dependencies": [
@@ -91,6 +117,22 @@
         "jsr:@std/encoding@^1.0.9",
         "jsr:@std/fmt@^1.0.6",
         "jsr:@std/path@^1.0.8"
+      ]
+    },
+    "@db/sqlite@0.13.0": {
+      "integrity": "4545c635e0b3d4ddfdc0f2240f932f24b8ad0178e9c2e3a0f9403e7b18ae2fb5",
+      "dependencies": [
+        "jsr:@denosaurs/plug",
+        "jsr:@std/path@1.0"
+      ]
+    },
+    "@denosaurs/plug@1.1.0": {
+      "integrity": "eb2f0b7546c7bca2000d8b0282c54d50d91cf6d75cb26a80df25a6de8c4bc044",
+      "dependencies": [
+        "jsr:@std/encoding@1",
+        "jsr:@std/fmt@1",
+        "jsr:@std/fs@1",
+        "jsr:@std/path@1"
       ]
     },
     "@iuioiua/redis@1.1.10": {
@@ -121,11 +163,21 @@
     "@std/fmt@1.0.9": {
       "integrity": "2487343e8899fb2be5d0e3d35013e54477ada198854e52dd05ed0422eddcabe0"
     },
+    "@std/fs@1.0.23": {
+      "integrity": "3ecbae4ce4fee03b180fa710caff36bb5adb66631c46a6460aaad49515565a37",
+      "dependencies": [
+        "jsr:@std/internal",
+        "jsr:@std/path@^1.1.4"
+      ]
+    },
     "@std/internal@1.0.12": {
       "integrity": "972a634fd5bc34b242024402972cd5143eac68d8dffaca5eaa4dba30ce17b027"
     },
     "@std/io@0.225.3": {
       "integrity": "27b07b591384d12d7b568f39e61dff966b8230559122df1e9fd11cc068f7ddd1"
+    },
+    "@std/path@1.0.9": {
+      "integrity": "260a49f11edd3db93dd38350bf9cd1b4d1366afa98e81b86167b4e3dd750129e"
     },
     "@std/path@1.1.4": {
       "integrity": "1d2d43f39efb1b42f0b1882a25486647cb851481862dc7313390b2bb044314b5",
@@ -133,10 +185,22 @@
         "jsr:@std/internal"
       ]
     },
+    "@std/semver@1.0.8": {
+      "integrity": "dc830e8b8b6a380c895d53fbfd1258dc253704ca57bbe1629ac65fd7830179b7"
+    },
     "@std/streams@1.0.17": {
       "integrity": "7859f3d9deed83cf4b41f19223d4a67661b3d3819e9fc117698f493bf5992140",
       "dependencies": [
         "jsr:@std/bytes@^1.0.6"
+      ]
+    },
+    "@std/testing@1.0.17": {
+      "integrity": "87bdc2700fa98249d48a17cd72413352d3d3680dcfbdb64947fd0982d6bbf681",
+      "dependencies": [
+        "jsr:@std/assert@^1.0.17",
+        "jsr:@std/fs@^1.0.22",
+        "jsr:@std/internal",
+        "jsr:@std/path@^1.1.4"
       ]
     },
     "@std/text@1.0.18": {
@@ -151,6 +215,7 @@
       "jsr:@cliffy/table@^1.0.1",
       "jsr:@cliffy/testing@^1.0.1",
       "jsr:@db/postgres@~0.19.5",
+      "jsr:@db/sqlite@0.13",
       "jsr:@iuioiua/redis@^1.1.10",
       "jsr:@std/assert@1",
       "jsr:@std/cli@^1.0.28",

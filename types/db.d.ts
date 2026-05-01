@@ -48,10 +48,16 @@ export type PostgresTransactionContext = {
   tx: Transaction;
 };
 
+export type SQLiteTransactionContext = {
+  dbType: DbType.SQLite;
+};
+
 /**
  * Represents the transaction context for a specific database type.
  */
-export type DbTransactionContext = PostgresTransactionContext;
+export type DbTransactionContext =
+  | PostgresTransactionContext
+  | SQLiteTransactionContext;
 
 /**
  * Represents a database connection.
@@ -125,10 +131,24 @@ export interface PostgresConnectionParams {
 }
 
 /**
+ * Connection parameters specifically for a SQLite database.
+ */
+export interface SQLiteConnectionParams {
+  /** The type of database, fixed to SQLite. */
+  dbType: DbType.SQLite;
+  /** The path to the SQLite database file. */
+  dbPath?: string;
+  /** The filename of the SQLite database file. */
+  dbFile?: string;
+}
+
+/**
  * Union type of all supported database connection parameters.
  * Initially supports only PostgreSQL.
  */
-export type DbConnectionParams = PostgresConnectionParams;
+export type DbConnectionParams =
+  | PostgresConnectionParams
+  | SQLiteConnectionParams;
 
 export interface TableDDL {
   /** The physical database table name. */

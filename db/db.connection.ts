@@ -1,7 +1,11 @@
 import {
   injectPostgresDbConnection,
   PostgresDbConnection,
-} from "../adapters/postgres/postgres-db.connection.ts";
+} from "@scope/adapters/postgres";
+import {
+  injectSqliteDbConnection,
+  SqliteDbConnection,
+} from "@scope/adapters/sqlite";
 import { DbType } from "@scope/consts/db";
 import type { DbConnection, DbConnectionParams } from "@scope/types/db";
 import type { DbConnectionCliConfig } from "@scope/types/cli";
@@ -17,6 +21,8 @@ export function injectDbConnection(dbType: DbType): DbConnection {
   switch (dbType) {
     case DbType.Postgres:
       return injectPostgresDbConnection();
+    case DbType.SQLite:
+      return injectSqliteDbConnection();
     default:
       throw new Error(`Unsupported database type: ${dbType}`);
   }
@@ -58,6 +64,19 @@ export async function attemptDbConnection(
           caCertFile: pg.ssl ? pg.caCertFile : undefined,
           caCertPath: pg.ssl ? pg.caCertPath : undefined,
         },
+      };
+      break;
+    }
+    case DbType.SQLite: {
+      if (!(connection instanceof SqliteDbConnection)) {
+        throw new Error(
+          "Invalid connection instance: Expected SqliteDbConnection for SQLite database type.",
+        );
+      }
+      params = {
+        dbType: DbType.SQLite,
+        dbPath: config.sqlite.dbPath,
+        dbFile: config.sqlite.dbFile,
       };
       break;
     }

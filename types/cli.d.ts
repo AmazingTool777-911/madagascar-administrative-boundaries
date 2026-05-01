@@ -34,6 +34,18 @@ export interface PostgresDbConnectionCliConfig {
 }
 
 /**
+ * SQLite configuration options derived from CLI or environment variables.
+ */
+export interface SQLiteDbConnectionCliConfig {
+  /** Path to the SQLite database file. */
+  dbPath?: string;
+  /**
+   * The file of the SQLite database within the `db/.sqlite` directory.
+   */
+  dbFile?: string;
+}
+
+/**
  * Redis configuration options derived from CLI or environment variables.
  */
 export interface RedisDbConnectionCliConfig {
@@ -84,6 +96,8 @@ export type CliConfig = {
   cliDebug: boolean;
   /** Configuration specific to PostgreSQL. */
   pg: PostgresDbConnectionCliConfig;
+  /** Configuration specific to SQLite. */
+  sqlite: SQLiteDbConnectionCliConfig;
   /** Whether to skip the Redis connection. Defaults to false. */
   disableRedis: boolean;
   /** Configuration specific to Redis. */
@@ -127,6 +141,10 @@ export type CliConfig = {
   pgCaCertFile?: string;
   /** Environment variable mapped for --pg.ca-cert-path. */
   pgCaCertPath?: string;
+  /** Environment variable mapped for --sqlite.db-file. */
+  sqliteDbFile?: string;
+  /** Environment variable mapped for --sqlite.db-path. */
+  sqliteDbPath?: string;
   /** Environment variable mapped for --redis.url. */
   redisUrl?: string;
   /** Environment variable mapped for --redis.host. */
@@ -159,13 +177,16 @@ export type CliConfig = {
  * Subset of CliConfig representing the globally resolved configuration,
  * available to all commands including subcommands.
  */
-export type GlobalCliConfig = Pick<CliConfig, "dbType" | "pg" | "cliDebug">;
+export type GlobalCliConfig = Pick<
+  CliConfig,
+  "dbType" | "pg" | "sqlite" | "cliDebug"
+>;
 
 /**
  * A comprehensive configuration object encompassing all possible connection values
  * grouped by database type, typically parsed from CLI arguments or environment variables.
  */
-export type DbConnectionCliConfig = Pick<CliConfig, "dbType" | "pg">;
+export type DbConnectionCliConfig = Pick<CliConfig, "dbType" | "pg" | "sqlite">;
 
 export type IndexActionCliConfig =
   & GlobalCliConfig

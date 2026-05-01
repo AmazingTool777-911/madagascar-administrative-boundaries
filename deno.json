@@ -1,9 +1,9 @@
 {
   "tasks": {
-    "cli": "deno -E --env -N -R -W commands/index.ts",
-    "cli:set-config": "deno -E --env -N -R -W commands/index.ts set-config",
-    "cli:update-field": "deno -E --env -N -R -W commands/index.ts update-field",
-    "cli:clear": "deno -E --env -N -R -W commands/index.ts clear",
+    "cli": "deno -E --env -N -R -W --allow-ffi commands/index.ts",
+    "cli:set-config": "deno -E --env -N -R -W --allow-ffi commands/index.ts set-config",
+    "cli:update-field": "deno -E --env -N -R -W --allow-ffi commands/index.ts update-field",
+    "cli:clear": "deno -E --env -N -R -W --allow-ffi commands/index.ts clear",
     "build:windows:x86_64": "deno compile -E -N -R -W --target x86_64-pc-windows-msvc --output ./bin/x86_64-pc-windows-msvc/mada-adm --include commands/workers commands/index.ts",
     "build:macos:x86_64": "deno compile -E -N -R -W --target x86_64-apple-darwin --output ./bin/x86_64-apple-darwin/mada-adm --include commands/workers commands/index.ts",
     "build:macos:arm64": "deno compile -E -N -R -W --target aarch64-apple-darwin --output ./bin/aarch64-apple-darwin/mada-adm --include commands/workers commands/index.ts",
@@ -20,6 +20,7 @@
     "@cliffy/table": "jsr:@cliffy/table@^1.0.1",
     "@cliffy/testing": "jsr:@cliffy/testing@^1.0.1",
     "@db/postgres": "jsr:@db/postgres@^0.19.5",
+    "@db/sqlite": "jsr:@db/sqlite@^0.13.0",
     "@iuioiua/redis": "jsr:@iuioiua/redis@^1.1.10",
     "@std/assert": "jsr:@std/assert@1",
     "@std/cli": "jsr:@std/cli@^1.0.28",
