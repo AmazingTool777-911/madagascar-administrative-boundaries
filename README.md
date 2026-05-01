@@ -197,8 +197,8 @@ resetting the project state.
 
 #### `update-field`
 
-**CLI Execution:** `mada-adm update-field`  
-**Local Execution:** `deno task cli:update-field`
+**CLI Execution:** `mada-adm update-field <adm-level> <field> [options]`  
+**Local Execution:** `deno task cli:update-field <adm-level> <field> [options]`
 
 Updates a specific field (like names or spatial GeoJSON boundaries) of an
 existing ADM record in the database.
