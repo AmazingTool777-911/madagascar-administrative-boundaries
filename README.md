@@ -57,12 +57,12 @@ deno task test
 
 ### Building
 
-To build the executable CLI artifacts for different platforms:
+To build the CLI executables for different platforms:
 
 ```bash
 deno task build
 ```
-This command compiles the project into standalone executables and places them in their respective platform-specific target directories (e.g., `bin/x86_64-pc-windows-msvc`, `bin/aarch64-apple-darwin`, `bin/x86_64-unknown-linux-gnu`, etc.).
+This command compiles the project into standalone CLI executables and places them in their respective platform-specific target directories (e.g., `bin/x86_64-pc-windows-msvc/`, `bin/aarch64-apple-darwin/`, `bin/x86_64-unknown-linux-gnu/`, etc.).
 
 ### Running CLI Tasks
 
@@ -78,17 +78,19 @@ deno task cli
 This repository serves as a centralized hub for administrative data and the
 logic required to process it:
 
-- **Data Sources**: Raw administrative boundary datasets.
-- **Pre-processed Data**: Optimized datasets (found in `/data/ndjson`) that have
+- **CLI Source Code**: The Deno source code for the command-line interface (found in `/commands/`).
+- **CLI Executables**: The compiled standalone executables for different platforms (found in `/bin/`).
+- **Data Sources**: Raw administrative boundary datasets (found in `/data/geojson/`).
+- **Pre-processed Data**: Optimized datasets (found in `/data/ndjson/`) that have
   been cleaned and structured for efficient processing.
 - **Extraction Scripts**: Utility scripts used to generate and extract seeding
-  inputs from raw sources.
+  inputs from raw sources (found in `/scripts/`).
 - **Data Catalogs**: Structured references for administrative metadata
   (currently in development).
 
 ## CLI Commands & Usage
 
-The project utilizes a command-line interface to orchestrate the pipeline. Below
+The project itself functions as a command-line interface to orchestrate the pipeline. Below
 is an overview of the available commands, along with their global and scoped
 configurations.
 
@@ -199,11 +201,11 @@ existing ADM record in the database.
 - `--value <value>`: The literal value to set for the field.
 - **When updating the `geojson` geometry feature**, it is mandatory to provide
   the value in a file because the content is usually too large for the terminal
-  to handle directly. By default, it will look for a file at
-  `commands/.args/value.txt`. You can also specify alternatives using:
-  - `--value-file <filename>`: Filename under `commands/.args` to read the value
-    from.
-  - `--value-path <path>`: Full path to the file to read the value from.
+  to handle directly. How you provide this file depends on how you run the tool:
+  - **Running via Deno (`deno task cli:update-field`)**: By default, it looks for a file at `commands/.args/value.txt`. You can specify alternatives using:
+    - `--value-file <filename>`: Filename under `commands/.args` to read the value from.
+    - `--value-path <path>`: Full absolute or relative path to the file to read the value from.
+  - **Running the compiled CLI executable**: The `commands/.args/` directory is bundled inside the executable, so `--value-file` cannot be used with local files. You **must** use `--value-path <path>` to provide the full path to an external file.
 - **Identification Options**: Depending on the ADM level, you must provide the
   necessary identifiers (e.g., `--province`, `--district.value`,
   `--district.region`, etc.) to correctly locate the administrative boundary.
