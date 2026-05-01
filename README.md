@@ -209,7 +209,7 @@ existing ADM record in the database.
   `district`, `commune`, `fokontany`).
 - `<field>`: The field to update (`value` or `geojson`).
 
-**Command-Scoped Options:**
+**Value Options:**
 
 - `--value <value>`: The literal value to set for the field.
 - **When updating the `geojson` geometry feature**, it is mandatory to provide
@@ -219,9 +219,18 @@ existing ADM record in the database.
     - `--value-file <filename>`: Filename under `commands/.args` to read the value from.
     - `--value-path <path>`: Full absolute or relative path to the file to read the value from.
   - **Running the compiled CLI executable**: The `commands/.args/` directory is bundled inside the executable, so `--value-file` cannot be used with local files. You **must** use `--value-path <path>` to provide the full path to an external file.
-- **Identification Options**: Depending on the ADM level, you must provide the
-  necessary identifiers (e.g., `--province`, `--district.value`,
-  `--district.region`, etc.) to correctly locate the administrative boundary.
+
+**Identification Options:**
+
+Depending on the `<adm-level>` argument provided, you must provide the following identifier options to correctly locate the administrative boundary:
+
+| `<adm-level>` | Required Identifier Options |
+| :--- | :--- |
+| `province` | `--province` |
+| `region` | `--region` |
+| `district` | `--district.value`, `--district.region` |
+| `commune` | `--commune.value`, `--commune.district`, `--commune.region` |
+| `fokontany` | `--fokontany.value`, `--fokontany.commune`, `--fokontany.district`, `--fokontany.region` |
 
 ## Current Status
 
