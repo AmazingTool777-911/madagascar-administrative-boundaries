@@ -100,27 +100,27 @@ These options can be provided either as CLI flags or environment variables. If
 both are provided, the CLI flags take precedence. They apply globally across all
 commands. All options are optional.
 
-| CLI Flag            | Environment Variable | Description                                                                                   |
-| :------------------ | :------------------- | :-------------------------------------------------------------------------------------------- |
-| `--db-type`         | `DB_TYPE`            | The database type to connect to (`sqlite`, `mysql`, `postgres`, `mongodb`). (default: sqlite) |
-| `--cli-debug`       | `CLI_DEBUG`          | Enable debug logging across the pipeline.                                                     |
-| `--pg.schema`       | `PG_SCHEMA`          | The PostgreSQL schema to use. (default: public)                                               |
-| `--pg.url`          | `PG_URL`             | The URL to connect to the PostgreSQL database.                                                |
-| `--pg.host`         | `PG_HOST`            | Hostname or IP address of the PostgreSQL server. (default: localhost)                         |
-| `--pg.port`         | `PG_PORT`            | Port number of the PostgreSQL server. (default: 5432)                                         |
-| `--pg.user`         | `PG_USER`            | Username for authenticating with the PostgreSQL server. (default: postgres)                   |
-| `--pg.password`     | `PG_PASSWORD`        | Password for authenticating with the PostgreSQL server.                                       |
-| `--pg.database`     | `PG_DATABASE`        | Name of the database to be used. (default: postgres)                                          |
-| `--pg.ssl`          | `PG_SSL`             | Whether to use SSL for the connection.                                                        |
-| `--pg.ca-cert-file` | `PG_CA_CERT_FILE`    | Filename of the CA cert under `db/.ca-certificates/`.                                         |
-| `--pg.ca-cert-path` | `PG_CA_CERT_PATH`    | Full path to the CA cert file.                                                                |
+| CLI Flag            | Environment Variable | Description                                                                                   | Default |
+| :------------------ | :------------------- | :-------------------------------------------------------------------------------------------- | :--- |
+| `--db-type`         | `DB_TYPE`            | The database type to connect to (`sqlite`, `mysql`, `postgres`, `mongodb`).                   | `sqlite` |
+| `--cli-debug`       | `CLI_DEBUG`          | Enable debug logging across the pipeline.                                                     | `false` |
+| `--pg.schema`       | `PG_SCHEMA`          | The PostgreSQL schema to use.                                                                 | `public` |
+| `--pg.url`          | `PG_URL`             | The URL to connect to the PostgreSQL database.                                                | - |
+| `--pg.host`         | `PG_HOST`            | Hostname or IP address of the PostgreSQL server.                                              | `localhost` |
+| `--pg.port`         | `PG_PORT`            | Port number of the PostgreSQL server.                                                         | `5432` |
+| `--pg.user`         | `PG_USER`            | Username for authenticating with the PostgreSQL server.                                       | `postgres` |
+| `--pg.password`     | `PG_PASSWORD`        | Password for authenticating with the PostgreSQL server.                                       | `""` |
+| `--pg.database`     | `PG_DATABASE`        | Name of the database to be used.                                                              | `postgres` |
+| `--pg.ssl`          | `PG_SSL`             | Whether to use SSL for the connection.                                                        | `false` |
+| `--pg.ca-cert-file` | `PG_CA_CERT_FILE`    | Filename of the CA cert under `db/.ca-certificates/`.                                         | - |
+| `--pg.ca-cert-path` | `PG_CA_CERT_PATH`    | Full path to the CA cert file.                                                                | - |
 
 ### Commands
 
 #### `mada-adm` (Index / Main Command)
 
-**CLI Execution:** `mada-adm`  
-**Local Execution:** `deno task cli`
+**CLI Execution:** `mada-adm [options]`  
+**Local Execution:** `deno task cli [options]`
 
 The core CLI command for seeding administrative data into the database. It
 features a resumable, fault-tolerant architecture with real-time terminal
@@ -141,35 +141,35 @@ All options are optional.
 
 **Redis Options**
 
-| CLI Flag                                  | Environment Variable                    | Description                                                      |
-| :---------------------------------------- | :-------------------------------------- | :--------------------------------------------------------------- |
-| `--disable-redis`                         | `DISABLE_REDIS`                         | Disable Redis connection. Uses the in-memory queue instead.      |
-| `--redis.url`                             | `REDIS_URL`                             | Full Redis connection URL.                                       |
-| `--redis.host`                            | `REDIS_HOST`                            | Hostname or IP address of the Redis server. (default: localhost) |
-| `--redis.port`                            | `REDIS_PORT`                            | TCP port the Redis server listens on. (default: 6379)            |
-| `--redis.user`                            | `REDIS_USERNAME`                        | Username for Redis authentication.                               |
-| `--redis.password`                        | `REDIS_PASSWORD`                        | Password for Redis authentication.                               |
-| `--redis.db`                              | `REDIS_DB`                              | Database index.                                                  |
-| `--redis.ssl`                             | `REDIS_SSL`                             | Enable TLS/SSL for the connection.                               |
-| `--redis.cert-file`                       | `REDIS_CERT_FILE`                       | Filename of the client cert under `redis/.ca-certificates/`.     |
-| `--redis.cert-path`                       | `REDIS_CERT_PATH`                       | Full path to the client certificate file.                        |
-| `--redis.key-file`                        | `REDIS_KEY_FILE`                        | Filename of the client key under `redis/.ca-certificates/`.      |
-| `--redis.key-path`                        | `REDIS_KEY_PATH`                        | Full path to the client key file.                                |
-| `--redis.ca-cert-file`                    | `REDIS_CA_CERT_FILE`                    | Filename of the CA cert under `redis/.ca-certificates/`.         |
-| `--redis.ca-cert-path`                    | `REDIS_CA_CERT_PATH`                    | Full path to the CA cert file for Redis.                         |
+| CLI Flag                                  | Environment Variable                    | Description                                                      | Default |
+| :---------------------------------------- | :-------------------------------------- | :--------------------------------------------------------------- | :--- |
+| `--disable-redis`                         | `DISABLE_REDIS`                         | Disable Redis connection. Uses the in-memory queue instead.      | `false` |
+| `--redis.url`                             | `REDIS_URL`                             | Full Redis connection URL.                                       | - |
+| `--redis.host`                            | `REDIS_HOST`                            | Hostname or IP address of the Redis server.                      | `localhost` |
+| `--redis.port`                            | `REDIS_PORT`                            | TCP port the Redis server listens on.                            | `6379` |
+| `--redis.user`                            | `REDIS_USERNAME`                        | Username for Redis authentication.                               | - |
+| `--redis.password`                        | `REDIS_PASSWORD`                        | Password for Redis authentication.                               | - |
+| `--redis.db`                              | `REDIS_DB`                              | Database index.                                                  | - |
+| `--redis.ssl`                             | `REDIS_SSL`                             | Enable TLS/SSL for the connection.                               | `false` |
+| `--redis.cert-file`                       | `REDIS_CERT_FILE`                       | Filename of the client cert under `redis/.ca-certificates/`.     | - |
+| `--redis.cert-path`                       | `REDIS_CERT_PATH`                       | Full path to the client certificate file.                        | - |
+| `--redis.key-file`                        | `REDIS_KEY_FILE`                        | Filename of the client key under `redis/.ca-certificates/`.      | - |
+| `--redis.key-path`                        | `REDIS_KEY_PATH`                        | Full path to the client key file.                                | - |
+| `--redis.ca-cert-file`                    | `REDIS_CA_CERT_FILE`                    | Filename of the CA cert under `redis/.ca-certificates/`.         | - |
+| `--redis.ca-cert-path`                    | `REDIS_CA_CERT_PATH`                    | Full path to the CA cert file for Redis.                         | - |
 
 **Queue & Worker Options**
 
-| CLI Flag                                  | Environment Variable                    | Description                                                      |
-| :---------------------------------------- | :-------------------------------------- | :--------------------------------------------------------------- |
-| `--queue-batch-size`                      | `QUEUE_BATCH_SIZE`                      | Batch size for processing messages concurrently.                 |
-| `--queue-max-retries`                     | `QUEUE_MAX_RETRIES`                     | Maximum number of retries per batch in case of an error.         |
-| `--in-memory-processing-hwm`              | `IN_MEMORY_PROCESSING_HWM`              | High water mark for in-memory processing workers.                |
-| `--in-memory-insert-hwm`                  | `IN_MEMORY_INSERT_HWM`                  | High water mark for the in-memory insert worker.                 |
-| `--worker-healthcheck-interval`           | `WORKER_HEALTHCHECK_INTERVAL`           | Interval for worker healthcheck in milliseconds.                 |
-| `--worker-pending-min-duration-threshold` | `WORKER_PENDING_MIN_DURATION_THRESHOLD` | Threshold for claiming pending messages in milliseconds.         |
-| `--xread-block-duration`                  | `XREAD_BLOCK_DURATION`                  | Duration in milliseconds for XREAD BLOCK calls in Redis.         |
-| `--processing-workers-count`              | `PROCESSING_WORKERS_COUNT`              | Number of concurrent processing workers to spawn.                |
+| CLI Flag                                  | Environment Variable                    | Description                                                      | Default |
+| :---------------------------------------- | :-------------------------------------- | :--------------------------------------------------------------- | :--- |
+| `--queue-batch-size`                      | `QUEUE_BATCH_SIZE`                      | Batch size for processing messages concurrently.                 | `1` |
+| `--queue-max-retries`                     | `QUEUE_MAX_RETRIES`                     | Maximum number of retries per batch in case of an error.         | `3` |
+| `--in-memory-processing-hwm`              | `IN_MEMORY_PROCESSING_HWM`              | High water mark for in-memory processing workers.                | `1` |
+| `--in-memory-insert-hwm`                  | `IN_MEMORY_INSERT_HWM`                  | High water mark for the in-memory insert worker.                 | `1` |
+| `--worker-healthcheck-interval`           | `WORKER_HEALTHCHECK_INTERVAL`           | Interval for worker healthcheck in milliseconds.                 | `10000` |
+| `--worker-pending-min-duration-threshold` | `WORKER_PENDING_MIN_DURATION_THRESHOLD` | Threshold for claiming pending messages in milliseconds.         | `60000` |
+| `--xread-block-duration`                  | `XREAD_BLOCK_DURATION`                  | Duration in milliseconds for XREAD BLOCK calls in Redis.         | `5000` |
+| `--processing-workers-count`              | `PROCESSING_WORKERS_COUNT`              | Number of concurrent processing workers to spawn.                | `2` |
 
 ### Sub-Commands
 
@@ -207,7 +207,52 @@ existing ADM record in the database.
 
 - `<adm-level>`: The ADM level of the record (e.g. `province`, `region`,
   `district`, `commune`, `fokontany`).
-- `<field>`: The field to update (`value` or `geojson`).
+- `<field>`: The specific field to update. Can be one of:
+  - `value`: Updates the name/value of the administrative record (i.e., the `province` column for a province level, `region` for a region level, etc.).
+  - `geojson`: Updates the spatial geometry of the administrative boundary. The data provided must be a valid GeoJSON **Geometry** object (not a Feature or FeatureCollection). If the provided data is not in the correct form, a validation error will be thrown. Examples of expected data formats:
+
+    **Polygon:**
+    ```json
+    {
+      "type": "Polygon",
+      "coordinates": [
+        [
+          [47.534, -18.879],
+          [47.538, -18.879],
+          [47.538, -18.883],
+          [47.534, -18.883],
+          [47.534, -18.879]
+        ]
+      ]
+    }
+    ```
+
+    **MultiPolygon:**
+    ```json
+    {
+      "type": "MultiPolygon",
+      "coordinates": [
+        [
+          [
+            [47.534, -18.879],
+            [47.538, -18.879],
+            [47.538, -18.883],
+            [47.534, -18.883],
+            [47.534, -18.879]
+          ]
+        ],
+        [
+          [
+            [47.540, -18.885],
+            [47.544, -18.885],
+            [47.544, -18.889],
+            [47.540, -18.889],
+            [47.540, -18.885]
+          ]
+        ]
+      ]
+    }
+    ```
 
 **Value Options:**
 
