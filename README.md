@@ -224,13 +224,13 @@ existing ADM record in the database.
 
 Depending on the `<adm-level>` argument provided, you must provide the following identifier options to correctly locate the administrative boundary:
 
-| `<adm-level>` | Required Identifier Options |
-| :--- | :--- |
-| `province` | `--province` |
-| `region` | `--region` |
-| `district` | `--district.value`, `--district.region` |
-| `commune` | `--commune.value`, `--commune.district`, `--commune.region` |
-| `fokontany` | `--fokontany.value`, `--fokontany.commune`, `--fokontany.district`, `--fokontany.region` |
+| `<adm-level>` | Required Identifier Options | Example |
+| :--- | :--- | :--- |
+| `province` | `--province` | `--province "Antananarivo"` |
+| `region` | `--region` | `--region "Analamanga"` |
+| `district` | `--district.value`, `--district.region` | `--district.value "Ambohidratrimo" --district.region "Analamanga"` |
+| `commune` | `--commune.value`, `--commune.district`, `--commune.region` | `--commune.value "Ivato" --commune.district "Ambohidratrimo" --commune.region "Analamanga"` |
+| `fokontany` | `--fokontany.value`, `--fokontany.commune`, `--fokontany.district`, `--fokontany.region` | `--fokontany.value "Ivato Centre" --fokontany.commune "Ivato" --fokontany.district "Ambohidratrimo" --fokontany.region "Analamanga"` |
 
 ## Current Status
 
