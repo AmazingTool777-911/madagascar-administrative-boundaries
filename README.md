@@ -117,8 +117,9 @@ commands. All options are optional.
 
 ### Commands
 
-#### 1. `mada-adm` (Index / Main Command)
+#### `mada-adm` (Index / Main Command)
 
+**CLI Execution:** `mada-adm`  
 **Local Execution:** `deno task cli`
 
 The core CLI command for seeding administrative data into the database. It
@@ -138,6 +139,8 @@ progress visualization.
 orchestration (Redis or In-Memory queues) specifically for the seeding pipeline.
 All options are optional.
 
+**Redis Options**
+
 | CLI Flag                                  | Environment Variable                    | Description                                                      |
 | :---------------------------------------- | :-------------------------------------- | :--------------------------------------------------------------- |
 | `--disable-redis`                         | `DISABLE_REDIS`                         | Disable Redis connection. Uses the in-memory queue instead.      |
@@ -154,6 +157,11 @@ All options are optional.
 | `--redis.key-path`                        | `REDIS_KEY_PATH`                        | Full path to the client key file.                                |
 | `--redis.ca-cert-file`                    | `REDIS_CA_CERT_FILE`                    | Filename of the CA cert under `redis/.ca-certificates/`.         |
 | `--redis.ca-cert-path`                    | `REDIS_CA_CERT_PATH`                    | Full path to the CA cert file for Redis.                         |
+
+**Queue & Worker Options**
+
+| CLI Flag                                  | Environment Variable                    | Description                                                      |
+| :---------------------------------------- | :-------------------------------------- | :--------------------------------------------------------------- |
 | `--queue-batch-size`                      | `QUEUE_BATCH_SIZE`                      | Batch size for processing messages concurrently.                 |
 | `--queue-max-retries`                     | `QUEUE_MAX_RETRIES`                     | Maximum number of retries per batch in case of an error.         |
 | `--in-memory-processing-hwm`              | `IN_MEMORY_PROCESSING_HWM`              | High water mark for in-memory processing workers.                |
@@ -163,8 +171,11 @@ All options are optional.
 | `--xread-block-duration`                  | `XREAD_BLOCK_DURATION`                  | Duration in milliseconds for XREAD BLOCK calls in Redis.         |
 | `--processing-workers-count`              | `PROCESSING_WORKERS_COUNT`              | Number of concurrent processing workers to spawn.                |
 
-#### 2. `set-config`
+### Sub-Commands
 
+#### `set-config`
+
+**CLI Execution:** `mada-adm set-config`  
 **Local Execution:** `deno task cli:set-config`
 
 Interactively sets or updates the Mada ADM configuration stored in the database.
@@ -176,15 +187,17 @@ configurations from overriding each other. This allows you to work safely in the
 same database while running automated tests, performing experimentations, or
 maintaining separate project schemas without destructive interference.
 
-#### 3. `clear`
+#### `clear`
 
+**CLI Execution:** `mada-adm clear`  
 **Local Execution:** `deno task cli:clear`
 
 Drops all ADM tables and the configuration table from the database, effectively
 resetting the project state.
 
-#### 4. `update-field`
+#### `update-field`
 
+**CLI Execution:** `mada-adm update-field`  
 **Local Execution:** `deno task cli:update-field`
 
 Updates a specific field (like names or spatial GeoJSON boundaries) of an
