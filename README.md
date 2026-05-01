@@ -112,8 +112,12 @@ commands. All options are optional.
 | `--pg.password`     | `PG_PASSWORD`        | Password for authenticating with the PostgreSQL server.                                       | `""` |
 | `--pg.database`     | `PG_DATABASE`        | Name of the database to be used.                                                              | `postgres` |
 | `--pg.ssl`          | `PG_SSL`             | Whether to use SSL for the connection.                                                        | `false` |
-| `--pg.ca-cert-file` | `PG_CA_CERT_FILE`    | Filename of the CA cert under `db/.ca-certificates/`.                                         | - |
-| `--pg.ca-cert-path` | `PG_CA_CERT_PATH`    | Full path to the CA cert file.                                                                | - |
+| `--pg.ca-cert-file` | `PG_CA_CERT_FILE`    | Filename of the CA cert under `db/.ca-certificates/`. **(Deno only)**       | - |
+| `--pg.ca-cert-path` | `PG_CA_CERT_PATH`    | Full path to the CA cert file.                                               | - |
+| `--sqlite.db-file` | `SQLITE_DB_FILE`     | Filename of the SQLite database within `db/.sqlite`. **(Deno only)**        | `mada-adm.db` |
+| `--sqlite.db-path` | `SQLITE_DB_PATH`     | Full absolute or relative path to the SQLite database file.                  | - |
+
+> **Note on File Paths:** Options ending in `-file` (e.g., `--sqlite.db-file`, `--pg.ca-cert-file`) resolve paths relative to the internal project structure. These **do not work** in the compiled binary because internal directories are encapsulated. In the binary, always use the corresponding `-path` option with a full path.
 
 ### Commands
 
@@ -151,11 +155,11 @@ All options are optional.
 | `--redis.password`                        | `REDIS_PASSWORD`                        | Password for Redis authentication.                               | - |
 | `--redis.db`                              | `REDIS_DB`                              | Database index.                                                  | - |
 | `--redis.ssl`                             | `REDIS_SSL`                             | Enable TLS/SSL for the connection.                               | `false` |
-| `--redis.cert-file`                       | `REDIS_CERT_FILE`                       | Filename of the client cert under `redis/.ca-certificates/`.     | - |
+| `--redis.cert-file`                       | `REDIS_CERT_FILE`                       | Filename of the client cert under `redis/.ca-certificates/`. **(Deno only)** | - |
 | `--redis.cert-path`                       | `REDIS_CERT_PATH`                       | Full path to the client certificate file.                        | - |
-| `--redis.key-file`                        | `REDIS_KEY_FILE`                        | Filename of the client key under `redis/.ca-certificates/`.      | - |
+| `--redis.key-file`                        | `REDIS_KEY_FILE`                        | Filename of the client key under `redis/.ca-certificates/`. **(Deno only)**  | - |
 | `--redis.key-path`                        | `REDIS_KEY_PATH`                        | Full path to the client key file.                                | - |
-| `--redis.ca-cert-file`                    | `REDIS_CA_CERT_FILE`                    | Filename of the CA cert under `redis/.ca-certificates/`.         | - |
+| `--redis.ca-cert-file`                    | `REDIS_CA_CERT_FILE`                    | Filename of the CA cert under `redis/.ca-certificates/`. **(Deno only)**     | - |
 | `--redis.ca-cert-path`                    | `REDIS_CA_CERT_PATH`                    | Full path to the CA cert file for Redis.                         | - |
 
 **Queue & Worker Options**
