@@ -7,6 +7,11 @@ import {
   type PostgresDbConnection,
   resetRegionsPostgresDDL,
 } from "@scope/adapters/postgres";
+import {
+  injectRegionsSqliteDDL,
+  resetRegionsSqliteDDL,
+  type SqliteDbConnection,
+} from "@scope/adapters/sqlite";
 
 /**
  * Injects (or creates) an instance of the regions table DDL adapter based on the database type.
@@ -31,6 +36,8 @@ export function injectRegionsDDL(
         db as PostgresDbConnection,
         options?.pgSchema,
       );
+    case DbType.SQLite:
+      return injectRegionsSqliteDDL(config, db as SqliteDbConnection);
     default:
       throw new Error(`Unsupported database type for regions DDL: ${dbType}`);
   }
@@ -46,6 +53,9 @@ export function resetRegionsDDL(dbType: DbType): void {
   switch (dbType) {
     case DbType.Postgres:
       resetRegionsPostgresDDL();
+      break;
+    case DbType.SQLite:
+      resetRegionsSqliteDDL();
       break;
     default:
       throw new Error(

@@ -39,11 +39,11 @@ export class MadaAdmConfigSqliteDML implements MadaAdmConfigDML {
         const sql = `
 					UPDATE ${this.#tableName}
 					SET tables_prefix = ?,
-					SET is_fk_repeated = ?,
-					SET is_province_repeated = ?,
-					SET is_province_fk_repeated = ?,
-					SET has_geojson = ?,
-					SET has_adm_level = ?
+					is_fk_repeated = ?,
+					is_province_repeated = ?,
+					is_province_fk_repeated = ?,
+					has_geojson = ?,
+					has_adm_level = ?
 					WHERE id = ?
 				`;
         const stmt = this.#db.client.prepare(sql);

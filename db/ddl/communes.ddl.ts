@@ -7,6 +7,11 @@ import {
   type PostgresDbConnection,
   resetCommunesPostgresDDL,
 } from "@scope/adapters/postgres";
+import {
+  injectCommunesSqliteDDL,
+  resetCommunesSqliteDDL,
+  type SqliteDbConnection,
+} from "@scope/adapters/sqlite";
 
 /**
  * Injects (or creates) an instance of the communes table DDL adapter based on the database type.
@@ -31,6 +36,8 @@ export function injectCommunesDDL(
         db as PostgresDbConnection,
         options?.pgSchema,
       );
+    case DbType.SQLite:
+      return injectCommunesSqliteDDL(config, db as SqliteDbConnection);
     default:
       throw new Error(`Unsupported database type for communes DDL: ${dbType}`);
   }
@@ -46,6 +53,9 @@ export function resetCommunesDDL(dbType: DbType): void {
   switch (dbType) {
     case DbType.Postgres:
       resetCommunesPostgresDDL();
+      break;
+    case DbType.SQLite:
+      resetCommunesSqliteDDL();
       break;
     default:
       throw new Error(

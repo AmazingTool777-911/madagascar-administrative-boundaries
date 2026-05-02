@@ -242,6 +242,16 @@ export type AdmValuesDiscriminated =
   };
 
 /**
+ * Attributes used to uniquely identify a province.
+ */
+export type ProvinceAttributes = { province: string };
+
+/**
+ * Attributes used to uniquely identify a region.
+ */
+export type RegionAttributes = { region: string };
+
+/**
  * Attributes used to uniquely identify a district.
  */
 export type DistrictAttributes = { district: string; region: string };
@@ -264,3 +274,10 @@ export type FokontanyAttributes = {
   district: string;
   region: string;
 };
+
+export type AdmAttributes =
+  | ProvinceAttributes
+  | RegionAttributes
+  | DistrictAttributes
+  | CommuneAttributes
+  | FokontanyAttributes;
