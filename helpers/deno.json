@@ -4,6 +4,7 @@
   "exports": {
     ".": "./index.ts",
     "./cli-args-env-resolvers": "./cli-args-env-resolvers.helper.ts",
-    "./models": "./models.helper.ts"
+    "./models": "./models.helper.ts",
+    "./db": "./db.helper.ts"
   }
 }

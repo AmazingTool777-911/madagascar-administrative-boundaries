@@ -159,6 +159,7 @@ export class CliIndexCommand extends Command<GlobalCliConfig, void> {
     this.name(CLI_NAME)
       .version(CLI_VERSION)
       .description(CLI_DESCRIPTION)
+      .throwErrors()
       // ── Global options ──────────────────────────────────────────────────
       .globalOption("--db-type <type:string>", DB_TYPE_DESCRIPTION, {
         default: DbType.SQLite,

@@ -6,6 +6,7 @@ import type {
   MadaAdmConfigValues,
 } from "@scope/types/models";
 import type { PostgresDbConnection } from "../postgres-db.connection.ts";
+import { ensureIsPostgresDbTransactionCtx } from "@scope/helpers/db";
 
 /**
  * Concrete implementation of the MadaAdmConfigDML interface using PostgreSQL.
@@ -54,6 +55,9 @@ export class MadaAdmConfigPostgresDML implements MadaAdmConfigDML {
    */
   async createOrUpdate(values: MadaAdmConfigValues): Promise<MadaAdmConfig> {
     return await this.db.transaction(async (transactionContext) => {
+      if (!ensureIsPostgresDbTransactionCtx(transactionContext)) {
+        throw new Error("This method can only be called within a transaction.");
+      }
       const tx = transactionContext.tx;
       const checkQuery =
         `SELECT id FROM ${this.schema}.${MADA_ADM_CONFIG_TABLE_NAME_SNAKE} LIMIT 1;`;

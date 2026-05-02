@@ -1,5 +1,5 @@
 import * as path from "node:path";
-import { Database } from "@db/sqlite";
+import { DatabaseSync } from "node:sqlite";
 import type {
   DbConnection,
   DbConnectionParams,
@@ -14,9 +14,9 @@ import {
 } from "@scope/consts/db";
 
 export class SqliteDbConnection implements DbConnection {
-  #client: Database | null = null;
+  #client: DatabaseSync | null = null;
 
-  get client(): Database {
+  get client(): DatabaseSync {
     if (!this.#client) {
       throw new Error(
         "SQLite client has not been initialized. Call connect() first.",
@@ -64,10 +64,9 @@ export class SqliteDbConnection implements DbConnection {
       const dbFileName = params.dbFile ?? SQLITE_DB_DEFAULT_FILE;
       fullDbPath = path.join(SQLITE_DB_DIR, dbFileName);
     }
-    this.#client = new Database(fullDbPath, {
-      enableLoadExtension: true,
-    });
-    this.#client.loadExtension("mod_spatialite.so");
+    this.#client = new DatabaseSync(fullDbPath, { allowExtension: true });
+    this.#client.loadExtension("mod_spatialite");
+    this.#client.exec("SELECT InitSpatialMetaData(1);");
 
     this.#params = params;
   }
@@ -83,8 +82,15 @@ export class SqliteDbConnection implements DbConnection {
       transactionContext: DbTransactionContext,
     ) => MaybePromise<TReturn>,
   ): MaybePromise<TReturn> {
-    const transactionFn = this.client.transaction(callback);
-    return transactionFn({ dbType: DbType.SQLite });
+    this.client.exec("BEGIN");
+    try {
+      const res = callback({ dbType: DbType.SQLite });
+      this.client.exec("COMMIT");
+      return res;
+    } catch (error) {
+      this.client.exec("ROLLBACK");
+      throw error;
+    }
   }
 }
 
