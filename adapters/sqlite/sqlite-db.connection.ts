@@ -65,8 +65,21 @@ export class SqliteDbConnection implements DbConnection {
       fullDbPath = path.join(SQLITE_DB_DIR, dbFileName);
     }
     this.#client = new DatabaseSync(fullDbPath, { allowExtension: true });
+
+    this.#client.exec(`
+			PRAGMA journal_mode = WAL;
+    	PRAGMA busy_timeout = 5000;	
+		`);
+
     this.#client.loadExtension("mod_spatialite");
-    this.#client.exec("SELECT InitSpatialMetaData(1);");
+
+    const spatialRefSysExists = this.#client.prepare(
+      "SELECT name FROM sqlite_master WHERE type='table' AND name='spatial_ref_sys'",
+    ).get();
+
+    if (!spatialRefSysExists) {
+      this.#client.exec("SELECT InitSpatialMetaData(1);");
+    }
 
     this.#params = params;
   }

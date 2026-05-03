@@ -57,7 +57,7 @@ export const PG_CA_CERT_PATH_DESCRIPTION: string =
 // ── SQLite descriptions ─────────────────────────────────────────────────────
 
 export const SQLITE_DB_FILE_DESCRIPTION: string =
-  "The file of the SQLite database within the `db/.sqlite` directory. NOTE: This only works when running from the Deno codebase; it is not supported in the compiled binary as internal directories are encapsulated. Use --sqlite.db-path instead.";
+  "The file of the SQLite database within the `db/.sqlite` directory. NOTE: This only works when running from the Deno codebase; it is not supported in the compiled binary as internal directories are encapsulated. Use --sqlite.db-path instead. It defaults to `mada-adm.db`.";
 
 export const SQLITE_DB_PATH_DESCRIPTION: string =
   "Path to the SQLite database file.";

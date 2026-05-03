@@ -1,5 +1,5 @@
 import { ADM_LEVEL_TITLE_BY_CODE, AdmLevelCode } from "@scope/consts/models";
-import { BaseAdmTableDDL } from "@scope/db";
+import { BaseAdmTableDDL } from "@scope/db/ddl/base";
 import type { MadaAdmConfigValues } from "@scope/types/models";
 import type { DbTransactionContext } from "@scope/types/db";
 import { ensureIsSqliteDbTransactionCtx } from "@scope/helpers/db";
@@ -41,8 +41,8 @@ export class RegionsSqliteDDL extends BaseAdmTableDDL {
         region VARCHAR(255) NOT NULL,
         province VARCHAR(255) NOT NULL,
         province_id INTEGER NOT NULL,${admLevelColumn}
-        created_at INTEGER NOT NULL DEFAULT (unixepoch()),
-        updated_at INTEGER NOT NULL DEFAULT (unixepoch()),
+        created_at DATETIME NOT NULL DEFAULT (datetime('now')),
+        updated_at DATETIME NOT NULL DEFAULT (datetime('now')),
         CONSTRAINT fk_region_province FOREIGN KEY (province_id) REFERENCES ${provincesTable}(id) ON DELETE CASCADE
       );
     `;

@@ -26,8 +26,8 @@ export class MadaAdmConfigSqliteDDL implements TableDDL {
 					is_province_fk_repeated BOOLEAN NOT NULL DEFAULT FALSE,
 					has_geojson BOOLEAN NOT NULL DEFAULT FALSE,
 					has_adm_level BOOLEAN NOT NULL DEFAULT TRUE,
-					created_at INTEGER NOT NULL DEFAULT (unixepoch()),
-					updated_at INTEGER NOT NULL DEFAULT (unixepoch())
+					created_at DATETIME NOT NULL DEFAULT (datetime('now')),
+					updated_at DATETIME NOT NULL DEFAULT (datetime('now'))
 				)
 			`;
     this.#db.client.exec(sql);

@@ -1,5 +1,5 @@
 import { ADM_LEVEL_TITLE_BY_CODE, AdmLevelCode } from "@scope/consts/models";
-import { BaseAdmTableDDL } from "@scope/db";
+import { BaseAdmTableDDL } from "@scope/db/ddl/base";
 import type { MadaAdmConfigValues } from "@scope/types/models";
 import type { DbTransactionContext } from "@scope/types/db";
 import { ensureIsSqliteDbTransactionCtx } from "@scope/helpers/db";
@@ -73,8 +73,8 @@ export class FokontanysSqliteDDL extends BaseAdmTableDDL {
         district VARCHAR(255) NOT NULL,
         region VARCHAR(255) NOT NULL,
         commune_id INTEGER NOT NULL,${optionalCols}${admLevelColumn}
-        created_at INTEGER NOT NULL DEFAULT (unixepoch()),
-        updated_at INTEGER NOT NULL DEFAULT (unixepoch()),
+        created_at DATETIME NOT NULL DEFAULT (datetime('now')),
+        updated_at DATETIME NOT NULL DEFAULT (datetime('now')),
         CONSTRAINT fk_fokontany_commune FOREIGN KEY (commune_id) REFERENCES ${communesTable}(id) ON DELETE CASCADE${optionalFk}
       );
     `;

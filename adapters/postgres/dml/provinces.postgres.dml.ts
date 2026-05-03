@@ -13,7 +13,7 @@ import type {
   MadaAdmConfigValues,
   Province,
   ProvinceRecord,
-  ProvinceSnakedCased,
+  ProvinceSnakeCased,
 } from "@scope/types/models";
 import type { PostgresDbConnection } from "../postgres-db.connection.ts";
 
@@ -41,7 +41,7 @@ export class ProvincesPostgresDML extends BaseAdmPostgresTableDML
       ? transactionContext.tx
       : this.db.client;
     const query = `SELECT * FROM ${tableName} WHERE LOWER(province) = ANY($1)`;
-    const result = await client.queryObject<ProvinceSnakedCased>(
+    const result = await client.queryObject<ProvinceSnakeCased>(
       query,
       [names.map((n) => n.toLowerCase())],
     );

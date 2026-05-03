@@ -1,5 +1,5 @@
 import { ADM_LEVEL_TITLE_BY_CODE, AdmLevelCode } from "@scope/consts/models";
-import { BaseAdmTableDDL } from "@scope/db";
+import { BaseAdmTableDDL } from "@scope/db/ddl/base";
 import type { MadaAdmConfigValues } from "@scope/types/models";
 import type { DbTransactionContext } from "@scope/types/db";
 import { ensureIsSqliteDbTransactionCtx } from "@scope/helpers/db";
@@ -54,8 +54,8 @@ export class ProvincesSqliteDDL extends BaseAdmTableDDL {
       CREATE TABLE IF NOT EXISTS ${this.tableName} (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         province VARCHAR(255) NOT NULL,${admLevelColumn}
-        created_at INTEGER NOT NULL DEFAULT (unixepoch()),
-        updated_at INTEGER NOT NULL DEFAULT (unixepoch())
+        created_at DATETIME NOT NULL DEFAULT (datetime('now')),
+        updated_at DATETIME NOT NULL DEFAULT (datetime('now'))
       );
     `;
     this.db.client.exec(query);

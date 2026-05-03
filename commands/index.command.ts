@@ -220,16 +220,15 @@ export class CliIndexCommand extends Command<GlobalCliConfig, void> {
       )
       .group("SQLite configuration")
       .globalOption(
+        "--sqlite.db-file <filename:string>",
+        SQLITE_DB_FILE_DESCRIPTION,
+      )
+      .globalOption(
         "--sqlite.db-path <path:string>",
         SQLITE_DB_PATH_DESCRIPTION,
         {
           conflicts: ["sqlite.db-file"],
         },
-      )
-      .globalOption(
-        "--sqlite.db-file <filename:string>",
-        SQLITE_DB_FILE_DESCRIPTION,
-        { conflicts: ["sqlite.db-path"] },
       )
       // ── Global env variables ────────────────────────────────────────────
       .globalEnv("DB_TYPE=<type:string>", DB_TYPE_DESCRIPTION)

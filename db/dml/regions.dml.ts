@@ -7,6 +7,11 @@ import {
   type PostgresDbConnection,
 } from "@scope/adapters/postgres";
 
+import {
+  injectRegionsSqliteDML,
+  type SqliteDbConnection,
+} from "@scope/adapters/sqlite";
+
 /**
  * Injects (or creates) an instance of the regions table DML adapter based on the database type.
  *
@@ -29,6 +34,11 @@ export function injectRegionsDML(
         config,
         db as PostgresDbConnection,
         options?.pgSchema,
+      );
+    case DbType.SQLite:
+      return injectRegionsSqliteDML(
+        config,
+        db as SqliteDbConnection,
       );
     default:
       throw new Error(
