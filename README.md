@@ -32,6 +32,7 @@ Follow these steps to set up the project locally.
    - [Install Git LFS](https://github.com/git-lfs/git-lfs?utm_source=gitlfs_site&utm_medium=installation_link&utm_campaign=gitlfs#installing)
 2. **Deno**: The project is built with Deno. You need to have it installed on your machine.
    - [Install Deno](https://docs.deno.com/runtime/getting_started/installation/)
+3. **Database Software**: This project supports PostgreSQL and SQLite with their spatial extensions. You must have them installed on your system. See the [Database Support](#database-support) section for installation details.
 
 ### Installation
 
@@ -72,6 +73,33 @@ You can run the main CLI task using:
 deno task cli
 ```
 *(See the [CLI Commands & Usage](#cli-commands--usage) section below for more details.)*
+
+## Database Support
+
+The CLI currently supports two database drivers. You can switch between them using the `--db-type` global flag or the `DB_TYPE` environment variable.
+
+| Database | Spatial Extension | Website |
+| :--- | :--- | :--- |
+| **PostgreSQL** | [PostGIS](https://postgis.net/) | [postgresql.org](https://www.postgresql.org/) |
+| **SQLite** | [SpatiaLite](https://www.gaia-gis.it/fossil/libspatialite/index) | [sqlite.org](https://www.sqlite.org/) |
+
+### Installing SpatiaLite
+
+Since SQLite does not include spatial features by default, you must install the SpatiaLite extension:
+
+- **Linux (Ubuntu/Debian):**
+  ```bash
+  sudo apt-get update
+  sudo apt-get install libsqlite3-mod-spatialite
+  ```
+- **macOS:**
+  ```bash
+  brew install libspatialite
+  ```
+- **Windows:** Download the mod_spatialite binaries from the [Gaia-SINS website](https://www.gaia-gis.it/gaia-sins/windows-bin-amd64/) and ensure the DLLs are accessible in your system PATH.
+
+> [!IMPORTANT]
+> You are responsible for ensuring that the database and its spatial extensions are correctly installed and configured before running the CLI.
 
 ## Project Structure & Content
 
@@ -297,16 +325,18 @@ features are available alongside the CLI:
 
 ### Coming Soon
 
-- **Database Adapters**: Native support for SQLite, MySQL, and MongoDB within
-  the seeding pipeline (currently only PostgreSQL is fully integrated).
+- **Database Adapters**: Native support for MySQL and MongoDB within
+  the seeding pipeline.
 - **Data Catalog**: A comprehensive, public-facing catalog of administrative
   metadata.
 
 ## Tech Stack
 
 - **Runtime**: [Deno](https://deno.land/)
-- **Database**: PostgreSQL (PostGIS) — _SQLite, MySQL, MongoDB support coming
-  soon_
+- **Database**: 
+  - **PostgreSQL** (with [PostGIS](https://postgis.net/))
+  - **SQLite** (with [SpatiaLite](https://www.gaia-gis.it/fossil/libspatialite/index))
+  - _MySQL, MongoDB support coming soon_
 - **Job Orchestration**: Redis / In-Memory (for fault-tolerant processing)
 - **UI**: CLI with interactive progress tracking and resumable job state
 
