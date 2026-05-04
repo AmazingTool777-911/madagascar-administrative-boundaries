@@ -161,26 +161,16 @@ export class CliIndexCommand extends Command<GlobalCliConfig, void> {
       .description(CLI_DESCRIPTION)
       .throwErrors()
       // ── Global options ──────────────────────────────────────────────────
-      .globalOption("--db-type <type:string>", DB_TYPE_DESCRIPTION, {
-        default: DbType.SQLite,
-      })
-      .globalOption("--cli-debug [debug:boolean]", DEBUG_DESCRIPTION, {
-        default: false,
-      })
+      .globalOption("--db-type <type:string>", DB_TYPE_DESCRIPTION)
+      .globalOption("--cli-debug [debug:boolean]", DEBUG_DESCRIPTION)
       .group("PostgreSQL configuration")
-      .globalOption("--pg.schema <schema:string>", PG_SCHEMA_DESCRIPTION, {
-        default: "public",
-      })
+      .globalOption("--pg.schema <schema:string>", PG_SCHEMA_DESCRIPTION)
       .globalOption("--pg.url <url:string>", PG_URL_DESCRIPTION)
-      .globalOption("--pg.host <host:string>", PG_HOST_DESCRIPTION, {
-        default: "localhost",
-      })
+      .globalOption("--pg.host <host:string>", PG_HOST_DESCRIPTION)
       .globalOption("--pg.port <port:number>", PG_PORT_DESCRIPTION, {
-        default: 5432,
         depends: ["pg.host"],
       })
       .globalOption("--pg.user <username:string>", PG_USER_DESCRIPTION, {
-        default: "postgres",
         depends: ["pg.host"],
       })
       .globalOption(
@@ -188,7 +178,6 @@ export class CliIndexCommand extends Command<GlobalCliConfig, void> {
         PG_PASSWORD_DESCRIPTION,
         {
           depends: ["pg.user"],
-          default: "",
         },
       )
       .globalOption(
@@ -196,11 +185,9 @@ export class CliIndexCommand extends Command<GlobalCliConfig, void> {
         PG_DATABASE_DESCRIPTION,
         {
           depends: ["pg.user"],
-          default: "postgres",
         },
       )
       .globalOption("--pg.ssl [ssl:boolean]", PG_SSL_DESCRIPTION, {
-        default: false,
         depends: ["pg.user"],
       })
       .globalOption(
@@ -254,13 +241,13 @@ export class CliIndexCommand extends Command<GlobalCliConfig, void> {
       .globalAction(async (args) => {
         const pg: PostgresDbConnectionCliConfig = {
           url: args.pg?.url ?? args.pgUrl,
-          host: args.pg?.host ?? args.pgHost,
-          port: args.pg?.port ?? args.pgPort,
-          user: args.pg?.user ?? args.pgUser,
-          password: args.pg?.password ?? args.pgPassword,
-          database: args.pg?.database ?? args.pgDatabase,
-          schema: args.pg?.schema ?? args.pgSchema,
-          ssl: args.pg?.ssl ?? args.pgSsl,
+          host: args.pg?.host ?? args.pgHost ?? "localhost",
+          port: args.pg?.port ?? args.pgPort ?? 5432,
+          user: args.pg?.user ?? args.pgUser ?? "postgres",
+          password: args.pg?.password ?? args.pgPassword ?? "",
+          database: args.pg?.database ?? args.pgDatabase ?? "postgres",
+          schema: args.pg?.schema ?? args.pgSchema ?? "public",
+          ssl: args.pg?.ssl ?? args.pgSsl ?? false,
           caCertFile: args.pg?.caCertFile ?? args.pgCaCertFile,
           caCertPath: args.pg?.caCertPath ?? args.pgCaCertPath,
         };
@@ -269,8 +256,8 @@ export class CliIndexCommand extends Command<GlobalCliConfig, void> {
           dbPath: args.sqlite?.dbPath ?? args.sqliteDbPath,
         };
         await this.handleGlobalAction({
-          dbType: args.dbType as unknown as DbType,
-          cliDebug: !!args.cliDebug,
+          dbType: (args.dbType ?? args.dbType) as unknown as DbType ?? DbType.SQLite,
+          cliDebug: !!(args.cliDebug ?? args.cliDebug ?? false),
           pg,
           sqlite,
         });
@@ -280,24 +267,17 @@ export class CliIndexCommand extends Command<GlobalCliConfig, void> {
       .option(
         "--disable-redis [disabled:boolean]",
         DISABLE_REDIS_DESCRIPTION,
-        { default: false },
       )
       .option("--redis.url <url:string>", REDIS_URL_DESCRIPTION)
-      .option("--redis.host <host:string>", REDIS_HOST_DESCRIPTION, {
-        default: "localhost",
-      })
-      .option("--redis.port <port:number>", REDIS_PORT_DESCRIPTION, {
-        default: 6379,
-      })
+      .option("--redis.host <host:string>", REDIS_HOST_DESCRIPTION)
+      .option("--redis.port <port:number>", REDIS_PORT_DESCRIPTION)
       .option("--redis.user <username:string>", REDIS_USERNAME_DESCRIPTION)
       .option(
         "--redis.password <password:string>",
         REDIS_PASSWORD_DESCRIPTION,
       )
       .option("--redis.db <db:number>", REDIS_DB_DESCRIPTION)
-      .option("--redis.ssl <ssl:boolean>", REDIS_SSL_DESCRIPTION, {
-        default: false,
-      })
+      .option("--redis.ssl <ssl:boolean>", REDIS_SSL_DESCRIPTION)
       .option(
         "--redis.cert-file <filename:string>",
         REDIS_CERT_FILE_DESCRIPTION,
@@ -361,42 +341,34 @@ export class CliIndexCommand extends Command<GlobalCliConfig, void> {
       .option(
         "--queue-batch-size <size:number>",
         QUEUE_BATCH_SIZE_DESCRIPTION,
-        { default: DEFAULT_BATCH_SIZE },
       )
       .option(
         "--queue-max-retries <retries:number>",
         QUEUE_MAX_RETRIES_DESCRIPTION,
-        { default: DEFAULT_MAX_RETRIES },
       )
       .option(
         "--in-memory-processing-hwm <hwm:number>",
         IN_MEMORY_PROCESSING_HWM_DESCRIPTION,
-        { default: DEFAULT_WORKER_JOB_HWM },
       )
       .option(
         "--in-memory-insert-hwm <hwm:number>",
         IN_MEMORY_INSERT_HWM_DESCRIPTION,
-        { default: DEFAULT_WORKER_JOB_HWM },
       )
       .option(
         "--worker-healthcheck-interval <ms:number>",
         WORKER_HEALTHCHECK_INTERVAL_DESCRIPTION,
-        { default: DEFAULT_HEALTHCHECK_INTERVAL },
       )
       .option(
         "--worker-pending-min-duration-threshold <ms:number>",
         WORKER_PENDING_MIN_DURATION_THRESHOLD_DESCRIPTION,
-        { default: DEFAULT_PENDING_MIN_DURATION_THRESHOLD },
       )
       .option(
         "--xread-block-duration <ms:number>",
         XREAD_BLOCK_DURATION_DESCRIPTION,
-        { default: DEFAULT_XREAD_BLOCK_DURATION },
       )
       .option(
         "--processing-workers-count <count:number>",
         PROCESSING_WORKERS_COUNT_DESCRIPTION,
-        { default: DEFAULT_PROCESSING_WORKERS_COUNT },
       )
       // ── Command-scoped mediator/worker env variables ────────────────────
       .env("QUEUE_BATCH_SIZE=<size:number>", QUEUE_BATCH_SIZE_DESCRIPTION)
@@ -430,17 +402,17 @@ export class CliIndexCommand extends Command<GlobalCliConfig, void> {
       )
       .action(async (args) => {
         const indexArgs: IndexActionCliConfig = {
-          dbType: args.dbType as DbType,
-          cliDebug: args.cliDebug,
+          dbType: (args.dbType ?? args.dbType) as unknown as DbType ?? DbType.SQLite,
+          cliDebug: !!(args.cliDebug ?? args.cliDebug ?? false),
           pg: {
             url: args.pg?.url ?? args.pgUrl,
-            host: args.pg?.host ?? args.pgHost,
-            port: args.pg?.port ?? args.pgPort,
-            user: args.pg?.user ?? args.pgUser,
-            password: args.pg?.password ?? args.pgPassword,
-            database: args.pg?.database ?? args.pgDatabase,
-            schema: args.pg?.schema ?? args.pgSchema,
-            ssl: args.pg?.ssl ?? args.pgSsl,
+            host: args.pg?.host ?? args.pgHost ?? "localhost",
+            port: args.pg?.port ?? args.pgPort ?? 5432,
+            user: args.pg?.user ?? args.pgUser ?? "postgres",
+            password: args.pg?.password ?? args.pgPassword ?? "",
+            database: args.pg?.database ?? args.pgDatabase ?? "postgres",
+            schema: args.pg?.schema ?? args.pgSchema ?? "public",
+            ssl: args.pg?.ssl ?? args.pgSsl ?? false,
             caCertFile: args.pg?.caCertFile ?? args.pgCaCertFile,
             caCertPath: args.pg?.caCertPath ?? args.pgCaCertPath,
           },
@@ -450,12 +422,12 @@ export class CliIndexCommand extends Command<GlobalCliConfig, void> {
           },
           redis: {
             url: args.redis?.url ?? args.redisUrl,
-            host: args.redis?.host ?? args.redisHost,
-            port: args.redis?.port ?? args.redisPort,
+            host: args.redis?.host ?? args.redisHost ?? "localhost",
+            port: args.redis?.port ?? args.redisPort ?? 6379,
             user: args.redis?.user ?? args.redisUsername,
             password: args.redis?.password ?? args.redisPassword,
             db: args.redis?.db ?? args.redisDb,
-            ssl: args.redis?.ssl ?? args.redisSsl,
+            ssl: args.redis?.ssl ?? args.redisSsl ?? false,
             certFile: args.redis?.certFile ?? args.redisCertFile,
             certPath: args.redis?.certPath ?? args.redisCertPath,
             keyFile: args.redis?.keyFile ?? args.redisKeyFile,
@@ -463,16 +435,15 @@ export class CliIndexCommand extends Command<GlobalCliConfig, void> {
             caCertFile: args.redis?.caCertFile ?? args.redisCaCertFile,
             caCertPath: args.redis?.caCertPath ?? args.redisCaCertPath,
           },
-          disableRedis: !!args.disableRedis,
-          inMemoryInsertHwm: args.inMemoryInsertHwm as number,
-          inMemoryProcessingHwm: args.inMemoryProcessingHwm as number,
-          workerHealthcheckInterval: args.workerHealthcheckInterval as number,
-          workerPendingMinDurationThreshold: args
-            .workerPendingMinDurationThreshold as number,
-          xreadBlockDuration: args.xreadBlockDuration as number,
-          processingWorkersCount: args.processingWorkersCount as number,
-          queueBatchSize: args.queueBatchSize as number,
-          queueMaxRetries: args.queueMaxRetries as number,
+          disableRedis: !!(args.disableRedis ?? args.disableRedis ?? false),
+          inMemoryInsertHwm: (args.inMemoryInsertHwm ?? args.inMemoryInsertHwm ?? DEFAULT_WORKER_JOB_HWM) as number,
+          inMemoryProcessingHwm: (args.inMemoryProcessingHwm ?? args.inMemoryProcessingHwm ?? DEFAULT_WORKER_JOB_HWM) as number,
+          workerHealthcheckInterval: (args.workerHealthcheckInterval ?? args.workerHealthcheckInterval ?? DEFAULT_HEALTHCHECK_INTERVAL) as number,
+          workerPendingMinDurationThreshold: (args.workerPendingMinDurationThreshold ?? args.workerPendingMinDurationThreshold ?? DEFAULT_PENDING_MIN_DURATION_THRESHOLD) as number,
+          xreadBlockDuration: (args.xreadBlockDuration ?? args.xreadBlockDuration ?? DEFAULT_XREAD_BLOCK_DURATION) as number,
+          processingWorkersCount: (args.processingWorkersCount ?? args.processingWorkersCount ?? DEFAULT_PROCESSING_WORKERS_COUNT) as number,
+          queueBatchSize: (args.queueBatchSize ?? args.queueBatchSize ?? DEFAULT_BATCH_SIZE) as number,
+          queueMaxRetries: (args.queueMaxRetries ?? args.queueMaxRetries ?? DEFAULT_MAX_RETRIES) as number,
         };
         await this.handleIndexAction(indexArgs);
       });
