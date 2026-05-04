@@ -177,14 +177,33 @@ export class CliClearCommand extends Command<GlobalCliConfig, void> {
         );
       }
 
+      console.log();
+
       // ── 4. Drop the config table ───────────────────────────────────────────
 
+      const dropConfigTable = await Confirm.prompt({
+        message: "Do you also want to drop the Mada ADM configuration table?",
+        default: true,
+      });
+
+      if (dropConfigTable) {
+        console.log(
+          colors.yellow(`\n🗑️  Dropping Mada ADM configuration table...`),
+        );
+        await madaAdmConfigDDL.drop();
+        console.log(
+          colors.bold.green(
+            `\n✅ Mada ADM configuration table dropped successfully.`,
+          ),
+        );
+      } else {
+        console.log(
+          colors.gray(`\nℹ️  Mada ADM configuration table kept.`),
+        );
+      }
+
       console.log(
-        colors.yellow(`\n🗑️  Dropping Mada ADM configuration table...`),
-      );
-      await madaAdmConfigDDL.drop();
-      console.log(
-        colors.bold.green(`\n✅ Mada ADM data cleared successfully.`),
+        colors.bold.green(`\n✨ Clear operation completed.`),
       );
     } finally {
       await db.close();
