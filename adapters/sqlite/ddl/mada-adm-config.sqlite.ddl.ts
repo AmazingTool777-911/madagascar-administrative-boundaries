@@ -54,7 +54,9 @@ export class MadaAdmConfigSqliteDDL implements TableDDL {
 
 let madaAdmConfigSQLiteDDL: MadaAdmConfigSqliteDDL | null = null;
 
-export function injectMadaAdmConfigSqliteDDL(db: SqliteDbConnection) {
+export function injectMadaAdmConfigSqliteDDL(
+  db: SqliteDbConnection,
+): MadaAdmConfigSqliteDDL {
   if (!madaAdmConfigSQLiteDDL) {
     madaAdmConfigSQLiteDDL = new MadaAdmConfigSqliteDDL(db);
   }

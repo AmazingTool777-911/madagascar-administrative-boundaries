@@ -79,7 +79,9 @@ export class MadaAdmConfigSqliteDML implements MadaAdmConfigDML {
 
 let madaAdmConfigSqliteDML: MadaAdmConfigSqliteDML | null = null;
 
-export function injectMadaAdmConfigSqliteDML(db: SqliteDbConnection) {
+export function injectMadaAdmConfigSqliteDML(
+  db: SqliteDbConnection,
+): MadaAdmConfigSqliteDML {
   if (!madaAdmConfigSqliteDML) {
     madaAdmConfigSqliteDML = new MadaAdmConfigSqliteDML(db);
   }
