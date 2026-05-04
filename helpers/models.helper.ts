@@ -19,7 +19,7 @@ import type {
   MadaAdmConfigSnakeCased,
   Province,
   ProvinceRecord,
-  ProvinceSnakedCased,
+  ProvinceSnakeCased,
   ProvinceValues,
   Region,
   RegionRecord,
@@ -34,10 +34,16 @@ import type { GeoJSONGeometry } from "@scope/types/utils";
  * @param timestamp - The incoming date data (often natively passed from databases).
  * @returns The converted ISO standard date string, or undefined if no timestamp was mapped.
  */
-function parseTimestamp(
+export function parseTimestamp(
   timestamp?: Date | string | number,
 ): string | undefined {
   if (timestamp === undefined || timestamp === null) return undefined;
+  if (typeof timestamp === "number") {
+    // If the number is small (e.g., < 10^12), it's likely Unix seconds (SQLite/Postgres default)
+    // rather than JS milliseconds. 1e12 ms is year 2001.
+    const ms = timestamp < 1e12 ? timestamp * 1000 : timestamp;
+    return new Date(ms).toISOString();
+  }
   return new Date(timestamp).toISOString();
 }
 
@@ -83,7 +89,7 @@ export function mapMadaAdmConfigSnakeToCamel(
 /**
  * Maps a snake cased Province model into its Camel Cased entity.
  */
-export function mapProvinceSnakeToCamel(entity: ProvinceSnakedCased): Province {
+export function mapProvinceSnakeToCamel(entity: ProvinceSnakeCased): Province {
   return {
     id: entity.id,
     province: entity.province,
@@ -415,4 +421,37 @@ export function encodeDistrictAttributes(attr: DistrictAttributes): string {
 
 export function encodeCommuneAttributes(attr: CommuneAttributes): string {
   return `commune:${attr.commune}-district:${attr.district}-region:${attr.region}`;
+}
+/**
+ * Type guard that checks if a value is a valid GeoJSON geometry (Polygon or MultiPolygon).
+ * It also verifies that the geometry contains at least one coordinate pair.
+ *
+ * @param value - The value to check.
+ * @returns True if the value is a valid GeoJSON Polygon or MultiPolygon with coordinates.
+ */
+export function isGeoJSONGeometry(value: unknown): value is GeoJSONGeometry {
+  if (!value || typeof value !== "object") return false;
+  const geom = value as GeoJSONGeometry;
+
+  if (geom.type === "Polygon") {
+    return Array.isArray(geom.coordinates) &&
+      geom.coordinates.length > 0 &&
+      Array.isArray(geom.coordinates[0]) &&
+      geom.coordinates[0].length > 0 &&
+      Array.isArray(geom.coordinates[0][0]) &&
+      geom.coordinates[0][0].length === 2;
+  }
+
+  if (geom.type === "MultiPolygon") {
+    return Array.isArray(geom.coordinates) &&
+      geom.coordinates.length > 0 &&
+      Array.isArray(geom.coordinates[0]) &&
+      geom.coordinates[0].length > 0 &&
+      Array.isArray(geom.coordinates[0][0]) &&
+      geom.coordinates[0][0].length > 0 &&
+      Array.isArray(geom.coordinates[0][0][0]) &&
+      geom.coordinates[0][0][0].length === 2;
+  }
+
+  return false;
 }

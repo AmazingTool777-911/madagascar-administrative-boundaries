@@ -1,5 +1,9 @@
 import { assertEquals } from "@std/assert";
-import { prefixWithCamelCase, prefixWithSnakeCase } from "./string.utils.ts";
+import {
+  camelToSnakeCase,
+  prefixWithCamelCase,
+  prefixWithSnakeCase,
+} from "./string.utils.ts";
 
 Deno.test("StringUtils - prefixWithSnakeCase", () => {
   assertEquals(
@@ -31,4 +35,12 @@ Deno.test("StringUtils - prefixWithCamelCase", () => {
   assertEquals(prefixWithCamelCase("", "provinces"), "provinces");
   assertEquals(prefixWithCamelCase(null, "regions"), "regions");
   assertEquals(prefixWithCamelCase(undefined, "districts"), "districts");
+});
+
+Deno.test("StringUtils - camelToSnakeCase", () => {
+  assertEquals(camelToSnakeCase("camelCase"), "camel_case");
+  assertEquals(camelToSnakeCase("thisIsATest"), "this_is_a_test");
+  assertEquals(camelToSnakeCase("simple"), "simple");
+  assertEquals(camelToSnakeCase("ID"), "id");
+  assertEquals(camelToSnakeCase(""), "");
 });

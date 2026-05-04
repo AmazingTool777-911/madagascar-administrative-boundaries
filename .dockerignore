@@ -1,0 +1,7 @@
+bin/
+commands/.args/
+db/.sqlite/
+db/.ca-certificates/
+redis/.ca-certificates/
+.git/
+.env

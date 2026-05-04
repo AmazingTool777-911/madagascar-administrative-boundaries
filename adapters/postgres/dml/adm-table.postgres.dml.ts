@@ -8,6 +8,7 @@ import type {
   DMLUpdateResult,
 } from "@scope/types/db";
 import { DbHelper } from "@scope/helpers";
+import { ensureIsPostgresDbTransactionCtx } from "@scope/helpers/db";
 
 /**
  * Abstract base class for ADM Data Manipulation Layer (DML) implementations
@@ -132,7 +133,11 @@ export abstract class BaseAdmPostgresTableDML {
   ): Promise<DMLCreateManyResult> {
     if (rows.length === 0) return { insertedCount: 0 };
 
-    return await this.db.transaction(async ({ tx }) => {
+    return await this.db.transaction(async (transactionContext) => {
+      if (!ensureIsPostgresDbTransactionCtx(transactionContext)) {
+        return { insertedCount: 0 };
+      }
+      const { tx } = transactionContext;
       const allPlaceholders: string[] = [];
       const allArgs: unknown[] = [];
       let currentArgIndex = 1;

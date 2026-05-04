@@ -22,6 +22,8 @@ export const DB_TYPE_DESCRIPTION: string =
 export const DEBUG_DESCRIPTION: string =
   "Enable debug logging across the pipeline.";
 
+// ── PostgreSQL descriptions ───────────────────────────────────────────────
+
 export const PG_SCHEMA_DESCRIPTION: string =
   "The PostgreSQL schema to use (e.g. public).";
 
@@ -47,10 +49,18 @@ export const PG_SSL_DESCRIPTION: string =
   "Whether to use SSL for the connection.";
 
 export const PG_CA_CERT_FILE_DESCRIPTION: string =
-  "Filename of the CA certificate under db/.ca-certificates/. Takes precedence over --pg.ca-cert-path.";
+  "Filename of the CA certificate under db/.ca-certificates/. NOTE: This only works when running from the Deno codebase; it is not supported in the compiled binary as internal directories are encapsulated. Use --pg.ca-cert-path instead.";
 
 export const PG_CA_CERT_PATH_DESCRIPTION: string =
   "Full path to the CA certificate file. Used when --pg.ca-cert-file is not set.";
+
+// ── SQLite descriptions ─────────────────────────────────────────────────────
+
+export const SQLITE_DB_FILE_DESCRIPTION: string =
+  "The file of the SQLite database within the `db/.sqlite` directory. NOTE: This only works when running from the Deno codebase; it is not supported in the compiled binary as internal directories are encapsulated. Use --sqlite.db-path instead. It defaults to `mada-adm.db`.";
+
+export const SQLITE_DB_PATH_DESCRIPTION: string =
+  "Path to the SQLite database file.";
 
 // ── Redis descriptions ─────────────────────────────────────────────────────
 
@@ -79,19 +89,19 @@ export const REDIS_SSL_DESCRIPTION: string =
   "Enable TLS/SSL for the connection.";
 
 export const REDIS_CERT_FILE_DESCRIPTION: string =
-  "Filename of the client certificate under redis/.ca-certificates/.";
+  "Filename of the client certificate under redis/.ca-certificates/. NOTE: This only works when running from the Deno codebase; it is not supported in the compiled binary as internal directories are encapsulated. Use --redis.cert-path instead.";
 
 export const REDIS_CERT_PATH_DESCRIPTION: string =
   "Full path to the client certificate file.";
 
 export const REDIS_KEY_FILE_DESCRIPTION: string =
-  "Filename of the client key under redis/.ca-certificates/.";
+  "Filename of the client key under redis/.ca-certificates/. NOTE: This only works when running from the Deno codebase; it is not supported in the compiled binary as internal directories are encapsulated. Use --redis.key-path instead.";
 
 export const REDIS_KEY_PATH_DESCRIPTION: string =
   "Full path to the client key file.";
 
 export const REDIS_CA_CERT_FILE_DESCRIPTION: string =
-  "Filename of the CA certificate under redis/.ca-certificates/.";
+  "Filename of the CA certificate under redis/.ca-certificates/. NOTE: This only works when running from the Deno codebase; it is not supported in the compiled binary as internal directories are encapsulated. Use --redis.ca-cert-path instead.";
 
 export const REDIS_CA_CERT_PATH_DESCRIPTION: string =
   "Full path to the CA certificate file for Redis.";
@@ -152,7 +162,7 @@ export const UPDATE_FIELD_COMMAND_VALUE_OPTION_DESCRIPTION =
   "The value to set for the field.";
 
 export const UPDATE_FIELD_COMMAND_VALUE_FILE_OPTION_DESCRIPTION =
-  "Filename under commands/.args to read the value from. Useful for large content like GeoJSON.";
+  "Filename under commands/.args to read the value from. NOTE: This only works when running from the Deno codebase; it is not supported in the compiled binary as internal directories are encapsulated. Use --value-path for a full path instead.";
 
 export const UPDATE_FIELD_COMMAND_VALUE_PATH_OPTION_DESCRIPTION =
   "Full path to the file to read the value from.";

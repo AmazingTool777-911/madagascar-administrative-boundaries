@@ -4,6 +4,7 @@
   "exports": {
     ".": "./index.ts",
     "./ddl": "./ddl/index.ts",
-    "./dml": "./dml/index.ts"
+    "./dml": "./dml/index.ts",
+    "./ddl/base": "./ddl/adm-table.ddl.ts"
   }
 }

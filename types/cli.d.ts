@@ -1,25 +1,28 @@
 import type { DbType } from "@scope/consts/db";
 
+// ── Raw connection sub-types (all fields optional — mirrors CLI with no defaults) ──
+
 /**
- * PostgreSQL configuration options derived from CLI or environment variables.
+ * Raw PostgreSQL configuration options as parsed from CLI flags or environment
+ * variables. Every field is optional because no defaults are applied at parse time.
  */
 export interface PostgresDbConnectionCliConfig {
   /** Full PostgreSQL connection URL. When set, individual config fields are ignored. */
   url?: string;
   /** Hostname or IP address of the PostgreSQL server. */
-  host: string;
+  host?: string;
   /** TCP port the PostgreSQL server listens on. */
-  port: number;
+  port?: number;
   /** Username to authenticate with. */
-  user: string;
+  user?: string;
   /** Password for the database user. */
-  password: string;
+  password?: string;
   /** Name of the target database. */
-  database: string;
+  database?: string;
   /** The physical database schema name. */
-  schema: string;
+  schema?: string;
   /** Whether to enable SSL for the connection. */
-  ssl: boolean;
+  ssl?: boolean;
   /**
    * Filename of a CA certificate located under the shared `db/.ca-certificates/`
    * directory. Takes precedence over `caCertPath` when both are provided.
@@ -34,15 +37,28 @@ export interface PostgresDbConnectionCliConfig {
 }
 
 /**
- * Redis configuration options derived from CLI or environment variables.
+ * SQLite configuration options derived from CLI or environment variables.
+ */
+export interface SQLiteDbConnectionCliConfig {
+  /** Path to the SQLite database file. */
+  dbPath?: string;
+  /**
+   * The file of the SQLite database within the `db/.sqlite` directory.
+   */
+  dbFile?: string;
+}
+
+/**
+ * Raw Redis configuration options as parsed from CLI flags or environment
+ * variables. Every field is optional because no defaults are applied at parse time.
  */
 export interface RedisDbConnectionCliConfig {
   /** Full Redis connection URL. */
   url?: string;
   /** Hostname or IP address of the Redis server. */
-  host: string;
+  host?: string;
   /** Port the Redis server listens on. */
-  port: number;
+  port?: number;
   /** Optional username for Redis authentication. */
   user?: string;
   /** Optional password for Redis authentication. */
@@ -50,7 +66,7 @@ export interface RedisDbConnectionCliConfig {
   /** Optional database index to select after connection. */
   db?: number;
   /** Whether to use TLS for the connection. */
-  ssl: boolean;
+  ssl?: boolean;
   /**
    * Filename of the client certificate located under the shared
    * `redis/.ca-certificates/` directory.
@@ -74,114 +90,220 @@ export interface RedisDbConnectionCliConfig {
   caCertPath?: string;
 }
 
+// ── Raw CLI config types (mirrors Cliffy parsed output — everything optional) ──
+
 /**
- * Full CLI configuration encompassing all global and command-scoped options.
+ * Raw global CLI configuration as populated by Cliffy from flags and environment
+ * variables. Every field is optional; defaults are applied later by the resolver.
+ * Includes env-var shadow keys that Cliffy injects alongside the structured
+ * `pg` / `sqlite` sub-objects.
  */
-export type CliConfig = {
+export type GlobalCliConfig = {
+  /** The target database type as a raw string (not yet cast to DbType). */
+  dbType?: string;
+  /** Whether to enable debug logging across the pipeline. */
+  cliDebug?: boolean;
+  /** Structured PostgreSQL options from `--pg.*` flags. */
+  pg?: PostgresDbConnectionCliConfig;
+  /** Structured SQLite options from `--sqlite.*` flags. */
+  sqlite?: SQLiteDbConnectionCliConfig;
+
+  // ── Env-var shadow keys injected by Cliffy ──────────────────────────────
+  /** Environment variable mapped for PG_URL. */
+  pgUrl?: string;
+  /** Environment variable mapped for PG_HOST. */
+  pgHost?: string;
+  /** Environment variable mapped for PG_PORT. */
+  pgPort?: number;
+  /** Environment variable mapped for PG_USER. */
+  pgUser?: string;
+  /** Environment variable mapped for PG_PASSWORD. */
+  pgPassword?: string;
+  /** Environment variable mapped for PG_DATABASE. */
+  pgDatabase?: string;
+  /** Environment variable mapped for PG_SCHEMA. */
+  pgSchema?: string;
+  /** Environment variable mapped for PG_SSL. */
+  pgSsl?: boolean;
+  /** Environment variable mapped for PG_CA_CERT_FILE. */
+  pgCaCertFile?: string;
+  /** Environment variable mapped for PG_CA_CERT_PATH. */
+  pgCaCertPath?: string;
+  /** Environment variable mapped for SQLITE_DB_FILE. */
+  sqliteDbFile?: string;
+  /** Environment variable mapped for SQLITE_DB_PATH. */
+  sqliteDbPath?: string;
+};
+
+/**
+ * Raw index-action CLI configuration as populated by Cliffy. Extends the global
+ * config keys with Redis and mediator-specific fields. Every field is optional;
+ * defaults are applied later by the resolver.
+ */
+export type IndexActionCliConfig = GlobalCliConfig & {
+  /** Structured Redis options from `--redis.*` flags. */
+  redis?: RedisDbConnectionCliConfig;
+  /** Whether to skip the Redis connection entirely. */
+  disableRedis?: boolean;
+
+  // ── Redis env-var shadow keys ────────────────────────────────────────────
+  /** Environment variable mapped for REDIS_URL. */
+  redisUrl?: string;
+  /** Environment variable mapped for REDIS_HOST. */
+  redisHost?: string;
+  /** Environment variable mapped for REDIS_PORT. */
+  redisPort?: number;
+  /** Environment variable mapped for REDIS_USERNAME. */
+  redisUsername?: string;
+  /** Environment variable mapped for REDIS_PASSWORD. */
+  redisPassword?: string;
+  /** Environment variable mapped for REDIS_DB. */
+  redisDb?: number;
+  /** Environment variable mapped for REDIS_SSL. */
+  redisSsl?: boolean;
+  /** Environment variable mapped for REDIS_CERT_FILE. */
+  redisCertFile?: string;
+  /** Environment variable mapped for REDIS_CERT_PATH. */
+  redisCertPath?: string;
+  /** Environment variable mapped for REDIS_KEY_FILE. */
+  redisKeyFile?: string;
+  /** Environment variable mapped for REDIS_KEY_PATH. */
+  redisKeyPath?: string;
+  /** Environment variable mapped for REDIS_CA_CERT_FILE. */
+  redisCaCertFile?: string;
+  /** Environment variable mapped for REDIS_CA_CERT_PATH. */
+  redisCaCertPath?: string;
+
+  // ── Mediator/worker env-var shadow keys ──────────────────────────────────
+  /** Environment variable mapped for QUEUE_BATCH_SIZE. */
+  queueBatchSize?: number;
+  /** Environment variable mapped for QUEUE_MAX_RETRIES. */
+  queueMaxRetries?: number;
+  /** Environment variable mapped for IN_MEMORY_PROCESSING_HWM. */
+  inMemoryProcessingHwm?: number;
+  /** Environment variable mapped for IN_MEMORY_INSERT_HWM. */
+  inMemoryInsertHwm?: number;
+  /** Environment variable mapped for WORKER_HEALTHCHECK_INTERVAL. */
+  workerHealthcheckInterval?: number;
+  /** Environment variable mapped for WORKER_PENDING_MIN_DURATION_THRESHOLD. */
+  workerPendingMinDurationThreshold?: number;
+  /** Environment variable mapped for XREAD_BLOCK_DURATION. */
+  xreadBlockDuration?: number;
+  /** Environment variable mapped for PROCESSING_WORKERS_COUNT. */
+  processingWorkersCount?: number;
+};
+
+// ── Resolved config types (no shadow keys, required defaults applied) ────────
+
+/**
+ * Fully resolved global CLI configuration. All fields with defaults are required.
+ * Env-var shadow keys are absent — they have been merged into the structured fields.
+ */
+export type GlobalCliConfigResolved = {
   /** The target database type. */
   dbType: DbType;
   /** Whether to enable debug logging across the pipeline. */
   cliDebug: boolean;
-  /** Configuration specific to PostgreSQL. */
-  pg: PostgresDbConnectionCliConfig;
-  /** Whether to skip the Redis connection. Defaults to false. */
-  disableRedis: boolean;
-  /** Configuration specific to Redis. */
-  redis: RedisDbConnectionCliConfig;
-  /** Batch size for processing messages concurrently. */
-  queueBatchSize?: number;
-  /** Maximum number of retries per batch in case of an error. */
-  queueMaxRetries?: number;
-  /** Default high water mark for in-memory processing workers. */
-  inMemoryProcessingHwm?: number;
-  /** Default high water mark for the in-memory insert worker. */
-  inMemoryInsertHwm?: number;
-  /** Interval for worker healthcheck in milliseconds. */
-  workerHealthcheckInterval?: number;
-  /** Threshold for claiming pending messages in milliseconds. */
-  workerPendingMinDurationThreshold?: number;
-  /** Duration in milliseconds for XREAD BLOCK calls in Redis. */
-  xreadBlockDuration?: number;
-  /** Number of concurrent processing workers to spawn per ADM level. */
-  processingWorkersCount: number;
-
-  // ── Environment variable mappings (populated by Cliffy) ──────────────────
-
-  /** Environment variable mapped for --pg.url. */
-  pgUrl?: string;
-  /** Environment variable mapped for --pg.host. */
-  pgHost?: string;
-  /** Environment variable mapped for --pg.port. */
-  pgPort?: number;
-  /** Environment variable mapped for --pg.user. */
-  pgUser?: string;
-  /** Environment variable mapped for --pg.password. */
-  pgPassword?: string;
-  /** Environment variable mapped for --pg.database. */
-  pgDatabase?: string;
-  /** Environment variable mapped for --pg.schema. */
-  pgSchema?: string;
-  /** Environment variable mapped for --pg.ssl. */
-  pgSsl?: boolean;
-  /** Environment variable mapped for --pg.ca-cert-file. */
-  pgCaCertFile?: string;
-  /** Environment variable mapped for --pg.ca-cert-path. */
-  pgCaCertPath?: string;
-  /** Environment variable mapped for --redis.url. */
-  redisUrl?: string;
-  /** Environment variable mapped for --redis.host. */
-  redisHost?: string;
-  /** Environment variable mapped for --redis.port. */
-  redisPort?: number;
-  /** Environment variable mapped for --redis.username. */
-  redisUsername?: string;
-  /** Environment variable mapped for --redis.password. */
-  redisPassword?: string;
-  /** Environment variable mapped for --redis.db. */
-  redisDb?: number;
-  /** Environment variable mapped for --redis.ssl. */
-  redisSsl?: boolean;
-  /** Environment variable mapped for --redis.cert-file. */
-  redisCertFile?: string;
-  /** Environment variable mapped for --redis.cert-path. */
-  redisCertPath?: string;
-  /** Environment variable mapped for --redis.key-file. */
-  redisKeyFile?: string;
-  /** Environment variable mapped for --redis.key-path. */
-  redisKeyPath?: string;
-  /** Environment variable mapped for --redis.ca-cert-file. */
-  redisCaCertFile?: string;
-  /** Environment variable mapped for --redis.ca-cert-path. */
-  redisCaCertPath?: string;
+  /** The PostgreSQL schema name. */
+  pgSchema: string;
+  /** Resolved PostgreSQL connection configuration. */
+  pg: {
+    /** Full PostgreSQL connection URL. When set, individual config fields are ignored. */
+    url?: string;
+    /** Hostname or IP address of the PostgreSQL server. */
+    host: string;
+    /** TCP port the PostgreSQL server listens on. */
+    port: number;
+    /** Username to authenticate with. */
+    user: string;
+    /** Password for the database user. */
+    password: string;
+    /** Name of the target database. */
+    database: string;
+    /** Whether to enable SSL for the connection. */
+    ssl: boolean;
+    /** Filename of the CA certificate under `db/.ca-certificates/`. */
+    caCertFile?: string;
+    /** Full path to the CA certificate file. */
+    caCertPath?: string;
+  };
+  /** Resolved SQLite connection configuration. */
+  sqlite: SQLiteDbConnectionCliConfig;
 };
 
 /**
- * Subset of CliConfig representing the globally resolved configuration,
- * available to all commands including subcommands.
+ * Fully resolved index-action CLI configuration. All fields with defaults are
+ * required. The full `pg` block is replaced by `pgSchema: string` since the
+ * index action only needs the schema for DML/DDL injection — the connection
+ * itself was established by the global action handler.
  */
-export type GlobalCliConfig = Pick<CliConfig, "dbType" | "pg" | "cliDebug">;
+export type IndexActionCliConfigResolved = {
+  /** The target database type. */
+  dbType: DbType;
+  /** Whether to enable debug logging across the pipeline. */
+  cliDebug: boolean;
+  /** The PostgreSQL schema name. */
+  pgSchema: string;
+  /** Resolved SQLite connection configuration. */
+  sqlite: SQLiteDbConnectionCliConfig;
+  /** Resolved Redis connection configuration. */
+  redis: {
+    /** Full Redis connection URL. */
+    url?: string;
+    /** Hostname or IP address of the Redis server. */
+    host: string;
+    /** Port the Redis server listens on. */
+    port: number;
+    /** Optional username for Redis authentication. */
+    user?: string;
+    /** Optional password for Redis authentication. */
+    password?: string;
+    /** Optional database index to select after connection. */
+    db?: number;
+    /** Whether to use TLS for the connection. */
+    ssl: boolean;
+    /** Filename of the client certificate under `redis/.ca-certificates/`. */
+    certFile?: string;
+    /** Full path to the client certificate file. */
+    certPath?: string;
+    /** Filename of the client key under `redis/.ca-certificates/`. */
+    keyFile?: string;
+    /** Full path to the client key file. */
+    keyPath?: string;
+    /** Filename of the CA certificate under `redis/.ca-certificates/`. */
+    caCertFile?: string;
+    /** Full path to the CA certificate file. */
+    caCertPath?: string;
+  };
+  /** Whether to skip the Redis connection entirely. */
+  disableRedis: boolean;
+  /** Batch size for processing messages concurrently. */
+  queueBatchSize: number;
+  /** Maximum number of retries per batch in case of an error. */
+  queueMaxRetries: number;
+  /** High water mark for in-memory processing workers. */
+  inMemoryProcessingHwm: number;
+  /** High water mark for the in-memory insert worker. */
+  inMemoryInsertHwm: number;
+  /** Interval for worker healthcheck in milliseconds. */
+  workerHealthcheckInterval: number;
+  /** Threshold for claiming pending messages in milliseconds. */
+  workerPendingMinDurationThreshold: number;
+  /** Duration in milliseconds for XREAD BLOCK calls in Redis. */
+  xreadBlockDuration: number;
+  /** Number of concurrent processing workers to spawn per ADM level. */
+  processingWorkersCount: number;
+};
 
 /**
- * A comprehensive configuration object encompassing all possible connection values
- * grouped by database type, typically parsed from CLI arguments or environment variables.
+ * Database connection configuration subset used by `attemptDbConnection`.
+ * Equivalent to the `dbType`, `pg`, and `sqlite` fields of
+ * {@link GlobalCliConfigResolved}.
  */
-export type DbConnectionCliConfig = Pick<CliConfig, "dbType" | "pg">;
-
-export type IndexActionCliConfig =
-  & GlobalCliConfig
-  & Pick<
-    CliConfig,
-    | "redis"
-    | "disableRedis"
-    | "inMemoryInsertHwm"
-    | "inMemoryProcessingHwm"
-    | "workerHealthcheckInterval"
-    | "xreadBlockDuration"
-    | "workerPendingMinDurationThreshold"
-    | "processingWorkersCount"
-    | "queueBatchSize"
-    | "queueMaxRetries"
-  >;
+export type DbConnectionCliConfig = Pick<
+  GlobalCliConfigResolved,
+  "dbType" | "pg" | "sqlite"
+>;
 
 /**
  * Extra options passed to database DDL injectors.
@@ -191,6 +313,10 @@ export type DbDDLExtraOptionsCliConfig = {
   pgSchema: string;
 };
 
+/**
+ * Options for updating a field on an ADM entity, including value source and
+ * identifying attributes.
+ */
 export type UpdateFieldCliConfig = {
   value?: string;
   valueFile?: string;
@@ -214,6 +340,9 @@ export type UpdateFieldCliConfig = {
   };
 };
 
+/**
+ * Subset of {@link UpdateFieldCliConfig} containing only the identifier fields.
+ */
 export type UpdateFieldIdentifiersCliConfig = Pick<
   UpdateFieldCliConfig,
   "province" | "region" | "district" | "commune" | "fokontany"

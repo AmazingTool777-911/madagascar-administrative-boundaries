@@ -8,6 +8,7 @@ import {
   isCommuneValues,
   isDistrictValues,
   isFokontanyValues,
+  isGeoJSONGeometry,
   isProvinceValues,
   isRegionValues,
   mapAdmRecordToValues,
@@ -22,6 +23,7 @@ import {
   mapProvinceSnakeToCamel,
   mapRegionRecordToValues,
   mapRegionSnakeToCamel,
+  parseTimestamp,
 } from "./models.helper.ts";
 import type {
   CommuneRecord,
@@ -32,7 +34,7 @@ import type {
   FokontanySnakeCased,
   MadaAdmConfigSnakeCased,
   ProvinceRecord,
-  ProvinceSnakedCased,
+  ProvinceSnakeCased,
   RegionRecord,
   RegionSnakeCased,
 } from "@scope/types/models";
@@ -69,7 +71,7 @@ Deno.test("models.helper", async (t) => {
   });
 
   await t.step("mapProvinceSnakeToCamel", () => {
-    const snake: ProvinceSnakedCased = {
+    const snake: ProvinceSnakeCased = {
       id: 1,
       province: "Prov",
       geojson: geojsonStr,
@@ -417,5 +419,46 @@ Deno.test("models.helper", async (t) => {
       encodeCommuneAttributes({ commune: "C", district: "D", region: "R" }),
       "commune:C-district:D-region:R",
     );
+  });
+
+  await t.step("isGeoJSONGeometry", () => {
+    const validPolygon = {
+      type: "Polygon",
+      coordinates: [[[0, 0], [1, 1], [1, 0], [0, 0]]],
+    };
+    const validMultiPolygon = {
+      type: "MultiPolygon",
+      coordinates: [[[[0, 0], [1, 1], [1, 0], [0, 0]]]],
+    };
+    const invalidType = { type: "Point", coordinates: [0, 0] };
+    const emptyCoords = { type: "Polygon", coordinates: [] };
+    const wrongStructure = { type: "Polygon", coordinates: [0, 0] };
+
+    assertEquals(isGeoJSONGeometry(validPolygon), true);
+    assertEquals(isGeoJSONGeometry(validMultiPolygon), true);
+    assertEquals(isGeoJSONGeometry(invalidType), false);
+    assertEquals(isGeoJSONGeometry(emptyCoords), false);
+    assertEquals(isGeoJSONGeometry(wrongStructure), false);
+    assertEquals(isGeoJSONGeometry(null), false);
+    assertEquals(isGeoJSONGeometry({}), false);
+  });
+
+  await t.step("parseTimestamp", () => {
+    const iso = "2024-05-04T00:00:00.000Z";
+    const ms = new Date(iso).getTime(); // 1714780800000
+    const s = Math.floor(ms / 1000); // 1714780800
+
+    // ISO string
+    assertEquals(parseTimestamp(iso), iso);
+
+    // Milliseconds (>= 1e12)
+    assertEquals(parseTimestamp(ms), iso);
+
+    // Seconds (< 1e12)
+    assertEquals(parseTimestamp(s), iso);
+
+    // Null/Undefined
+    assertEquals(parseTimestamp(undefined), undefined);
+    assertEquals(parseTimestamp(null as any), undefined);
   });
 });

@@ -6,6 +6,11 @@ import {
   type PostgresDbConnection,
   resetMadaAdmConfigPostgresDDL,
 } from "@scope/adapters/postgres";
+import {
+  injectMadaAdmConfigSqliteDDL,
+  resetMadaAdmConfigSqliteDDL,
+  type SqliteDbConnection,
+} from "@scope/adapters/sqlite";
 
 /**
  * Injects (or creates) an instance of the mada adm config table DDL adapter based on the database type.
@@ -27,6 +32,10 @@ export function injectMadaAdmConfigDDL(
         db as PostgresDbConnection,
         options?.pgSchema,
       );
+    case DbType.SQLite:
+      return injectMadaAdmConfigSqliteDDL(
+        db as SqliteDbConnection,
+      );
     default:
       throw new Error(
         `Unsupported database type for mada adm config DDL: ${dbType}`,
@@ -44,6 +53,9 @@ export function resetMadaAdmConfigDDL(dbType: DbType): void {
   switch (dbType) {
     case DbType.Postgres:
       resetMadaAdmConfigPostgresDDL();
+      break;
+    case DbType.SQLite:
+      resetMadaAdmConfigSqliteDDL();
       break;
     default:
       throw new Error(

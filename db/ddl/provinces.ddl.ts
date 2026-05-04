@@ -7,6 +7,11 @@ import {
   type PostgresDbConnection,
   resetProvincesPostgresDDL,
 } from "@scope/adapters/postgres";
+import {
+  injectProvincesSqliteDDL,
+  resetProvincesSqliteDDL,
+  type SqliteDbConnection,
+} from "@scope/adapters/sqlite";
 
 /**
  * Injects (or creates) an instance of the provinces table DDL adapter based on the database type.
@@ -31,6 +36,8 @@ export function injectProvincesDDL(
         db as PostgresDbConnection,
         options?.pgSchema,
       );
+    case DbType.SQLite:
+      return injectProvincesSqliteDDL(config, db as SqliteDbConnection);
     default:
       throw new Error(`Unsupported database type for provinces DDL: ${dbType}`);
   }
@@ -46,6 +53,9 @@ export function resetProvincesDDL(dbType: DbType): void {
   switch (dbType) {
     case DbType.Postgres:
       resetProvincesPostgresDDL();
+      break;
+    case DbType.SQLite:
+      resetProvincesSqliteDDL();
       break;
     default:
       throw new Error(

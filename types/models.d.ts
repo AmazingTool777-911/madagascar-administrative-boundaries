@@ -77,7 +77,7 @@ export type ProvinceValues = HasAdmLevel<
   }>
 >;
 export type ProvinceRecord = ProvinceValues;
-export type ProvinceSnakedCased = EntitySnakeCased<
+export type ProvinceSnakeCased = EntitySnakeCased<
   HasAdmLevelLowLevel<
     HasGeoJsonLowLevel<{
       province: string;
@@ -205,6 +205,13 @@ export type Fokontany = Entity<FokontanyRecord>;
 
 export type AdmEntity = Province | Region | District | Commune | Fokontany;
 
+export type AdmEntitySnakeCased =
+  | ProvinceSnakeCased
+  | RegionSnakeCased
+  | DistrictSnakeCased
+  | CommuneSnakeCased
+  | FokontanySnakeCased;
+
 export type AdmValues =
   | ProvinceValues
   | RegionValues
@@ -242,6 +249,16 @@ export type AdmValuesDiscriminated =
   };
 
 /**
+ * Attributes used to uniquely identify a province.
+ */
+export type ProvinceAttributes = { province: string };
+
+/**
+ * Attributes used to uniquely identify a region.
+ */
+export type RegionAttributes = { region: string };
+
+/**
  * Attributes used to uniquely identify a district.
  */
 export type DistrictAttributes = { district: string; region: string };
@@ -264,3 +281,13 @@ export type FokontanyAttributes = {
   district: string;
   region: string;
 };
+
+export type AdmAttributes =
+  & Record<string, string>
+  & (
+    | ProvinceAttributes
+    | RegionAttributes
+    | DistrictAttributes
+    | CommuneAttributes
+    | FokontanyAttributes
+  );

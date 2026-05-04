@@ -7,6 +7,11 @@ import {
   type PostgresDbConnection,
   resetDistrictsPostgresDDL,
 } from "@scope/adapters/postgres";
+import {
+  injectDistrictsSqliteDDL,
+  resetDistrictsSqliteDDL,
+  type SqliteDbConnection,
+} from "@scope/adapters/sqlite";
 
 /**
  * Injects (or creates) an instance of the districts table DDL adapter based on the database type.
@@ -31,6 +36,8 @@ export function injectDistrictsDDL(
         db as PostgresDbConnection,
         options?.pgSchema,
       );
+    case DbType.SQLite:
+      return injectDistrictsSqliteDDL(config, db as SqliteDbConnection);
     default:
       throw new Error(`Unsupported database type for districts DDL: ${dbType}`);
   }
@@ -46,6 +53,9 @@ export function resetDistrictsDDL(dbType: DbType): void {
   switch (dbType) {
     case DbType.Postgres:
       resetDistrictsPostgresDDL();
+      break;
+    case DbType.SQLite:
+      resetDistrictsSqliteDDL();
       break;
     default:
       throw new Error(

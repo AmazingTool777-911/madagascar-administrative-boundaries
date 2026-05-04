@@ -7,6 +7,11 @@ import {
   type PostgresDbConnection,
   resetFokontanysPostgresDDL,
 } from "@scope/adapters/postgres";
+import {
+  injectFokontanysSqliteDDL,
+  resetFokontanysSqliteDDL,
+  type SqliteDbConnection,
+} from "@scope/adapters/sqlite";
 
 /**
  * Injects (or creates) an instance of the fokontanys table DDL adapter based on the database type.
@@ -31,6 +36,8 @@ export function injectFokontanysDDL(
         db as PostgresDbConnection,
         options?.pgSchema,
       );
+    case DbType.SQLite:
+      return injectFokontanysSqliteDDL(config, db as SqliteDbConnection);
     default:
       throw new Error(
         `Unsupported database type for fokontanys DDL: ${dbType}`,
@@ -48,6 +55,9 @@ export function resetFokontanysDDL(dbType: DbType): void {
   switch (dbType) {
     case DbType.Postgres:
       resetFokontanysPostgresDDL();
+      break;
+    case DbType.SQLite:
+      resetFokontanysSqliteDDL();
       break;
     default:
       throw new Error(

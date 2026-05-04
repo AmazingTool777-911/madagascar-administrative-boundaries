@@ -15,6 +15,7 @@ seeding.
 
 - [Overview](#overview)
 - [Getting Started](#getting-started)
+- [Running with Docker](#running-with-docker)
 - [Project Structure & Content](#project-structure--content)
 - [CLI Commands & Usage](#cli-commands--usage)
   - [Global Options & Environment Variables](#global-options--environment-variables)
@@ -32,6 +33,7 @@ Follow these steps to set up the project locally.
    - [Install Git LFS](https://github.com/git-lfs/git-lfs?utm_source=gitlfs_site&utm_medium=installation_link&utm_campaign=gitlfs#installing)
 2. **Deno**: The project is built with Deno. You need to have it installed on your machine.
    - [Install Deno](https://docs.deno.com/runtime/getting_started/installation/)
+3. **Database Software**: This project supports PostgreSQL and SQLite with their spatial extensions. You must have them installed on your system. See the [Database Support](#database-support) section for installation details.
 
 ### Installation
 
@@ -64,6 +66,18 @@ deno task build
 ```
 This command compiles the project into standalone CLI executables and places them in their respective platform-specific target directories (e.g., `bin/x86_64-pc-windows-msvc/`, `bin/aarch64-apple-darwin/`, `bin/x86_64-unknown-linux-gnu/`, etc.).
 
+### Using the Compiled Executable
+
+Once the build is complete, you can run the `mada-adm` binary directly. To use it as a global command:
+
+1. **Run from the directory**: Navigate to the specific platform directory in `bin/` and execute the binary:
+   ```bash
+   cd bin/<your-platform-directory>
+   ./mada-adm --help
+   ```
+
+2. **Add to PATH (Recommended)**: Add the directory containing the executable to your system's `PATH` environment variable. This allows you to run `mada-adm` from any directory without prefixing it with a path.
+
 ### Running CLI Tasks
 
 You can run the main CLI task using:
@@ -72,6 +86,76 @@ You can run the main CLI task using:
 deno task cli
 ```
 *(See the [CLI Commands & Usage](#cli-commands--usage) section below for more details.)*
+
+## Running with Docker
+
+This project includes a Docker configuration to simplify environment setup, providing a consistent runtime with Deno, SpatiaLite, and Redis pre-configured.
+
+### 1. Build and Run
+
+You can optionally use a local `.env` file in the root directory to manage your configurations (see `.env.example`). This file is used by Docker Compose at **runtime** to inject environment variables; it is explicitly excluded from the image build for security.
+
+To build the project and start the containers:
+
+```bash
+docker compose up --build -d
+```
+
+This will start the `app` service and a `redis` instance. The `app` container uses a "keep-alive" trick (`tail -f /dev/null` as the final command) to stay active in the background.
+
+### 2. Executing Tasks
+
+The easiest way to execute tasks is using `docker compose exec`, which targets the **service name** (`app`) and automatically handles the underlying container instances:
+
+- **Run the CLI**:
+  ```bash
+  docker compose exec app deno task cli [options]
+  ```
+
+- **Run the test suite**:
+  ```bash
+  docker compose exec app deno task test
+  ```
+
+- **Build the CLI executables**:
+  ```bash
+  docker compose exec app deno task build
+  ```
+
+- **Run extraction scripts**:
+  ```bash
+  docker compose exec app deno task script:extract-adm-inputs
+  ```
+
+
+Environment variables defined in your local `.env` file are automatically injected into the container by Docker Compose. You can also provide configurations directly as CLI flags when executing commands.
+
+## Database Support
+
+The CLI currently supports two database drivers. You can switch between them using the `--db-type` global flag or the `DB_TYPE` environment variable.
+
+| Database | Spatial Extension | Website |
+| :--- | :--- | :--- |
+| **PostgreSQL** | [PostGIS](https://postgis.net/) | [postgresql.org](https://www.postgresql.org/) |
+| **SQLite** | [SpatiaLite](https://www.gaia-gis.it/fossil/libspatialite/index) | [sqlite.org](https://www.sqlite.org/) |
+
+### Installing SpatiaLite
+
+Since SQLite does not include spatial features by default, you must install the SpatiaLite extension:
+
+- **Linux (Ubuntu/Debian):**
+  ```bash
+  sudo apt-get update
+  sudo apt-get install libsqlite3-mod-spatialite
+  ```
+- **macOS:**
+  ```bash
+  brew install libspatialite
+  ```
+- **Windows:** Download the mod_spatialite binaries from the [Gaia-SINS website](https://www.gaia-gis.it/gaia-sins/windows-bin-amd64/) and ensure the DLLs are accessible in your system PATH.
+
+> [!IMPORTANT]
+> You are responsible for ensuring that the database and its spatial extensions are correctly installed and configured before running the CLI.
 
 ## Project Structure & Content
 
@@ -112,8 +196,12 @@ commands. All options are optional.
 | `--pg.password`     | `PG_PASSWORD`        | Password for authenticating with the PostgreSQL server.                                       | `""` |
 | `--pg.database`     | `PG_DATABASE`        | Name of the database to be used.                                                              | `postgres` |
 | `--pg.ssl`          | `PG_SSL`             | Whether to use SSL for the connection.                                                        | `false` |
-| `--pg.ca-cert-file` | `PG_CA_CERT_FILE`    | Filename of the CA cert under `db/.ca-certificates/`.                                         | - |
-| `--pg.ca-cert-path` | `PG_CA_CERT_PATH`    | Full path to the CA cert file.                                                                | - |
+| `--pg.ca-cert-file` | `PG_CA_CERT_FILE`    | Filename of the CA cert under `db/.ca-certificates/`. **(Deno only)**       | - |
+| `--pg.ca-cert-path` | `PG_CA_CERT_PATH`    | Full path to the CA cert file.                                               | - |
+| `--sqlite.db-file` | `SQLITE_DB_FILE`     | Filename of the SQLite database within `db/.sqlite`. **(Deno only)**        | `mada-adm.db` |
+| `--sqlite.db-path` | `SQLITE_DB_PATH`     | Full absolute or relative path to the SQLite database file.                  | - |
+
+> **Note on File Paths:** Options ending in `-file` (e.g., `--sqlite.db-file`, `--pg.ca-cert-file`) resolve paths relative to the internal project structure. These **do not work** in the compiled binary because internal directories are encapsulated. In the binary, always use the corresponding `-path` option with a full path.
 
 ### Commands
 
@@ -151,11 +239,11 @@ All options are optional.
 | `--redis.password`                        | `REDIS_PASSWORD`                        | Password for Redis authentication.                               | - |
 | `--redis.db`                              | `REDIS_DB`                              | Database index.                                                  | - |
 | `--redis.ssl`                             | `REDIS_SSL`                             | Enable TLS/SSL for the connection.                               | `false` |
-| `--redis.cert-file`                       | `REDIS_CERT_FILE`                       | Filename of the client cert under `redis/.ca-certificates/`.     | - |
+| `--redis.cert-file`                       | `REDIS_CERT_FILE`                       | Filename of the client cert under `redis/.ca-certificates/`. **(Deno only)** | - |
 | `--redis.cert-path`                       | `REDIS_CERT_PATH`                       | Full path to the client certificate file.                        | - |
-| `--redis.key-file`                        | `REDIS_KEY_FILE`                        | Filename of the client key under `redis/.ca-certificates/`.      | - |
+| `--redis.key-file`                        | `REDIS_KEY_FILE`                        | Filename of the client key under `redis/.ca-certificates/`. **(Deno only)**  | - |
 | `--redis.key-path`                        | `REDIS_KEY_PATH`                        | Full path to the client key file.                                | - |
-| `--redis.ca-cert-file`                    | `REDIS_CA_CERT_FILE`                    | Filename of the CA cert under `redis/.ca-certificates/`.         | - |
+| `--redis.ca-cert-file`                    | `REDIS_CA_CERT_FILE`                    | Filename of the CA cert under `redis/.ca-certificates/`. **(Deno only)**     | - |
 | `--redis.ca-cert-path`                    | `REDIS_CA_CERT_PATH`                    | Full path to the CA cert file for Redis.                         | - |
 
 **Queue & Worker Options**
@@ -293,16 +381,18 @@ features are available alongside the CLI:
 
 ### Coming Soon
 
-- **Database Adapters**: Native support for SQLite, MySQL, and MongoDB within
-  the seeding pipeline (currently only PostgreSQL is fully integrated).
+- **Database Adapters**: Native support for MySQL and MongoDB within
+  the seeding pipeline.
 - **Data Catalog**: A comprehensive, public-facing catalog of administrative
   metadata.
 
 ## Tech Stack
 
 - **Runtime**: [Deno](https://deno.land/)
-- **Database**: PostgreSQL (PostGIS) — _SQLite, MySQL, MongoDB support coming
-  soon_
+- **Database**: 
+  - **PostgreSQL** (with [PostGIS](https://postgis.net/))
+  - **SQLite** (with [SpatiaLite](https://www.gaia-gis.it/fossil/libspatialite/index))
+  - _MySQL, MongoDB support coming soon_
 - **Job Orchestration**: Redis / In-Memory (for fault-tolerant processing)
 - **UI**: CLI with interactive progress tracking and resumable job state
 

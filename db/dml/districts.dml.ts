@@ -7,6 +7,11 @@ import {
   type PostgresDbConnection,
 } from "@scope/adapters/postgres";
 
+import {
+  injectDistrictsSqliteDML,
+  type SqliteDbConnection,
+} from "@scope/adapters/sqlite";
+
 /**
  * Injects (or creates) an instance of the districts table DML adapter based on the database type.
  *
@@ -29,6 +34,11 @@ export function injectDistrictsDML(
         config,
         db as PostgresDbConnection,
         options?.pgSchema,
+      );
+    case DbType.SQLite:
+      return injectDistrictsSqliteDML(
+        config,
+        db as SqliteDbConnection,
       );
     default:
       throw new Error(

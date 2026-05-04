@@ -42,15 +42,21 @@ import {
   REDIS_SSL_DESCRIPTION,
   REDIS_URL_DESCRIPTION,
   REDIS_USERNAME_DESCRIPTION,
+  SQLITE_DB_FILE_DESCRIPTION,
+  SQLITE_DB_PATH_DESCRIPTION,
   WORKER_HEALTHCHECK_INTERVAL_DESCRIPTION,
   WORKER_PENDING_MIN_DURATION_THRESHOLD_DESCRIPTION,
   XREAD_BLOCK_DURATION_DESCRIPTION,
 } from "@scope/consts/cli";
-import { DbType } from "@scope/consts/db";
+import {
+  DbType,
+  SQLITE_DB_DEFAULT_FILE,
+  SQLITE_DB_DIR,
+} from "@scope/consts/db";
 import type {
   GlobalCliConfig,
-  IndexActionCliConfig,
-  PostgresDbConnectionCliConfig,
+  GlobalCliConfigResolved,
+  IndexActionCliConfigResolved,
 } from "@scope/types/cli";
 import type {
   AdmRecord,
@@ -78,20 +84,13 @@ import {
 } from "@scope/db";
 import { injectRedisConnection, RedisConnection } from "@scope/redis";
 import {
-  DEFAULT_MAX_RETRIES,
-  DEFAULT_PROCESSING_WORKERS_COUNT,
   type QueueWorkersMediator,
   WorkerPool,
 } from "@scope/lib/workers-mediators";
 import {
-  DEFAULT_BATCH_SIZE,
-  DEFAULT_WORKER_JOB_HWM,
   injectInMemoryQueueWorkersMediator,
 } from "@scope/lib/in-memory-workers-mediators";
 import {
-  DEFAULT_HEALTHCHECK_INTERVAL,
-  DEFAULT_PENDING_MIN_DURATION_THRESHOLD,
-  DEFAULT_XREAD_BLOCK_DURATION,
   injectRedisQueueWorkersMediator,
 } from "@scope/lib/redis-workers-mediators";
 import type { SeedAdmJobContext } from "@scope/types/command";
@@ -113,6 +112,10 @@ import {
   isProvinceValues,
   isRegionValues,
 } from "@scope/helpers/models";
+import {
+  resolveGlobalCliConfig,
+  resolveIndexCliConfig,
+} from "@scope/helpers/cli";
 
 const PROGRESS_BARS_LINES_COUNT = 5;
 
@@ -152,27 +155,18 @@ export class CliIndexCommand extends Command<GlobalCliConfig, void> {
     this.name(CLI_NAME)
       .version(CLI_VERSION)
       .description(CLI_DESCRIPTION)
+      .throwErrors()
       // ── Global options ──────────────────────────────────────────────────
-      .globalOption("--db-type <type:string>", DB_TYPE_DESCRIPTION, {
-        default: DbType.SQLite,
-      })
-      .globalOption("--cli-debug [debug:boolean]", DEBUG_DESCRIPTION, {
-        default: false,
-      })
+      .globalOption("--db-type <type:string>", DB_TYPE_DESCRIPTION)
+      .globalOption("--cli-debug [debug:boolean]", DEBUG_DESCRIPTION)
       .group("PostgreSQL configuration")
-      .globalOption("--pg.schema <schema:string>", PG_SCHEMA_DESCRIPTION, {
-        default: "public",
-      })
+      .globalOption("--pg.schema <schema:string>", PG_SCHEMA_DESCRIPTION)
       .globalOption("--pg.url <url:string>", PG_URL_DESCRIPTION)
-      .globalOption("--pg.host <host:string>", PG_HOST_DESCRIPTION, {
-        default: "localhost",
-      })
+      .globalOption("--pg.host <host:string>", PG_HOST_DESCRIPTION)
       .globalOption("--pg.port <port:number>", PG_PORT_DESCRIPTION, {
-        default: 5432,
         depends: ["pg.host"],
       })
       .globalOption("--pg.user <username:string>", PG_USER_DESCRIPTION, {
-        default: "postgres",
         depends: ["pg.host"],
       })
       .globalOption(
@@ -180,7 +174,6 @@ export class CliIndexCommand extends Command<GlobalCliConfig, void> {
         PG_PASSWORD_DESCRIPTION,
         {
           depends: ["pg.user"],
-          default: "",
         },
       )
       .globalOption(
@@ -188,11 +181,9 @@ export class CliIndexCommand extends Command<GlobalCliConfig, void> {
         PG_DATABASE_DESCRIPTION,
         {
           depends: ["pg.user"],
-          default: "postgres",
         },
       )
       .globalOption("--pg.ssl [ssl:boolean]", PG_SSL_DESCRIPTION, {
-        default: false,
         depends: ["pg.user"],
       })
       .globalOption(
@@ -208,6 +199,18 @@ export class CliIndexCommand extends Command<GlobalCliConfig, void> {
         {
           conflicts: ["--pg.ca-cert-file"],
           depends: ["pg.ssl"],
+        },
+      )
+      .group("SQLite configuration")
+      .globalOption(
+        "--sqlite.db-file <filename:string>",
+        SQLITE_DB_FILE_DESCRIPTION,
+      )
+      .globalOption(
+        "--sqlite.db-path <path:string>",
+        SQLITE_DB_PATH_DESCRIPTION,
+        {
+          conflicts: ["sqlite.db-file"],
         },
       )
       // ── Global env variables ────────────────────────────────────────────
@@ -229,48 +232,27 @@ export class CliIndexCommand extends Command<GlobalCliConfig, void> {
         "PG_CA_CERT_PATH=<path:string>",
         PG_CA_CERT_PATH_DESCRIPTION,
       )
+      .globalEnv("SQLITE_DB_FILE <filename:string>", SQLITE_DB_FILE_DESCRIPTION)
+      .globalEnv("SQLITE_DB_PATH <path:string>", SQLITE_DB_PATH_DESCRIPTION)
       .globalAction(async (args) => {
-        const pg: PostgresDbConnectionCliConfig = {
-          url: args.pg?.url ?? args.pgUrl,
-          host: args.pg?.host ?? args.pgHost,
-          port: args.pg?.port ?? args.pgPort,
-          user: args.pg?.user ?? args.pgUser,
-          password: args.pg?.password ?? args.pgPassword,
-          database: args.pg?.database ?? args.pgDatabase,
-          schema: args.pg?.schema ?? args.pgSchema,
-          ssl: args.pg?.ssl ?? args.pgSsl,
-          caCertFile: args.pg?.caCertFile ?? args.pgCaCertFile,
-          caCertPath: args.pg?.caCertPath ?? args.pgCaCertPath,
-        };
-        await this.handleGlobalAction({
-          dbType: args.dbType as unknown as DbType,
-          cliDebug: !!args.cliDebug,
-          pg,
-        });
+        await this.handleGlobalAction(resolveGlobalCliConfig(args));
       })
       // ── Command-scoped Redis options ────────────────────────────────────
       .group("Redis configuration")
       .option(
         "--disable-redis [disabled:boolean]",
         DISABLE_REDIS_DESCRIPTION,
-        { default: false },
       )
       .option("--redis.url <url:string>", REDIS_URL_DESCRIPTION)
-      .option("--redis.host <host:string>", REDIS_HOST_DESCRIPTION, {
-        default: "localhost",
-      })
-      .option("--redis.port <port:number>", REDIS_PORT_DESCRIPTION, {
-        default: 6379,
-      })
+      .option("--redis.host <host:string>", REDIS_HOST_DESCRIPTION)
+      .option("--redis.port <port:number>", REDIS_PORT_DESCRIPTION)
       .option("--redis.user <username:string>", REDIS_USERNAME_DESCRIPTION)
       .option(
         "--redis.password <password:string>",
         REDIS_PASSWORD_DESCRIPTION,
       )
       .option("--redis.db <db:number>", REDIS_DB_DESCRIPTION)
-      .option("--redis.ssl <ssl:boolean>", REDIS_SSL_DESCRIPTION, {
-        default: false,
-      })
+      .option("--redis.ssl <ssl:boolean>", REDIS_SSL_DESCRIPTION)
       .option(
         "--redis.cert-file <filename:string>",
         REDIS_CERT_FILE_DESCRIPTION,
@@ -334,42 +316,34 @@ export class CliIndexCommand extends Command<GlobalCliConfig, void> {
       .option(
         "--queue-batch-size <size:number>",
         QUEUE_BATCH_SIZE_DESCRIPTION,
-        { default: DEFAULT_BATCH_SIZE },
       )
       .option(
         "--queue-max-retries <retries:number>",
         QUEUE_MAX_RETRIES_DESCRIPTION,
-        { default: DEFAULT_MAX_RETRIES },
       )
       .option(
         "--in-memory-processing-hwm <hwm:number>",
         IN_MEMORY_PROCESSING_HWM_DESCRIPTION,
-        { default: DEFAULT_WORKER_JOB_HWM },
       )
       .option(
         "--in-memory-insert-hwm <hwm:number>",
         IN_MEMORY_INSERT_HWM_DESCRIPTION,
-        { default: DEFAULT_WORKER_JOB_HWM },
       )
       .option(
         "--worker-healthcheck-interval <ms:number>",
         WORKER_HEALTHCHECK_INTERVAL_DESCRIPTION,
-        { default: DEFAULT_HEALTHCHECK_INTERVAL },
       )
       .option(
         "--worker-pending-min-duration-threshold <ms:number>",
         WORKER_PENDING_MIN_DURATION_THRESHOLD_DESCRIPTION,
-        { default: DEFAULT_PENDING_MIN_DURATION_THRESHOLD },
       )
       .option(
         "--xread-block-duration <ms:number>",
         XREAD_BLOCK_DURATION_DESCRIPTION,
-        { default: DEFAULT_XREAD_BLOCK_DURATION },
       )
       .option(
         "--processing-workers-count <count:number>",
         PROCESSING_WORKERS_COUNT_DESCRIPTION,
-        { default: DEFAULT_PROCESSING_WORKERS_COUNT },
       )
       // ── Command-scoped mediator/worker env variables ────────────────────
       .env("QUEUE_BATCH_SIZE=<size:number>", QUEUE_BATCH_SIZE_DESCRIPTION)
@@ -402,48 +376,7 @@ export class CliIndexCommand extends Command<GlobalCliConfig, void> {
         PROCESSING_WORKERS_COUNT_DESCRIPTION,
       )
       .action(async (args) => {
-        const indexArgs: IndexActionCliConfig = {
-          dbType: args.dbType as DbType,
-          cliDebug: args.cliDebug,
-          pg: {
-            url: args.pg?.url ?? args.pgUrl,
-            host: args.pg?.host ?? args.pgHost,
-            port: args.pg?.port ?? args.pgPort,
-            user: args.pg?.user ?? args.pgUser,
-            password: args.pg?.password ?? args.pgPassword,
-            database: args.pg?.database ?? args.pgDatabase,
-            schema: args.pg?.schema ?? args.pgSchema,
-            ssl: args.pg?.ssl ?? args.pgSsl,
-            caCertFile: args.pg?.caCertFile ?? args.pgCaCertFile,
-            caCertPath: args.pg?.caCertPath ?? args.pgCaCertPath,
-          },
-          redis: {
-            url: args.redis?.url ?? args.redisUrl,
-            host: args.redis?.host ?? args.redisHost,
-            port: args.redis?.port ?? args.redisPort,
-            user: args.redis?.user ?? args.redisUsername,
-            password: args.redis?.password ?? args.redisPassword,
-            db: args.redis?.db ?? args.redisDb,
-            ssl: args.redis?.ssl ?? args.redisSsl,
-            certFile: args.redis?.certFile ?? args.redisCertFile,
-            certPath: args.redis?.certPath ?? args.redisCertPath,
-            keyFile: args.redis?.keyFile ?? args.redisKeyFile,
-            keyPath: args.redis?.keyPath ?? args.redisKeyPath,
-            caCertFile: args.redis?.caCertFile ?? args.redisCaCertFile,
-            caCertPath: args.redis?.caCertPath ?? args.redisCaCertPath,
-          },
-          disableRedis: !!args.disableRedis,
-          inMemoryInsertHwm: args.inMemoryInsertHwm as number,
-          inMemoryProcessingHwm: args.inMemoryProcessingHwm as number,
-          workerHealthcheckInterval: args.workerHealthcheckInterval as number,
-          workerPendingMinDurationThreshold: args
-            .workerPendingMinDurationThreshold as number,
-          xreadBlockDuration: args.xreadBlockDuration as number,
-          processingWorkersCount: args.processingWorkersCount as number,
-          queueBatchSize: args.queueBatchSize as number,
-          queueMaxRetries: args.queueMaxRetries as number,
-        };
-        await this.handleIndexAction(indexArgs);
+        await this.handleIndexAction(resolveIndexCliConfig(args));
       });
   }
 
@@ -453,7 +386,7 @@ export class CliIndexCommand extends Command<GlobalCliConfig, void> {
    *
    * @param args - The globally resolved CLI and environment configurations.
    */
-  private async handleGlobalAction(args: GlobalCliConfig) {
+  private async handleGlobalAction(args: GlobalCliConfigResolved) {
     console.log(
       colors.blue.bold(`\n🚀 Initializing Administrative Data Pipeline`),
     );
@@ -475,6 +408,18 @@ export class CliIndexCommand extends Command<GlobalCliConfig, void> {
         }
         break;
       }
+      case DbType.SQLite: {
+        let fullPath!: string;
+        if (args.sqlite.dbFile) {
+          fullPath = path.join(SQLITE_DB_DIR, args.sqlite.dbFile);
+        } else if (args.sqlite.dbPath) {
+          fullPath = path.resolve(args.sqlite.dbPath);
+        } else {
+          fullPath = path.join(SQLITE_DB_DIR, SQLITE_DB_DEFAULT_FILE);
+        }
+        console.log(colors.gray(`   SQLite DB File: ${fullPath}`));
+        break;
+      }
       default:
         break;
     }
@@ -486,6 +431,7 @@ export class CliIndexCommand extends Command<GlobalCliConfig, void> {
     await attemptDbConnection(db, {
       dbType: args.dbType,
       pg: args.pg,
+      sqlite: args.sqlite,
     });
     console.log(
       colors.green.bold(`✅ Database connection established successfully!\n`),
@@ -499,7 +445,7 @@ export class CliIndexCommand extends Command<GlobalCliConfig, void> {
    *
    * @param args - The resolved CLI and environment configurations.
    */
-  private async handleIndexAction(args: IndexActionCliConfig) {
+  private async handleIndexAction(args: IndexActionCliConfigResolved) {
     let redis: RedisConnection | null = null;
 
     try {
@@ -507,10 +453,10 @@ export class CliIndexCommand extends Command<GlobalCliConfig, void> {
       let prevAdmConfigValues: MadaAdmConfigValues | null = null;
 
       const configDdl = injectMadaAdmConfigDDL(args.dbType, db, {
-        pgSchema: args.pg.schema,
+        pgSchema: args.pgSchema,
       });
       const configDml = injectMadaAdmConfigDML(args.dbType, db, {
-        pgSchema: args.pg.schema,
+        pgSchema: args.pgSchema,
       });
 
       const tableExists = await configDdl.exists();
@@ -628,7 +574,7 @@ export class CliIndexCommand extends Command<GlobalCliConfig, void> {
       }
 
       const madaAdmConfigDDL = injectMadaAdmConfigDDL(args.dbType, this.#db, {
-        pgSchema: args.pg.schema,
+        pgSchema: args.pgSchema,
       });
       let provincesDDL!: TableDDL;
       let regionsDDL!: TableDDL;
@@ -637,7 +583,7 @@ export class CliIndexCommand extends Command<GlobalCliConfig, void> {
       let fokontanysDDL!: TableDDL;
 
       const madaAdmConfigDML = injectMadaAdmConfigDML(args.dbType, this.#db, {
-        pgSchema: args.pg.schema,
+        pgSchema: args.pgSchema,
       });
 
       const madaAdmConfigTableExists = await madaAdmConfigDDL.exists();
@@ -681,7 +627,7 @@ export class CliIndexCommand extends Command<GlobalCliConfig, void> {
               args.dbType,
               this.#db,
               {
-                pgSchema: args.pg.schema,
+                pgSchema: args.pgSchema,
               },
             );
             regionsDDL = injectRegionsDDL(
@@ -689,7 +635,7 @@ export class CliIndexCommand extends Command<GlobalCliConfig, void> {
               args.dbType,
               this.#db,
               {
-                pgSchema: args.pg.schema,
+                pgSchema: args.pgSchema,
               },
             );
             districtsDDL = injectDistrictsDDL(
@@ -697,7 +643,7 @@ export class CliIndexCommand extends Command<GlobalCliConfig, void> {
               args.dbType,
               this.#db,
               {
-                pgSchema: args.pg.schema,
+                pgSchema: args.pgSchema,
               },
             );
             communesDDL = injectCommunesDDL(
@@ -705,7 +651,7 @@ export class CliIndexCommand extends Command<GlobalCliConfig, void> {
               args.dbType,
               this.#db,
               {
-                pgSchema: args.pg.schema,
+                pgSchema: args.pgSchema,
               },
             );
             fokontanysDDL = injectFokontanysDDL(
@@ -713,7 +659,7 @@ export class CliIndexCommand extends Command<GlobalCliConfig, void> {
               args.dbType,
               this.#db,
               {
-                pgSchema: args.pg.schema,
+                pgSchema: args.pgSchema,
               },
             );
             const admTablesExist = (await Promise.all([
@@ -827,7 +773,7 @@ export class CliIndexCommand extends Command<GlobalCliConfig, void> {
         args.dbType,
         this.#db,
         {
-          pgSchema: args.pg.schema,
+          pgSchema: args.pgSchema,
         },
       );
       regionsDDL = injectRegionsDDL(
@@ -835,7 +781,7 @@ export class CliIndexCommand extends Command<GlobalCliConfig, void> {
         args.dbType,
         this.#db,
         {
-          pgSchema: args.pg.schema,
+          pgSchema: args.pgSchema,
         },
       );
       districtsDDL = injectDistrictsDDL(
@@ -843,7 +789,7 @@ export class CliIndexCommand extends Command<GlobalCliConfig, void> {
         args.dbType,
         this.#db,
         {
-          pgSchema: args.pg.schema,
+          pgSchema: args.pgSchema,
         },
       );
       communesDDL = injectCommunesDDL(
@@ -851,7 +797,7 @@ export class CliIndexCommand extends Command<GlobalCliConfig, void> {
         args.dbType,
         this.#db,
         {
-          pgSchema: args.pg.schema,
+          pgSchema: args.pgSchema,
         },
       );
       fokontanysDDL = injectFokontanysDDL(
@@ -859,7 +805,7 @@ export class CliIndexCommand extends Command<GlobalCliConfig, void> {
         args.dbType,
         this.#db,
         {
-          pgSchema: args.pg.schema,
+          pgSchema: args.pgSchema,
         },
       );
       const admTablesExist = (await Promise.all([
@@ -951,7 +897,7 @@ export class CliIndexCommand extends Command<GlobalCliConfig, void> {
           dbConnectionParams: this.#db.params,
           jobTimestamp: Date.now(),
           ddlExtraOptions: {
-            pgSchema: args.pg.schema,
+            pgSchema: args.pgSchema,
           },
           dbType: args.dbType,
           progressBarsLinesCount: PROGRESS_BARS_LINES_COUNT,
@@ -1178,7 +1124,7 @@ export class CliIndexCommand extends Command<GlobalCliConfig, void> {
 
           console.log(`\n🧹 Deleting duplicates for ${levelTitle}...\n`);
           const dmlArgs = [activeAdmConfigValues, args.dbType, this.#db, {
-            pgSchema: args.pg.schema,
+            pgSchema: args.pgSchema,
           }] as const;
           const tableDML = admLevelCode === AdmLevelCode.PROVINCE
             ? injectProvincesDML(...dmlArgs)

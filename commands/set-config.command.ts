@@ -9,6 +9,7 @@ import {
 import type { GlobalCliConfig } from "@scope/types/cli";
 import type { MadaAdmConfigValues } from "@scope/types/models";
 import type { DbConnection } from "@scope/types/db";
+import { DbType, DEFAULT_DB_TYPE, DEFAULT_PG_SCHEMA } from "@scope/consts/db";
 import {
   injectCommunesDDL,
   injectDbConnection,
@@ -103,13 +104,16 @@ export class CliSetConfigCommand extends Command<GlobalCliConfig, void> {
     let db!: DbConnection;
 
     try {
-      db = injectDbConnection(options.dbType);
-      const pgSchema = options.pg?.schema;
+      const dbType = (options.dbType ?? DEFAULT_DB_TYPE) as DbType;
+      const pgSchema = options.pg?.schema ?? options.pgSchema ??
+        DEFAULT_PG_SCHEMA;
 
-      const madaAdmConfigDDL = injectMadaAdmConfigDDL(options.dbType, db, {
+      db = injectDbConnection(dbType);
+
+      const madaAdmConfigDDL = injectMadaAdmConfigDDL(dbType, db, {
         pgSchema,
       });
-      const madaAdmConfigDML = injectMadaAdmConfigDML(options.dbType, db, {
+      const madaAdmConfigDML = injectMadaAdmConfigDML(dbType, db, {
         pgSchema,
       });
 
@@ -228,31 +232,31 @@ export class CliSetConfigCommand extends Command<GlobalCliConfig, void> {
         // Check whether the old ADM tables exist before asking the user
         const provincesDDL = injectProvincesDDL(
           prevAdmConfigValues,
-          options.dbType,
+          dbType,
           db,
           { pgSchema },
         );
         const regionsDDL = injectRegionsDDL(
           prevAdmConfigValues,
-          options.dbType,
+          dbType,
           db,
           { pgSchema },
         );
         const districtsDDL = injectDistrictsDDL(
           prevAdmConfigValues,
-          options.dbType,
+          dbType,
           db,
           { pgSchema },
         );
         const communesDDL = injectCommunesDDL(
           prevAdmConfigValues,
-          options.dbType,
+          dbType,
           db,
           { pgSchema },
         );
         const fokontanysDDL = injectFokontanysDDL(
           prevAdmConfigValues,
-          options.dbType,
+          dbType,
           db,
           { pgSchema },
         );
@@ -300,40 +304,40 @@ export class CliSetConfigCommand extends Command<GlobalCliConfig, void> {
             );
 
             // Reset DDL singletons so they are rebuilt with the NEW config
-            resetProvincesDDL(options.dbType);
-            resetRegionsDDL(options.dbType);
-            resetDistrictsDDL(options.dbType);
-            resetCommunesDDL(options.dbType);
-            resetFokontanysDDL(options.dbType);
+            resetProvincesDDL(dbType);
+            resetRegionsDDL(dbType);
+            resetDistrictsDDL(dbType);
+            resetCommunesDDL(dbType);
+            resetFokontanysDDL(dbType);
 
             // Create ADM tables with the NEW config
             const newProvincesDDL = injectProvincesDDL(
               newAdmConfigValues,
-              options.dbType,
+              dbType,
               db,
               { pgSchema },
             );
             const newRegionsDDL = injectRegionsDDL(
               newAdmConfigValues,
-              options.dbType,
+              dbType,
               db,
               { pgSchema },
             );
             const newDistrictsDDL = injectDistrictsDDL(
               newAdmConfigValues,
-              options.dbType,
+              dbType,
               db,
               { pgSchema },
             );
             const newCommunesDDL = injectCommunesDDL(
               newAdmConfigValues,
-              options.dbType,
+              dbType,
               db,
               { pgSchema },
             );
             const newFokontanysDDL = injectFokontanysDDL(
               newAdmConfigValues,
-              options.dbType,
+              dbType,
               db,
               { pgSchema },
             );
@@ -362,6 +366,8 @@ export class CliSetConfigCommand extends Command<GlobalCliConfig, void> {
           }
         }
       }
+    } catch (error) {
+      console.error(error);
     } finally {
       await db.close();
       console.log(
