@@ -29,3 +29,13 @@ export const SQLITE_DB_DIR: string = "db/.sqlite";
  * Default file name of the SQLite database file.
  */
 export const SQLITE_DB_DEFAULT_FILE: string = "mada-adm.db";
+
+/**
+ * Default PostgreSQL schema name used when none is configured.
+ */
+export const DEFAULT_PG_SCHEMA: string = "public";
+
+/**
+ * Default database type used when none is configured.
+ */
+export const DEFAULT_DB_TYPE: DbType = DbType.SQLite;

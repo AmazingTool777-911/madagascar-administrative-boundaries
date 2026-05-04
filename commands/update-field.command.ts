@@ -27,6 +27,7 @@ import {
   ADM_LEVEL_TITLE_BY_CODE,
   AdmLevelCode,
 } from "@scope/consts/models";
+import { DbType, DEFAULT_DB_TYPE, DEFAULT_PG_SCHEMA } from "@scope/consts/db";
 import {
   injectCommunesDML,
   injectDbConnection,
@@ -344,9 +345,12 @@ Please specify a valid file using --value-file, --value-path, or ensure the defa
     let db!: DbConnection;
 
     try {
-      db = injectDbConnection(options.dbType);
-      const pgSchema = options.pg?.schema;
-      const madaAdmConfigDML = injectMadaAdmConfigDML(options.dbType, db, {
+      const dbType = (options.dbType ?? DEFAULT_DB_TYPE) as DbType;
+      const pgSchema = options.pg?.schema ?? options.pgSchema ??
+        DEFAULT_PG_SCHEMA;
+
+      db = injectDbConnection(dbType);
+      const madaAdmConfigDML = injectMadaAdmConfigDML(dbType, db, {
         pgSchema,
       });
 
@@ -360,19 +364,19 @@ Please specify a valid file using --value-file, --value-path, or ensure the defa
         Deno.exit(1);
       }
 
-      const provincesDML = injectProvincesDML(config, options.dbType, db, {
+      const provincesDML = injectProvincesDML(config, dbType, db, {
         pgSchema,
       });
-      const regionsDML = injectRegionsDML(config, options.dbType, db, {
+      const regionsDML = injectRegionsDML(config, dbType, db, {
         pgSchema,
       });
-      const districtsDML = injectDistrictsDML(config, options.dbType, db, {
+      const districtsDML = injectDistrictsDML(config, dbType, db, {
         pgSchema,
       });
-      const communesDML = injectCommunesDML(config, options.dbType, db, {
+      const communesDML = injectCommunesDML(config, dbType, db, {
         pgSchema,
       });
-      const fokontanysDML = injectFokontanysDML(config, options.dbType, db, {
+      const fokontanysDML = injectFokontanysDML(config, dbType, db, {
         pgSchema,
       });
 
@@ -688,9 +692,12 @@ Please specify a valid file using --value-file, --value-path, or ensure the defa
         Deno.exit(1);
       }
 
-      db = injectDbConnection(options.dbType);
-      const pgSchema = options.pg?.schema;
-      const madaAdmConfigDML = injectMadaAdmConfigDML(options.dbType, db, {
+      const dbType = (options.dbType ?? DEFAULT_DB_TYPE) as DbType;
+      const pgSchema = options.pg?.schema ?? options.pgSchema ??
+        DEFAULT_PG_SCHEMA;
+
+      db = injectDbConnection(dbType);
+      const madaAdmConfigDML = injectMadaAdmConfigDML(dbType, db, {
         pgSchema,
       });
 
@@ -727,7 +734,7 @@ Please specify a valid file using --value-file, --value-path, or ensure the defa
 
       switch (identifiers.admLevel) {
         case AdmLevelCode.PROVINCE: {
-          const dml = injectProvincesDML(config, options.dbType, db, {
+          const dml = injectProvincesDML(config, dbType, db, {
             pgSchema,
           });
           const result = await dml.updateGeojsonByName(
@@ -738,7 +745,7 @@ Please specify a valid file using --value-file, --value-path, or ensure the defa
           break;
         }
         case AdmLevelCode.REGION: {
-          const dml = injectRegionsDML(config, options.dbType, db, {
+          const dml = injectRegionsDML(config, dbType, db, {
             pgSchema,
           });
           const result = await dml.updateGeojsonByName(
@@ -749,7 +756,7 @@ Please specify a valid file using --value-file, --value-path, or ensure the defa
           break;
         }
         case AdmLevelCode.DISTRICT: {
-          const dml = injectDistrictsDML(config, options.dbType, db, {
+          const dml = injectDistrictsDML(config, dbType, db, {
             pgSchema,
           });
           const result = await dml.updateGeojsonByAttributes(
@@ -760,7 +767,7 @@ Please specify a valid file using --value-file, --value-path, or ensure the defa
           break;
         }
         case AdmLevelCode.COMMUNE: {
-          const dml = injectCommunesDML(config, options.dbType, db, {
+          const dml = injectCommunesDML(config, dbType, db, {
             pgSchema,
           });
           const result = await dml.updateGeojsonByAttributes(
@@ -775,7 +782,7 @@ Please specify a valid file using --value-file, --value-path, or ensure the defa
           break;
         }
         case AdmLevelCode.FOKONTANY: {
-          const dml = injectFokontanysDML(config, options.dbType, db, {
+          const dml = injectFokontanysDML(config, dbType, db, {
             pgSchema,
           });
           const result = await dml.updateGeojsonByAttributes(

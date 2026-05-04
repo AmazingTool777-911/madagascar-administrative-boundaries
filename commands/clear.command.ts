@@ -7,6 +7,7 @@ import {
 } from "@scope/consts/cli";
 import type { GlobalCliConfig } from "@scope/types/cli";
 import type { DbConnection } from "@scope/types/db";
+import { DbType, DEFAULT_DB_TYPE, DEFAULT_PG_SCHEMA } from "@scope/consts/db";
 import {
   injectCommunesDDL,
   injectDbConnection,
@@ -56,13 +57,16 @@ export class CliClearCommand extends Command<GlobalCliConfig, void> {
     let db!: DbConnection;
 
     try {
-      db = injectDbConnection(options.dbType);
-      const pgSchema = options.pg?.schema;
+      const dbType = (options.dbType ?? DEFAULT_DB_TYPE) as DbType;
+      const pgSchema = options.pg?.schema ?? options.pgSchema ??
+        DEFAULT_PG_SCHEMA;
 
-      const madaAdmConfigDDL = injectMadaAdmConfigDDL(options.dbType, db, {
+      db = injectDbConnection(dbType);
+
+      const madaAdmConfigDDL = injectMadaAdmConfigDDL(dbType, db, {
         pgSchema,
       });
-      const madaAdmConfigDML = injectMadaAdmConfigDML(options.dbType, db, {
+      const madaAdmConfigDML = injectMadaAdmConfigDML(dbType, db, {
         pgSchema,
       });
 
@@ -110,31 +114,31 @@ export class CliClearCommand extends Command<GlobalCliConfig, void> {
 
       const provincesDDL = injectProvincesDDL(
         existingConfig,
-        options.dbType,
+        dbType,
         db,
         { pgSchema },
       );
       const regionsDDL = injectRegionsDDL(
         existingConfig,
-        options.dbType,
+        dbType,
         db,
         { pgSchema },
       );
       const districtsDDL = injectDistrictsDDL(
         existingConfig,
-        options.dbType,
+        dbType,
         db,
         { pgSchema },
       );
       const communesDDL = injectCommunesDDL(
         existingConfig,
-        options.dbType,
+        dbType,
         db,
         { pgSchema },
       );
       const fokontanysDDL = injectFokontanysDDL(
         existingConfig,
-        options.dbType,
+        dbType,
         db,
         { pgSchema },
       );
