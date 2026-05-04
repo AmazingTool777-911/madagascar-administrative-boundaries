@@ -1,6 +1,6 @@
 import { Client } from "@db/postgres";
 import { StringUtils } from "@scope/utils";
-import type { DbTransactionContext } from "@scope/types/db";
+import type { PostgresTransactionContext } from "@scope/types/db";
 import type {
   AdmProperties,
   Commune,
@@ -42,7 +42,7 @@ async function buildParentsByAreaQuery<T>(
   config: MadaAdmConfigValues,
   parentTableBaseName: string,
   selectColumns: string[],
-  db: Client | DbTransactionContext,
+  db: Client | PostgresTransactionContext,
 ): Promise<[string, T][]> {
   const client = "tx" in db ? db.tx : db;
   const parentTable = StringUtils.prefixWithSnakeCase(
@@ -108,7 +108,7 @@ async function buildParentsByAreaQuery<T>(
 export async function getParentRegionsOfDistricts(
   inputs: InputRecord[],
   config: MadaAdmConfigValues,
-  db: Client | DbTransactionContext,
+  db: Client | PostgresTransactionContext,
 ): Promise<[string, Region][]> {
   return await buildParentsByAreaQuery<Region>(
     inputs,
@@ -125,7 +125,7 @@ export async function getParentRegionsOfDistricts(
 export async function getParentDistrictsOfCommunes(
   inputs: InputRecord[],
   config: MadaAdmConfigValues,
-  db: Client | DbTransactionContext,
+  db: Client | PostgresTransactionContext,
 ): Promise<[string, District][]> {
   // District also contains optional region/province fields
   return await buildParentsByAreaQuery<District>(
@@ -143,7 +143,7 @@ export async function getParentDistrictsOfCommunes(
 export async function getParentCommunesOfFokontanys(
   inputs: InputRecord[],
   config: MadaAdmConfigValues,
-  db: Client | DbTransactionContext,
+  db: Client | PostgresTransactionContext,
 ): Promise<[string, Commune][]> {
   return await buildParentsByAreaQuery<Commune>(
     inputs,

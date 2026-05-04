@@ -200,13 +200,13 @@ class WorkerJob<TInputMessage, TOutputMessage> {
    * Waits for the pending task to resolve, then closes the input and output streams.
    */
   async close(): Promise<void> {
-    if (this._pendingTask) {
-      await this._pendingTask;
-    }
     try {
       await this._inputWritable?.close();
     } catch (_err) {
       // Ignore if already closed or aborted
+    }
+    if (this._pendingTask) {
+      await this._pendingTask;
     }
     this._outputController?.close();
   }
