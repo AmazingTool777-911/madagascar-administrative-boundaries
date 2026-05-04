@@ -74,7 +74,7 @@ export class BaseAdmTableSqliteDML {
     admLevel: AdmLevelCode,
     attributesValues: AdmAttributes[],
     transactionContext?: DbTransactionContext,
-  ) {
+  ): AdmEntity[] {
     if (transactionContext) {
       ensureIsSqliteDbTransactionCtx(transactionContext);
     }

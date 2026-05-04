@@ -29,11 +29,16 @@ Follow these steps to set up the project locally.
 
 ### Prerequisites
 
-1. **Git LFS**: This project uses Git Large File Storage (LFS) to manage the `.ndjson` data files. You **must** install Git LFS before cloning the repository to ensure the data files are properly downloaded.
+1. **Git LFS**: This project uses Git Large File Storage (LFS) to manage the
+   `.ndjson` data files. You **must** install Git LFS before cloning the
+   repository to ensure the data files are properly downloaded.
    - [Install Git LFS](https://github.com/git-lfs/git-lfs?utm_source=gitlfs_site&utm_medium=installation_link&utm_campaign=gitlfs#installing)
-2. **Deno**: The project is built with Deno. You need to have it installed on your machine.
+2. **Deno**: The project is built with Deno. You need to have it installed on
+   your machine.
    - [Install Deno](https://docs.deno.com/runtime/getting_started/installation/)
-3. **Database Software**: This project supports PostgreSQL and SQLite with their spatial extensions. You must have them installed on your system. See the [Database Support](#database-support) section for installation details.
+3. **Database Software**: This project supports PostgreSQL and SQLite with their
+   spatial extensions. You must have them installed on your system. See the
+   [Database Support](#database-support) section for installation details.
 
 ### Installation
 
@@ -43,8 +48,8 @@ Follow these steps to set up the project locally.
    cd mada-adm
    ```
 
-2. **Install dependencies**:
-   Run the following command to install the project dependencies:
+2. **Install dependencies**: Run the following command to install the project
+   dependencies:
    ```bash
    deno install
    ```
@@ -64,19 +69,27 @@ To build the CLI executables for different platforms:
 ```bash
 deno task build
 ```
-This command compiles the project into standalone CLI executables and places them in their respective platform-specific target directories (e.g., `bin/x86_64-pc-windows-msvc/`, `bin/aarch64-apple-darwin/`, `bin/x86_64-unknown-linux-gnu/`, etc.).
+
+This command compiles the project into standalone CLI executables and places
+them in their respective platform-specific target directories (e.g.,
+`bin/x86_64-pc-windows-msvc/`, `bin/aarch64-apple-darwin/`,
+`bin/x86_64-unknown-linux-gnu/`, etc.).
 
 ### Using the Compiled Executable
 
-Once the build is complete, you can run the `mada-adm` binary directly. To use it as a global command:
+Once the build is complete, you can run the `mada-adm` binary directly. To use
+it as a global command:
 
-1. **Run from the directory**: Navigate to the specific platform directory in `bin/` and execute the binary:
+1. **Run from the directory**: Navigate to the specific platform directory in
+   `bin/` and execute the binary:
    ```bash
    cd bin/<your-platform-directory>
    ./mada-adm --help
    ```
 
-2. **Add to PATH (Recommended)**: Add the directory containing the executable to your system's `PATH` environment variable. This allows you to run `mada-adm` from any directory without prefixing it with a path.
+2. **Add to PATH (Recommended)**: Add the directory containing the executable to
+   your system's `PATH` environment variable. This allows you to run `mada-adm`
+   from any directory without prefixing it with a path.
 
 ### Running CLI Tasks
 
@@ -85,15 +98,21 @@ You can run the main CLI task using:
 ```bash
 deno task cli
 ```
-*(See the [CLI Commands & Usage](#cli-commands--usage) section below for more details.)*
+
+_(See the [CLI Commands & Usage](#cli-commands--usage) section below for more
+details.)_
 
 ## Running with Docker
 
-This project includes a Docker configuration to simplify environment setup, providing a consistent runtime with Deno, SpatiaLite, and Redis pre-configured.
+This project includes a Docker configuration to simplify environment setup,
+providing a consistent runtime with Deno, SpatiaLite, and Redis pre-configured.
 
 ### 1. Build and Run
 
-You can optionally use a local `.env` file in the root directory to manage your configurations (see `.env.example`). This file is used by Docker Compose at **runtime** to inject environment variables; it is explicitly excluded from the image build for security.
+You can optionally use a local `.env` file in the root directory to manage your
+configurations (see `.env.example`). This file is used by Docker Compose at
+**runtime** to inject environment variables; it is explicitly excluded from the
+image build for security.
 
 To build the project and start the containers:
 
@@ -101,11 +120,15 @@ To build the project and start the containers:
 docker compose up --build -d
 ```
 
-This will start the `app` service and a `redis` instance. The `app` container uses a "keep-alive" trick (`tail -f /dev/null` as the final command) to stay active in the background.
+This will start the `app` service and a `redis` instance. The `app` container
+uses a "keep-alive" trick (`tail -f /dev/null` as the final command) to stay
+active in the background.
 
 ### 2. Executing Tasks
 
-The easiest way to execute tasks is using `docker compose exec`, which targets the **service name** (`app`) and automatically handles the underlying container instances:
+The easiest way to execute tasks is using `docker compose exec`, which targets
+the **service name** (`app`) and automatically handles the underlying container
+instances:
 
 - **Run the CLI**:
   ```bash
@@ -127,21 +150,24 @@ The easiest way to execute tasks is using `docker compose exec`, which targets t
   docker compose exec app deno task script:extract-adm-inputs
   ```
 
-
-Environment variables defined in your local `.env` file are automatically injected into the container by Docker Compose. You can also provide configurations directly as CLI flags when executing commands.
+Environment variables defined in your local `.env` file are automatically
+injected into the container by Docker Compose. You can also provide
+configurations directly as CLI flags when executing commands.
 
 ## Database Support
 
-The CLI currently supports two database drivers. You can switch between them using the `--db-type` global flag or the `DB_TYPE` environment variable.
+The CLI currently supports two database drivers. You can switch between them
+using the `--db-type` global flag or the `DB_TYPE` environment variable.
 
-| Database | Spatial Extension | Website |
-| :--- | :--- | :--- |
-| **PostgreSQL** | [PostGIS](https://postgis.net/) | [postgresql.org](https://www.postgresql.org/) |
-| **SQLite** | [SpatiaLite](https://www.gaia-gis.it/fossil/libspatialite/index) | [sqlite.org](https://www.sqlite.org/) |
+| Database       | Spatial Extension                                                | Website                                       |
+| :------------- | :--------------------------------------------------------------- | :-------------------------------------------- |
+| **PostgreSQL** | [PostGIS](https://postgis.net/)                                  | [postgresql.org](https://www.postgresql.org/) |
+| **SQLite**     | [SpatiaLite](https://www.gaia-gis.it/fossil/libspatialite/index) | [sqlite.org](https://www.sqlite.org/)         |
 
 ### Installing SpatiaLite
 
-Since SQLite does not include spatial features by default, you must install the SpatiaLite extension:
+Since SQLite does not include spatial features by default, you must install the
+SpatiaLite extension:
 
 - **Linux (Ubuntu/Debian):**
   ```bash
@@ -152,21 +178,27 @@ Since SQLite does not include spatial features by default, you must install the 
   ```bash
   brew install libspatialite
   ```
-- **Windows:** Download the mod_spatialite binaries from the [Gaia-SINS website](https://www.gaia-gis.it/gaia-sins/windows-bin-amd64/) and ensure the DLLs are accessible in your system PATH.
+- **Windows:** Download the mod_spatialite binaries from the
+  [Gaia-SINS website](https://www.gaia-gis.it/gaia-sins/windows-bin-amd64/) and
+  ensure the DLLs are accessible in your system PATH.
 
 > [!IMPORTANT]
-> You are responsible for ensuring that the database and its spatial extensions are correctly installed and configured before running the CLI.
+> You are responsible for ensuring that the database and its spatial extensions
+> are correctly installed and configured before running the CLI.
 
 ## Project Structure & Content
 
 This repository serves as a centralized hub for administrative data and the
 logic required to process it:
 
-- **CLI Source Code**: The Deno source code for the command-line interface (found in `/commands/`).
-- **CLI Executables**: The compiled standalone executables for different platforms (found in `/bin/`).
-- **Data Sources**: Raw administrative boundary datasets (found in `/data/geojson/`).
-- **Pre-processed Data**: Optimized datasets (found in `/data/ndjson/`) that have
-  been cleaned and structured for efficient processing.
+- **CLI Source Code**: The Deno source code for the command-line interface
+  (found in `/commands/`).
+- **CLI Executables**: The compiled standalone executables for different
+  platforms (found in `/bin/`).
+- **Data Sources**: Raw administrative boundary datasets (found in
+  `/data/geojson/`).
+- **Pre-processed Data**: Optimized datasets (found in `/data/ndjson/`) that
+  have been cleaned and structured for efficient processing.
 - **Extraction Scripts**: Utility scripts used to generate and extract seeding
   inputs from raw sources (found in `/scripts/`).
 - **Data Catalogs**: Structured references for administrative metadata
@@ -174,9 +206,9 @@ logic required to process it:
 
 ## CLI Commands & Usage
 
-The project itself functions as a command-line interface to orchestrate the pipeline. Below
-is an overview of the available commands, along with their global and scoped
-configurations.
+The project itself functions as a command-line interface to orchestrate the
+pipeline. Below is an overview of the available commands, along with their
+global and scoped configurations.
 
 ### Global Options & Environment Variables
 
@@ -184,30 +216,34 @@ These options can be provided either as CLI flags or environment variables. If
 both are provided, the CLI flags take precedence. They apply globally across all
 commands. All options are optional.
 
-| CLI Flag            | Environment Variable | Description                                                                                   | Default |
-| :------------------ | :------------------- | :-------------------------------------------------------------------------------------------- | :--- |
-| `--db-type`         | `DB_TYPE`            | The database type to connect to (`sqlite`, `mysql`, `postgres`, `mongodb`).                   | `sqlite` |
-| `--cli-debug`       | `CLI_DEBUG`          | Enable debug logging across the pipeline.                                                     | `false` |
-| `--pg.schema`       | `PG_SCHEMA`          | The PostgreSQL schema to use.                                                                 | `public` |
-| `--pg.url`          | `PG_URL`             | The URL to connect to the PostgreSQL database.                                                | - |
-| `--pg.host`         | `PG_HOST`            | Hostname or IP address of the PostgreSQL server.                                              | `localhost` |
-| `--pg.port`         | `PG_PORT`            | Port number of the PostgreSQL server.                                                         | `5432` |
-| `--pg.user`         | `PG_USER`            | Username for authenticating with the PostgreSQL server.                                       | `postgres` |
-| `--pg.password`     | `PG_PASSWORD`        | Password for authenticating with the PostgreSQL server.                                       | `""` |
-| `--pg.database`     | `PG_DATABASE`        | Name of the database to be used.                                                              | `postgres` |
-| `--pg.ssl`          | `PG_SSL`             | Whether to use SSL for the connection.                                                        | `false` |
-| `--pg.ca-cert-file` | `PG_CA_CERT_FILE`    | Filename of the CA cert under `db/.ca-certificates/`. **(Deno only)**       | - |
-| `--pg.ca-cert-path` | `PG_CA_CERT_PATH`    | Full path to the CA cert file.                                               | - |
-| `--sqlite.db-file` | `SQLITE_DB_FILE`     | Filename of the SQLite database within `db/.sqlite`. **(Deno only)**        | `mada-adm.db` |
-| `--sqlite.db-path` | `SQLITE_DB_PATH`     | Full absolute or relative path to the SQLite database file.                  | - |
+| CLI Flag            | Environment Variable | Description                                                                 | Default       |
+| :------------------ | :------------------- | :-------------------------------------------------------------------------- | :------------ |
+| `--db-type`         | `DB_TYPE`            | The database type to connect to (`sqlite`, `mysql`, `postgres`, `mongodb`). | `sqlite`      |
+| `--cli-debug`       | `CLI_DEBUG`          | Enable debug logging across the pipeline.                                   | `false`       |
+| `--pg.schema`       | `PG_SCHEMA`          | The PostgreSQL schema to use.                                               | `public`      |
+| `--pg.url`          | `PG_URL`             | The URL to connect to the PostgreSQL database.                              | -             |
+| `--pg.host`         | `PG_HOST`            | Hostname or IP address of the PostgreSQL server.                            | `localhost`   |
+| `--pg.port`         | `PG_PORT`            | Port number of the PostgreSQL server.                                       | `5432`        |
+| `--pg.user`         | `PG_USER`            | Username for authenticating with the PostgreSQL server.                     | `postgres`    |
+| `--pg.password`     | `PG_PASSWORD`        | Password for authenticating with the PostgreSQL server.                     | `""`          |
+| `--pg.database`     | `PG_DATABASE`        | Name of the database to be used.                                            | `postgres`    |
+| `--pg.ssl`          | `PG_SSL`             | Whether to use SSL for the connection.                                      | `false`       |
+| `--pg.ca-cert-file` | `PG_CA_CERT_FILE`    | Filename of the CA cert under `db/.ca-certificates/`. **(Deno only)**       | -             |
+| `--pg.ca-cert-path` | `PG_CA_CERT_PATH`    | Full path to the CA cert file.                                              | -             |
+| `--sqlite.db-file`  | `SQLITE_DB_FILE`     | Filename of the SQLite database within `db/.sqlite`. **(Deno only)**        | `mada-adm.db` |
+| `--sqlite.db-path`  | `SQLITE_DB_PATH`     | Full absolute or relative path to the SQLite database file.                 | -             |
 
-> **Note on File Paths:** Options ending in `-file` (e.g., `--sqlite.db-file`, `--pg.ca-cert-file`) resolve paths relative to the internal project structure. These **do not work** in the compiled binary because internal directories are encapsulated. In the binary, always use the corresponding `-path` option with a full path.
+> **Note on File Paths:** Options ending in `-file` (e.g., `--sqlite.db-file`,
+> `--pg.ca-cert-file`) resolve paths relative to the internal project structure.
+> These **do not work** in the compiled binary because internal directories are
+> encapsulated. In the binary, always use the corresponding `-path` option with
+> a full path.
 
 ### Commands
 
 #### `mada-adm` (Index / Main Command)
 
-**CLI Execution:** `mada-adm [options]`  
+**CLI Execution:** `mada-adm [options]`\
 **Local Execution:** `deno task cli [options]`
 
 The core CLI command for seeding administrative data into the database. It
@@ -229,41 +265,41 @@ All options are optional.
 
 **Redis Options**
 
-| CLI Flag                                  | Environment Variable                    | Description                                                      | Default |
-| :---------------------------------------- | :-------------------------------------- | :--------------------------------------------------------------- | :--- |
-| `--disable-redis`                         | `DISABLE_REDIS`                         | Disable Redis connection. Uses the in-memory queue instead.      | `false` |
-| `--redis.url`                             | `REDIS_URL`                             | Full Redis connection URL.                                       | - |
-| `--redis.host`                            | `REDIS_HOST`                            | Hostname or IP address of the Redis server.                      | `localhost` |
-| `--redis.port`                            | `REDIS_PORT`                            | TCP port the Redis server listens on.                            | `6379` |
-| `--redis.user`                            | `REDIS_USERNAME`                        | Username for Redis authentication.                               | - |
-| `--redis.password`                        | `REDIS_PASSWORD`                        | Password for Redis authentication.                               | - |
-| `--redis.db`                              | `REDIS_DB`                              | Database index.                                                  | - |
-| `--redis.ssl`                             | `REDIS_SSL`                             | Enable TLS/SSL for the connection.                               | `false` |
-| `--redis.cert-file`                       | `REDIS_CERT_FILE`                       | Filename of the client cert under `redis/.ca-certificates/`. **(Deno only)** | - |
-| `--redis.cert-path`                       | `REDIS_CERT_PATH`                       | Full path to the client certificate file.                        | - |
-| `--redis.key-file`                        | `REDIS_KEY_FILE`                        | Filename of the client key under `redis/.ca-certificates/`. **(Deno only)**  | - |
-| `--redis.key-path`                        | `REDIS_KEY_PATH`                        | Full path to the client key file.                                | - |
-| `--redis.ca-cert-file`                    | `REDIS_CA_CERT_FILE`                    | Filename of the CA cert under `redis/.ca-certificates/`. **(Deno only)**     | - |
-| `--redis.ca-cert-path`                    | `REDIS_CA_CERT_PATH`                    | Full path to the CA cert file for Redis.                         | - |
+| CLI Flag               | Environment Variable | Description                                                                  | Default     |
+| :--------------------- | :------------------- | :--------------------------------------------------------------------------- | :---------- |
+| `--disable-redis`      | `DISABLE_REDIS`      | Disable Redis connection. Uses the in-memory queue instead.                  | `false`     |
+| `--redis.url`          | `REDIS_URL`          | Full Redis connection URL.                                                   | -           |
+| `--redis.host`         | `REDIS_HOST`         | Hostname or IP address of the Redis server.                                  | `localhost` |
+| `--redis.port`         | `REDIS_PORT`         | TCP port the Redis server listens on.                                        | `6379`      |
+| `--redis.user`         | `REDIS_USERNAME`     | Username for Redis authentication.                                           | -           |
+| `--redis.password`     | `REDIS_PASSWORD`     | Password for Redis authentication.                                           | -           |
+| `--redis.db`           | `REDIS_DB`           | Database index.                                                              | -           |
+| `--redis.ssl`          | `REDIS_SSL`          | Enable TLS/SSL for the connection.                                           | `false`     |
+| `--redis.cert-file`    | `REDIS_CERT_FILE`    | Filename of the client cert under `redis/.ca-certificates/`. **(Deno only)** | -           |
+| `--redis.cert-path`    | `REDIS_CERT_PATH`    | Full path to the client certificate file.                                    | -           |
+| `--redis.key-file`     | `REDIS_KEY_FILE`     | Filename of the client key under `redis/.ca-certificates/`. **(Deno only)**  | -           |
+| `--redis.key-path`     | `REDIS_KEY_PATH`     | Full path to the client key file.                                            | -           |
+| `--redis.ca-cert-file` | `REDIS_CA_CERT_FILE` | Filename of the CA cert under `redis/.ca-certificates/`. **(Deno only)**     | -           |
+| `--redis.ca-cert-path` | `REDIS_CA_CERT_PATH` | Full path to the CA cert file for Redis.                                     | -           |
 
 **Queue & Worker Options**
 
-| CLI Flag                                  | Environment Variable                    | Description                                                      | Default |
-| :---------------------------------------- | :-------------------------------------- | :--------------------------------------------------------------- | :--- |
-| `--queue-batch-size`                      | `QUEUE_BATCH_SIZE`                      | Batch size for processing messages concurrently.                 | `1` |
-| `--queue-max-retries`                     | `QUEUE_MAX_RETRIES`                     | Maximum number of retries per batch in case of an error.         | `3` |
-| `--in-memory-processing-hwm`              | `IN_MEMORY_PROCESSING_HWM`              | High water mark for in-memory processing workers.                | `1` |
-| `--in-memory-insert-hwm`                  | `IN_MEMORY_INSERT_HWM`                  | High water mark for the in-memory insert worker.                 | `1` |
-| `--worker-healthcheck-interval`           | `WORKER_HEALTHCHECK_INTERVAL`           | Interval for worker healthcheck in milliseconds.                 | `10000` |
-| `--worker-pending-min-duration-threshold` | `WORKER_PENDING_MIN_DURATION_THRESHOLD` | Threshold for claiming pending messages in milliseconds.         | `60000` |
-| `--xread-block-duration`                  | `XREAD_BLOCK_DURATION`                  | Duration in milliseconds for XREAD BLOCK calls in Redis.         | `5000` |
-| `--processing-workers-count`              | `PROCESSING_WORKERS_COUNT`              | Number of concurrent processing workers to spawn.                | `2` |
+| CLI Flag                                  | Environment Variable                    | Description                                              | Default |
+| :---------------------------------------- | :-------------------------------------- | :------------------------------------------------------- | :------ |
+| `--queue-batch-size`                      | `QUEUE_BATCH_SIZE`                      | Batch size for processing messages concurrently.         | `1`     |
+| `--queue-max-retries`                     | `QUEUE_MAX_RETRIES`                     | Maximum number of retries per batch in case of an error. | `3`     |
+| `--in-memory-processing-hwm`              | `IN_MEMORY_PROCESSING_HWM`              | High water mark for in-memory processing workers.        | `1`     |
+| `--in-memory-insert-hwm`                  | `IN_MEMORY_INSERT_HWM`                  | High water mark for the in-memory insert worker.         | `1`     |
+| `--worker-healthcheck-interval`           | `WORKER_HEALTHCHECK_INTERVAL`           | Interval for worker healthcheck in milliseconds.         | `10000` |
+| `--worker-pending-min-duration-threshold` | `WORKER_PENDING_MIN_DURATION_THRESHOLD` | Threshold for claiming pending messages in milliseconds. | `60000` |
+| `--xread-block-duration`                  | `XREAD_BLOCK_DURATION`                  | Duration in milliseconds for XREAD BLOCK calls in Redis. | `5000`  |
+| `--processing-workers-count`              | `PROCESSING_WORKERS_COUNT`              | Number of concurrent processing workers to spawn.        | `2`     |
 
 ### Sub-Commands
 
 #### `set-config`
 
-**CLI Execution:** `mada-adm set-config`  
+**CLI Execution:** `mada-adm set-config`\
 **Local Execution:** `deno task cli:set-config`
 
 Interactively sets or updates the Mada ADM configuration stored in the database.
@@ -277,7 +313,7 @@ maintaining separate project schemas without destructive interference.
 
 #### `clear`
 
-**CLI Execution:** `mada-adm clear`  
+**CLI Execution:** `mada-adm clear`\
 **Local Execution:** `deno task cli:clear`
 
 Drops all ADM tables and the configuration table from the database, effectively
@@ -285,7 +321,7 @@ resetting the project state.
 
 #### `update-field`
 
-**CLI Execution:** `mada-adm update-field <adm-level> <field> [options]`  
+**CLI Execution:** `mada-adm update-field <adm-level> <field> [options]`\
 **Local Execution:** `deno task cli:update-field <adm-level> <field> [options]`
 
 Updates a specific field (like names or spatial GeoJSON boundaries) of an
@@ -296,8 +332,12 @@ existing ADM record in the database.
 - `<adm-level>`: The ADM level of the record (e.g. `province`, `region`,
   `district`, `commune`, `fokontany`).
 - `<field>`: The specific field to update. Can be one of:
-  - `value`: Updates the name/value of the administrative record (i.e., the `province` column for a province level, `region` for a region level, etc.).
-  - `geojson`: Updates the spatial geometry of the administrative boundary. The data provided must be a valid GeoJSON **Geometry** object (not a Feature or FeatureCollection). If the provided data is not in the correct form, a validation error will be thrown. Examples of expected data formats:
+  - `value`: Updates the name/value of the administrative record (i.e., the
+    `province` column for a province level, `region` for a region level, etc.).
+  - `geojson`: Updates the spatial geometry of the administrative boundary. The
+    data provided must be a valid GeoJSON **Geometry** object (not a Feature or
+    FeatureCollection). If the provided data is not in the correct form, a
+    validation error will be thrown. Examples of expected data formats:
 
     **Polygon:**
     ```json
@@ -348,22 +388,30 @@ existing ADM record in the database.
 - **When updating the `geojson` geometry feature**, it is mandatory to provide
   the value in a file because the content is usually too large for the terminal
   to handle directly. How you provide this file depends on how you run the tool:
-  - **Running via Deno (`deno task cli:update-field`)**: By default, it looks for a file at `commands/.args/value.txt`. You can specify alternatives using:
-    - `--value-file <filename>`: Filename under `commands/.args` to read the value from.
-    - `--value-path <path>`: Full absolute or relative path to the file to read the value from.
-  - **Running the compiled CLI executable**: The `commands/.args/` directory is bundled inside the executable, so `--value-file` cannot be used with local files. You **must** use `--value-path <path>` to provide the full path to an external file.
+  - **Running via Deno (`deno task cli:update-field`)**: By default, it looks
+    for a file at `commands/.args/value.txt`. You can specify alternatives
+    using:
+    - `--value-file <filename>`: Filename under `commands/.args` to read the
+      value from.
+    - `--value-path <path>`: Full absolute or relative path to the file to read
+      the value from.
+  - **Running the compiled CLI executable**: The `commands/.args/` directory is
+    bundled inside the executable, so `--value-file` cannot be used with local
+    files. You **must** use `--value-path <path>` to provide the full path to an
+    external file.
 
 **Identification Options:**
 
-Depending on the `<adm-level>` argument provided, you must provide the following identifier options to correctly locate the administrative boundary:
+Depending on the `<adm-level>` argument provided, you must provide the following
+identifier options to correctly locate the administrative boundary:
 
-| `<adm-level>` | Required Identifier Options | Example |
-| :--- | :--- | :--- |
-| `province` | `--province` | `--province "Antananarivo"` |
-| `region` | `--region` | `--region "Analamanga"` |
-| `district` | `--district.value`, `--district.region` | `--district.value "Ambohidratrimo" --district.region "Analamanga"` |
-| `commune` | `--commune.value`, `--commune.district`, `--commune.region` | `--commune.value "Ivato" --commune.district "Ambohidratrimo" --commune.region "Analamanga"` |
-| `fokontany` | `--fokontany.value`, `--fokontany.commune`, `--fokontany.district`, `--fokontany.region` | `--fokontany.value "Ivato Centre" --fokontany.commune "Ivato" --fokontany.district "Ambohidratrimo" --fokontany.region "Analamanga"` |
+| `<adm-level>` | Required Identifier Options                                                              | Example                                                                                                                              |
+| :------------ | :--------------------------------------------------------------------------------------- | :----------------------------------------------------------------------------------------------------------------------------------- |
+| `province`    | `--province`                                                                             | `--province "Antananarivo"`                                                                                                          |
+| `region`      | `--region`                                                                               | `--region "Analamanga"`                                                                                                              |
+| `district`    | `--district.value`, `--district.region`                                                  | `--district.value "Ambohidratrimo" --district.region "Analamanga"`                                                                   |
+| `commune`     | `--commune.value`, `--commune.district`, `--commune.region`                              | `--commune.value "Ivato" --commune.district "Ambohidratrimo" --commune.region "Analamanga"`                                          |
+| `fokontany`   | `--fokontany.value`, `--fokontany.commune`, `--fokontany.district`, `--fokontany.region` | `--fokontany.value "Ivato Centre" --fokontany.commune "Ivato" --fokontany.district "Ambohidratrimo" --fokontany.region "Analamanga"` |
 
 ## Current Status
 
@@ -381,17 +429,18 @@ features are available alongside the CLI:
 
 ### Coming Soon
 
-- **Database Adapters**: Native support for MySQL and MongoDB within
-  the seeding pipeline.
+- **Database Adapters**: Native support for MySQL and MongoDB within the seeding
+  pipeline.
 - **Data Catalog**: A comprehensive, public-facing catalog of administrative
   metadata.
 
 ## Tech Stack
 
 - **Runtime**: [Deno](https://deno.land/)
-- **Database**: 
+- **Database**:
   - **PostgreSQL** (with [PostGIS](https://postgis.net/))
-  - **SQLite** (with [SpatiaLite](https://www.gaia-gis.it/fossil/libspatialite/index))
+  - **SQLite** (with
+    [SpatiaLite](https://www.gaia-gis.it/fossil/libspatialite/index))
   - _MySQL, MongoDB support coming soon_
 - **Job Orchestration**: Redis / In-Memory (for fault-tolerant processing)
 - **UI**: CLI with interactive progress tracking and resumable job state

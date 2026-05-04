@@ -2,9 +2,9 @@ import { ADM_LEVEL_TITLE_BY_CODE, AdmLevelCode } from "@scope/consts/models";
 import { BaseAdmTableSqliteDML } from "./adm-table.sqlite.dml.ts";
 import type {
   DbTransactionContext,
+  DistrictTableDML,
   DMLCreateManyResult,
   DMLUpdateResult,
-  DistrictTableDML,
   EntityId,
 } from "@scope/types/db";
 import type {

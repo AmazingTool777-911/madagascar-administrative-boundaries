@@ -34,7 +34,6 @@ preference.**
 
 ---
 
-
 ## Example
 
 ### Package Structure
