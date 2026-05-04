@@ -15,6 +15,7 @@ seeding.
 
 - [Overview](#overview)
 - [Getting Started](#getting-started)
+- [Running with Docker](#running-with-docker)
 - [Project Structure & Content](#project-structure--content)
 - [CLI Commands & Usage](#cli-commands--usage)
   - [Global Options & Environment Variables](#global-options--environment-variables)
@@ -65,6 +66,18 @@ deno task build
 ```
 This command compiles the project into standalone CLI executables and places them in their respective platform-specific target directories (e.g., `bin/x86_64-pc-windows-msvc/`, `bin/aarch64-apple-darwin/`, `bin/x86_64-unknown-linux-gnu/`, etc.).
 
+### Using the Compiled Executable
+
+Once the build is complete, you can run the `mada-adm` binary directly. To use it as a global command:
+
+1. **Run from the directory**: Navigate to the specific platform directory in `bin/` and execute the binary:
+   ```bash
+   cd bin/<your-platform-directory>
+   ./mada-adm --help
+   ```
+
+2. **Add to PATH (Recommended)**: Add the directory containing the executable to your system's `PATH` environment variable. This allows you to run `mada-adm` from any directory without prefixing it with a path.
+
 ### Running CLI Tasks
 
 You can run the main CLI task using:
@@ -73,6 +86,49 @@ You can run the main CLI task using:
 deno task cli
 ```
 *(See the [CLI Commands & Usage](#cli-commands--usage) section below for more details.)*
+
+## Running with Docker
+
+This project includes a Docker configuration to simplify environment setup, providing a consistent runtime with Deno, SpatiaLite, and Redis pre-configured.
+
+### 1. Build and Run
+
+You can optionally use a local `.env` file in the root directory to manage your configurations (see `.env.example`). This file is used by Docker Compose at **runtime** to inject environment variables; it is explicitly excluded from the image build for security.
+
+To build the project and start the containers:
+
+```bash
+docker compose up --build -d
+```
+
+This will start the `app` service and a `redis` instance. The `app` container uses a "keep-alive" trick (`tail -f /dev/null` as the final command) to stay active in the background.
+
+### 2. Executing Tasks
+
+The easiest way to execute tasks is using `docker compose exec`, which targets the **service name** (`app`) and automatically handles the underlying container instances:
+
+- **Run the CLI**:
+  ```bash
+  docker compose exec app deno task cli [options]
+  ```
+
+- **Run the test suite**:
+  ```bash
+  docker compose exec app deno task test
+  ```
+
+- **Build the CLI executables**:
+  ```bash
+  docker compose exec app deno task build
+  ```
+
+- **Run extraction scripts**:
+  ```bash
+  docker compose exec app deno task script:extract-adm-inputs
+  ```
+
+
+Environment variables defined in your local `.env` file are automatically injected into the container by Docker Compose. You can also provide configurations directly as CLI flags when executing commands.
 
 ## Database Support
 

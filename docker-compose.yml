@@ -1,3 +1,5 @@
+name: mada-adm
+
 services:
   app:
     build:
